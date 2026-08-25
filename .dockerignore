@@ -1,0 +1,11 @@
+.env
+*.md
+docs/
+service.datadog.yaml
+sonar-project.properties
+
+
+.idea/
+.vscode/
+.github/
+.git/
