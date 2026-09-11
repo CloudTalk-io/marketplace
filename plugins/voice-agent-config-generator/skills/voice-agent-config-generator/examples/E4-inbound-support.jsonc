@@ -1,0 +1,125 @@
+// E4 — Inbound support line, pinned to Deepgram via providerOverride.
+// Demonstrates: providerOverride (meaningful here — "en" would auto-resolve to ElevenLabs under V3, so
+// the override forces Deepgram for latency), substantial custom skills (each a real capability), an
+// ARRAY extract property, answerQuestions "admitUncertainty", a `toolCall` scenario wired to a custom
+// tool, an extractData `endpoint` webhook, and a second point in the tone/verbosity space
+// (`["empathetic"]` + "thorough", where E8 sits at `["professional","calm"]` + "concise").
+//
+// This line is INTAKE ONLY and carries NO transferToHuman skill: it gathers the order/issue details, the
+// caller's callback number, and hands the case to the support team as captured data. The prompt therefore
+// promises a callback, never a handoff. To let it put callers through, ask the user for a real agent or ring
+// group id AND extension and add a transfer rule (E1 shows the switched-off shape to ship meanwhile).
+//
+// ACCOUNT-SPECIFIC VALUES — replace before saving:
+//   scenarios[0].toolReferenceId  ("7b2c3d4e5f60718293a4b5c6") — the custom HTTP tool the scenario calls
+//   skills.extractData.endpoint   ("https://example.com/webhook") — a documentation domain; point it at
+//                                 your own receiver, or drop the key to keep the captured data in CloudTalk
+// Create the tool in the Dashboard (or, connected, with `cloudtalk_create_voice_agent_tool`, which can
+// attach it to this agent in the same call) and copy its ID — referenced-resources.md.
+//
+// PROVIDER NOTE: language is plain "en" (→ ElevenLabs under V3 auto-selection), so providerOverride
+// "deepgram" actively forces Deepgram (single language, no KB → lowest latency). Deepgram +
+// secondaryLanguages would be rejected; elevenLabsSettings would be ignored. `tone` and `verbosity` are
+// NOT ElevenLabs-only — they are provider-agnostic, which is why this Deepgram agent carries them
+// (schema §11). Niche product names are handled via the canonical-name list in the prompt.
+{
+  "agentName": "VoltGear — Support Assistant",
+  "direction": "inbound",
+  "defaultOutboundNumberId": 1,    // Automatic — required even for an inbound agent, which never calls out
+  "failoverOutboundNumberId": 202, // replace with a real owned number id (cloudtalk_list_numbers or the
+                                   // dashboard) — Automatic requires a real failover in BOTH directions
+  "language": "en",
+  "maxCallDuration": 25,
+  "temperature": 0.5,
+  "voice": "iP95p4xoKVk53GoZ742B", // Chris — American, middle-aged, male
+  "optimizeStreamingLatency": 2,
+  "stability": 0.3,
+  "similarity": 0.7,
+  "providerOverride": "deepgram",
+  "startSpeakingFirst": true,
+  "tone": ["empathetic"],          // one label, deliberately: a support line meeting annoyed callers.
+                                   // A single preset expresses more strongly than a blend (schema §11)
+  "verbosity": "thorough",         // the opposite end from E8's "concise": order and returns questions
+                                   // deserve the full answer, not the shortest one
+  "greeting": "Thanks for calling VoltGear support, this is Sam. How can I help you today?",
+  "goalPrompt": "## Identity\nYou are Sam, the support assistant for VoltGear, an online store for e-bike parts and accessories. You help callers with order questions and hand the details to the support team to follow up.\n\n## Tone\n- Calm, helpful, and concise: two to three sentences per turn.\n- One question at a time; wait for each answer.\n- Say numbers as words; read order numbers back in blocks of three digits to confirm them.\n\n## Product names\nWhen these products are discussed, use the correct name: VoltGear Apex 500, VoltGear Trail 350, PowerHub Charger, TorqueFit Crankset.\n\n## Task flow\n1. Ask whether the caller needs help with an existing order or something else.\n2. For an order question: ask for the order number and confirm it back in blocks of three digits. Explain that the support team will check the status and call them back, and ask for the best callback number.\n3. For returns, damaged items, or technical faults: collect a one-sentence summary and the caller's callback number, read the number back to confirm, and tell them the support team will follow up within one business day.\n4. If the caller is upset or explicitly asks for a person: apologize, take their callback number, and tell them a member of the support team will call them back as a priority.\n5. Before ending, ask if there is anything else you can help with.\n\n## Guardrails\n- Never state an order status, delivery date, refund, or replacement yourself — this line does not look up live order data; the support team handles that.\n- You cannot put callers through to a person on this line; always offer a callback from the support team instead.\n- Use only information from this prompt; if you do not know, say so plainly.\n- Always confirm the order number back to the caller before passing it on — this rule is important.",
+  "skills": {
+    "answerQuestions": {
+      "enabled": true,
+      "action": "admitUncertainty" // no KB attached: admit honestly rather than guess or auto-transfer
+    },
+    "custom": [
+      {
+        "enabled": true,
+        "name": "orderInquiryIntake",
+        "prompt": "When the caller asks about an existing order, collect the order number first. Order numbers are six digits. Confirm the number back to the caller in blocks of three digits before continuing. This line does not look up live order data, so do not state an order status, delivery date, or tracking yourself. Instead, capture the order number and the caller's question, tell the caller the support team will check it and call them back, and take the best number to reach them on. If the caller cannot find their order number, reassure them the team can still help with their name and email."
+      },
+      {
+        "enabled": true,
+        "name": "issueIntake",
+        "prompt": "When an issue needs follow-up — returns, damaged or missing items, technical faults, or a billing question — gather the details the team will need. First summarize the issue back to the caller in one sentence and ask if the summary is right. Then ask for the best callback number and read it back in blocks of three or four digits to confirm. Tell the caller the support team will follow up within one business day. Never promise a refund, replacement, or specific resolution — only that the team will handle it."
+      }
+    ],
+    "extractData": {
+      "enabled": true,
+      // Optional webhook the platform POSTs the extracted properties to after the call. It is a plain
+      // user-supplied URL, not a company-resource ID — so it is the one URL in this corpus, and it uses
+      // the IANA-reserved documentation domain rather than anything that could resolve (schema §6.3).
+      // Omit the key entirely to keep the captured data in CloudTalk only.
+      "endpoint": "https://example.com/webhook",
+      "properties": [
+        {
+          "name": "orderNumber",
+          "type": "NUMBER",
+          "description": "The order number the caller asked about, digits only"
+        },
+        {
+          "name": "issueCategories",
+          "type": "ARRAY",
+          "description": "All issue categories mentioned on the call, e.g. delivery, damaged item, return, technical fault, billing"
+        },
+        {
+          "name": "callbackNumber",
+          "type": "STRING",
+          "description": "Best callback number the caller gave for the follow-up, digits only"
+        },
+        {
+          "name": "humanRequested",
+          "type": "BOOLEAN",
+          "description": "Whether the caller asked to speak to a person"
+        }
+      ]
+    }
+  },
+  "scenarios": [
+    {
+      // The worked `toolCall` shape: a custom HTTP tool the agent fires mid-call. `toolReferenceId` is
+      // REQUIRED for this action and must be a tool your own company owns — nothing here creates it.
+      // CROSS-COMPANY TRAP: paste a config carrying `toolCall` (or `sendSms`) into a DIFFERENT company's
+      // dashboard and the editor silently strips the action down to a plain reply — the scenario stays,
+      // the tool call quietly stops happening (schema §7.1/§8). Re-add the action in the UI after such a
+      // paste. Editing your own agent is same-company, so nothing is stripped.
+      "enabled": true,
+      "when": "the caller has confirmed both their issue summary and their callback number",
+      "reply": "Thanks — I'm logging this for the support team now.",
+      "action": "toolCall",
+      "toolReferenceId": "7b2c3d4e5f60718293a4b5c6" // illustrative: your ticket-logging tool's ID
+    },
+    {
+      "enabled": true,
+      "when": "the caller's request is fully handled and they have nothing else",
+      "reply": "Thanks for calling VoltGear. Have a great ride!",
+      "action": "hangup"
+    },
+    {
+      "enabled": true,
+      "when": "the caller has not responded after you re-engaged them twice",
+      "reply": "It looks like we got disconnected. Call us back anytime. Goodbye!",
+      "action": "hangup"
+    }
+  ],
+  // guardrails are accepted but INERT at runtime (the runtime has no `enabled` field for them, so each is
+  // silently skipped) — keep the array empty; the always-on rules live in the goalPrompt `## Guardrails`
+  // section instead (behavioral §2.1)
+  "guardrails": []
+}

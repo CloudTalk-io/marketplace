@@ -1,0 +1,105 @@
+// E8 — Inbound hotel front desk, demonstrating the IDENTITY PRESETS and ElevenLabs conversation tuning.
+// Resolved provider: ElevenLabs (V3 auto — "en" is a plain language; schema §5). The goalPrompt is over
+// 1500 characters, so the agent classifies COMPLEX and the auto LLM lands on Haiku 4.5 without an
+// llmOverride (E2/E9/E10 reach complex on scenario count, E5 via secondaryLanguages, E1 on prompt length
+// like this one; E3 and E7 are the genuinely trivial-tier pair, which is why they pin Haiku).
+//
+// Demonstrates: `tone` + `verbosity` — the structured identity presets (schema §11), which are
+// provider-agnostic; E4 carries them on a Deepgram agent — and the elevenLabsSettings knobs only
+// ElevenLabs honours: turnEagerness, an interruption-ignore pair, and a backgroundSound bed. Together
+// with E5's turn-taking subset (speculativeTurn, turnModel, vad, asrKeywords) that is the whole
+// elevenLabsSettings surface; neither file carries all of it alone.
+//
+// WHY THESE VALUES: `tone: ["professional","calm"]` is a two-label blend — prefer one or two labels:
+// only one- and two-label combinations have been validated, and a wider blend expresses each preset more
+// weakly. `verbosity: "concise"` suits a front desk that mostly answers short questions.
+// Because the presets carry HOW the agent sounds, the prompt's own style
+// section covers only what they cannot express — one question per turn and speech formatting
+// (behavioral §2.1/§7c) — instead of repeating "be professional and calm" in prose.
+//
+// SELF-CONTAINED: no tools, no SMS, no KB, and no transferToHuman skill. The front desk answers what it
+// knows and takes details for a callback, so the prompt never promises a handoff. E9 is the transfer
+// variant, scaffolding a group handoff as a disabled draft for the user to finish in the dashboard.
+{
+  "agentName": "Riverstone Hotel — Front Desk",
+  "direction": "inbound",
+  "defaultOutboundNumberId": 1,    // Automatic — required even for an inbound agent, which never calls out
+  "failoverOutboundNumberId": 202, // replace with a real owned number id (cloudtalk_list_numbers or the
+                                   // dashboard) — Automatic requires a real failover in BOTH directions
+  "language": "en",
+  "maxCallDuration": 25,
+  "temperature": 0.5,
+  "voice": "cjVigY5qzO86Huf0OWal", // Eric — Male, American English
+  "optimizeStreamingLatency": 2,
+  "stability": 0.3,
+  "similarity": 0.7,
+  "startSpeakingFirst": true,
+  "tone": ["professional", "calm"], // prefer one or two labels: only those combinations have been
+                                   // validated, and a wider blend dilutes each one (schema §11)
+  "verbosity": "concise",          // short factual answers; the callers who need detail ask for it
+  "elevenLabsSettings": {
+    "turnEagerness": "normal",     // the whole scale, in one line: `patient` for data collection, where a
+                                   // caller spelling a name must not be cut off (E5); `normal` here, for a
+                                   // front desk fielding short questions; `eager` for a fast short-turn
+                                   // support line where callers answer in a word or two and any pause
+                                   // between turns reads as lag
+    "interruptionIgnoreTerms": ["okay", "mhm", "right", "sure", "yes", "got it"],
+    "interruptionIgnoreTermLanguages": ["en"], // always set alongside the terms — half a pair does nothing
+    "backgroundSound": {
+      "preset": "office",          // subtle reception ambience; one of the nine documented presets
+      "volume": 0.3,               // keep low (~0.1-0.3) so the bed never masks speech
+      "crossfadeLoop": true
+    }
+  },
+  "greeting": "Good day, Riverstone Hotel front desk. How can I help you?",
+  "goalPrompt": "## Identity\nYou are the front-desk assistant for the Riverstone Hotel, a ninety-room city hotel. You answer the main line, help callers with questions about the hotel and their stay, and take details so the right team follows up.\n\n## Style\n- Ask exactly one question at a time and wait for the answer.\n- Say numbers as words; read phone numbers and booking references back in blocks of three or four digits to confirm them.\n- Say dates and times in word form, and mention that times are hotel local time when it matters.\n\n## Response guidelines\n- If you did not catch something, say so plainly and ask the caller to repeat that one detail.\n- Stay in role as the front desk for the whole call; if the caller drifts off topic, answer briefly and come back to what they needed.\n- Never invent a rate, a room type, or an availability answer. If you do not know, say so and offer a callback from reception.\n\n## Hotel information\n- Reception is staffed twenty-four hours a day.\n- Check-in is from three in the afternoon; check-out is by eleven in the morning.\n- Breakfast is served in the ground-floor restaurant from six thirty to ten thirty.\n- On-site parking is limited and has to be reserved in advance.\n- The hotel is a fifteen-minute walk from the central station.\n\n## Task flow\n1. Ask what the caller needs.\n2. For check-in and check-out times, breakfast, parking, or directions: answer from the hotel information above.\n3. For a new booking, a change, or a cancellation: take the caller's full name, then the dates they want, then the best number to reach them on. Read the number back to confirm it, and tell them reception will call back to complete it.\n4. For a billing or invoice question: take the caller's full name and their best number, and tell them the accounts team will call back the same day.\n5. For a message for someone currently staying at the hotel: take the caller's name and number only, and tell them reception will pass the message on.\n6. Before ending, restate the caller's name and number aloud, then ask if there is anything else.\n7. When there is nothing else, close the call politely and end it. Do the same if the caller stops responding after you have checked twice that they are still there.\n\n## Guardrails\n- Use only the information in this prompt; do not infer or add anything else.\n- Never confirm or deny whether a named person is staying at the hotel, and never give out a room number.\n- Do not quote a nightly rate, promise a specific room, or confirm availability — reception owns those.\n- You cannot put callers through to a colleague or a guest room on this line; always offer a callback instead.\n- Never confirm or deny that a named person is a guest here — this rule is important.",
+  "skills": {
+    "answerQuestions": {
+      "enabled": true,
+      "action": "offerAlternative" // answer from the in-prompt hotel facts, then steer — no KB to fall back on
+    },
+    // extractData is passive and post-call (behavioral §3.1) — the task flow above is what actually asks.
+    // Three atomic properties, each earning its place:
+    //   callerName      — who reception calls back
+    //   requestCategory — which team picks the callback up
+    //   callbackNumber  — the number to dial; step 6 reads it back aloud so the transcript carries it
+    "extractData": {
+      "enabled": true,
+      "properties": [
+        {
+          "name": "callerName",
+          "type": "STRING",
+          "description": "Caller's full name as they gave it"
+        },
+        {
+          "name": "requestCategory",
+          "type": "STRING",
+          "description": "Exactly one of: booking, information, billing, guest_message, complaint"
+        },
+        {
+          "name": "callbackNumber",
+          "type": "STRING",
+          "description": "Best callback number the caller gave, digits only"
+        }
+      ]
+    }
+  },
+  "scenarios": [
+    {
+      "enabled": true,
+      "when": "the caller's request is fully handled and they have nothing else",
+      "reply": "Thank you for calling the Riverstone Hotel. Enjoy the rest of your day!",
+      "action": "hangup"
+    },
+    {
+      "enabled": true,
+      "when": "the caller has not responded after you re-engaged them twice",
+      "reply": "It seems we got disconnected. Please call us back anytime. Goodbye!",
+      "action": "hangup"
+    }
+  ],
+  // guardrails are accepted but INERT at runtime (the runtime has no `enabled` field for them, so each is
+  // silently skipped) — keep the array empty; the always-on rules live in the goalPrompt `## Guardrails`
+  // section instead (behavioral §2.1)
+  "guardrails": []
+}

@@ -1,82 +1,71 @@
 # Contributing
 
-Before contributing, setup githooks scripts first
-(to ensure the right commit message content):
+Thanks for helping improve CloudTalk's Claude plugins. Open a pull request for every change —
+small, focused PRs are easiest to review.
 
-Install the [``pre-commit``](https://pre-commit.com/) in order to run the linter:
+## Run the checks locally
 
-```shell
-# install the pre-commit tool
-brew install pre-commit
+The validator test suite (stdlib Python, no dependencies):
 
-## apply the configuration
+```bash
+python3 plugins/voice-agent-config-generator/skills/voice-agent-config-generator/scripts/test_validate.py
+```
+
+The docs-sync check, which verifies the schema docs and `fields.json` agree:
+
+```bash
+python3 plugins/voice-agent-config-generator/skills/voice-agent-config-generator/scripts/check_docs_sync.py
+```
+
+If you have the Claude Code CLI installed, also validate the plugin structure from the repo root:
+
+```bash
+claude plugin validate .
+claude plugin validate ./plugins/voice-agent-config-generator
+```
+
+CI runs on every pull request (and on pushes to `main`): the validator test suite — which also validates
+every bundled example — and the docs-sync check, both **blocking**; `pre-commit` over the whole repo,
+also blocking, so run the hooks locally too, not only on staged files; and `claude plugin validate .` at
+the repo root, currently **advisory**.
+
+```bash
+pre-commit run --all-files
+```
+
+## Pre-commit hooks
+
+Install [pre-commit](https://pre-commit.com/) once, then enable the repo's hooks:
+
+```bash
+brew install pre-commit   # or: pip install pre-commit
 pre-commit install
-pre-commit install --install-hooks -t pre-commit -t commit-msg
 ```
 
-For every change to this repository please create new PR.
+The hooks catch large files, merge-conflict markers, stray credentials, and whitespace issues
+before they reach a PR.
 
-## Commits
+## Commit messages
 
-Commit messages has to follow this style:
+Use conventional-commit subjects: `<type>: <subject>` (an optional scope is fine,
+e.g. `fix(validator): …`).
 
-Format: `<type>(<scope>): <subject>`
+`<type>` is one of:
 
-- `<scope>` is Jira task, it can be `CT-<number>` or `IN-<number>` format
+- `feat` — a new capability for plugin users
+- `fix` — a bug fix
+- `docs` — documentation only
+- `refactor` — restructuring without behavior change
+- `test` — adding or reworking tests
+- `chore` — maintenance (CI, tooling, housekeeping)
 
-`<type>` can be:
+Example: `feat(schema): add backgroundSound to the ElevenLabs settings`
 
-- `feat`: (new feature for the user, not a new feature for build script)
-- `fix`: (bug fix for the user, not a fix to a build script)
-- `docs`: (changes to the documentation)
-- `style`: (formatting, missing semi colons, etc; no production code change)
-- `refactor`: (refactoring production code, eg. renaming a variable)
-- `test`: (adding missing tests, refactoring tests; no production code change)
-- `chore`: (updating grunt tasks etc; no production code change)
+## What to update together
 
-### Example
-
-```
-feat(CT-5555): Reworked intercom components
-^--^ ^-----^   ^--------------------------^
-|    |         |
-|    |         +-> Commit description
-|    |
-|    +-> Jira task
-|
-+-------> Type: chore, docs, feat, fix, refactor, style, or test
-```
-
-> NOTE: All commits should be signed with the committer’s verified signature.
-
-## Branches
-
-Branches names has to follow this style:
-
-Format: `<type>/(<scope>)-<description>`
-
-- `<scope>` is Jira task, it can be `CT-<number>` or `IN-<number>` format
-- `<description>` is short description of Jira task
-
-`<type>` can be:
-
-- `feat`: (new feature for the user, not a new feature for build script)
-- `fix`: (bug fix for the user, not a fix to a build script)
-- `docs`: (changes to the documentation)
-- `style`: (formatting, missing semi colons, etc; no production code change)
-- `refactor`: (refactoring production code, eg. renaming a variable)
-- `test`: (adding missing tests, refactoring tests; no production code change)
-- `chore`: (updating grunt tasks etc; no production code change)
-
-### Example
-
-```
-feat/CT-5555-Intercom-rework
-^--^  ^----^ ^-------------^
-|     |      |
-|     |      +-> Jira task short description
-|     |
-|     +-> Jira task
-|
-+-------> Type: chore, docs, feat, fix, refactor, style, or test
-```
+- Schema or validator changes: update `fields.json`, `schema.md`, `validate_config.py`, and the
+  tests in the same PR, and keep the bundled `examples/` passing the validator — `test_validate.py`
+  validates every one of them, so a broken example fails the suite.
+- Material schema or guidance changes: bump the semver in the plugin's `.claude-plugin/plugin.json`
+  and `.claude-plugin/marketplace.json`, and add a matching dated entry to [CHANGELOG.md](./CHANGELOG.md) —
+  the version plus the changelog is how consumers track what changed.

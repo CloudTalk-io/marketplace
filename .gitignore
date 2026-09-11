@@ -1,1 +1,10 @@
-# Empty .gitignore file
+# OS / editor cruft
+.DS_Store
+*.swp
+
+# Python
+__pycache__/
+*.pyc
+
+# Local Claude Code harness settings — never ship these
+.claude/

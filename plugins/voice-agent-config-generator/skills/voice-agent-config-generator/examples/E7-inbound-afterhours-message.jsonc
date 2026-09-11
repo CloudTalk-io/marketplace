@@ -1,0 +1,74 @@
+// E7 — Inbound after-hours message taker, demonstrating the takeMessage skill.
+// Resolved provider: ElevenLabs (V3 auto — "en" is a plain language; schema §5). This agent does real
+// work (careful name/number capture), so although it is trivial-tier we set llmOverride to Haiku 4.5 —
+// a small/nano model fumbles name and phone-number capture (behavioral §7b). Without the override a
+// trivial-tier ElevenLabs agent would auto-default to the lightweight Qwen model.
+// Demonstrates: takeMessage (the one skill no other example shows; inbound-only — behavioral §3.3),
+// a paired extractData so the captured details are also available post-call, and silence/normal hangups.
+//
+// REQUIRED RESOURCES: nothing to create, but the outbound number is ground truth — set a real owned
+//   defaultOutboundNumberId, and behind Automatic (1) a real owned failoverOutboundNumberId in both
+//   directions (only 1 is magic; never guess 2; a bare 1 with no failover 400s). takeMessage and the
+//   hangup scenarios are all self-contained.
+{
+  "agentName": "Northwind Plumbing — After-Hours Line",
+  "direction": "inbound",
+  "defaultOutboundNumberId": 1,    // Automatic — required even for an inbound agent, which never calls out
+  "failoverOutboundNumberId": 202, // replace with a real owned number id (cloudtalk_list_numbers or the
+                                   // dashboard) — Automatic requires a real failover in BOTH directions
+  "language": "en",
+  "maxCallDuration": 15,
+  "temperature": 0.5,
+  "voice": "cgSgspJ2msm6clMCkdW9", // Jessica — American, young, female
+  "optimizeStreamingLatency": 2,
+  "stability": 0.3,
+  "similarity": 0.7,
+  "llmOverride": "anthropic - claude-haiku-4-5", // careful data capture — don't risk the trivial-tier Qwen default (§5)
+  "startSpeakingFirst": true,
+  "greeting": "Thanks for calling Northwind Plumbing. Our office is closed right now, but I can take a message and we'll call you back.",
+  "goalPrompt": "## Identity\nYou are the after-hours assistant for Northwind Plumbing. The office is closed, so your job is to take a clear message and reassure the caller that someone will follow up on the next business day.\n\n## Tone\n- Warm, calm, and brief: two to three short sentences per turn.\n- Ask one thing at a time and wait for the answer.\n- Say numbers as words; read the phone number back in blocks of three or four digits to confirm it.\n\n## Task flow\n1. Let the caller know the office is closed and that you'll take a message.\n2. Ask for their full name.\n3. Ask for the best callback number, then read it back in digit blocks to confirm it.\n4. Ask briefly what the call is about.\n5. Restate the name, number, and reason back to the caller and confirm they are correct.\n6. Tell them the team will call back on the next business day, and ask if there is anything else.\n\n## Guardrails\n- Use only information in this prompt; do not quote prices, book jobs, or promise appointment times — the office handles those.\n- If the caller describes a flooding or gas emergency, tell them to hang up and call the emergency line or 911 immediately, and do not keep them on the line.\n- Never guess the caller's details — always read them back and confirm.\n- Always confirm the callback number before ending — this rule is important.",
+  "skills": {
+    "takeMessage": {
+      "enabled": true,
+      "prompt": "Collect the caller's full name, best callback number, and a one-sentence reason for the call, one item at a time. Read the phone number back in blocks of three or four digits to confirm it before moving on."
+    },
+    "extractData": {
+      "enabled": true,
+      "properties": [
+        {
+          "name": "callerName",
+          "type": "STRING",
+          "description": "The caller's full name"
+        },
+        {
+          "name": "callbackNumber",
+          "type": "STRING",
+          "description": "The callback phone number, digits only"
+        },
+        {
+          "name": "messageReason",
+          "type": "STRING",
+          "description": "One short phrase describing what the call is about"
+        }
+      ]
+    }
+  },
+  "scenarios": [
+    {
+      "enabled": true,
+      "when": "the message is captured and confirmed and the caller has nothing else",
+      "reply": "Thank you — I've noted that and the team will call you back on the next business day. Take care!",
+      "action": "hangup"
+    },
+    {
+      "enabled": true,
+      "when": "the caller has not responded after you re-engaged them twice",
+      "reply": "It seems we got disconnected. Please call us back anytime. Goodbye!",
+      "action": "hangup"
+    }
+  ],
+  // guardrails are accepted but INERT at runtime (the runtime has no `enabled` field for them, so each is
+  // silently skipped) — keep the array empty; the always-on rules live in the goalPrompt `## Guardrails`
+  // section instead (behavioral §2.1)
+  "guardrails": []
+}
