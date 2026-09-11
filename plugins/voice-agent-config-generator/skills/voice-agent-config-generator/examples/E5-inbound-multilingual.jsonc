@@ -1,0 +1,83 @@
+// E5 — Multilingual appointment-request agent with ElevenLabs tuning.
+// Resolved provider: ElevenLabs (pinned via providerOverride — multilingual must be ElevenLabs; Deepgram would reject it).
+// Auto LLM: complex (secondary languages) → Haiku 4.5.
+// Demonstrates: secondaryLanguages (multilingual), elevenLabsSettings (turn-taking tuned for data
+// collection), asrKeywords, and `turnModel: "turn_v3"` — the newer turn-detection model, safe to select
+// here because this API pins the ASR provider turn_v3 needs (schema §10). E8 carries the rest of the
+// elevenLabsSettings surface; between the two files every sub-field is shown.
+//
+// This agent takes the appointment request and hands it to the studio to confirm — fully self-contained.
+// To let the agent book into a calendar directly, connect a Google/Outlook calendar in the UI and enable
+// the appointmentBooking skill with its integrationId + calendarId (referenced-resources.md).
+{
+  "agentName": "Studio Lumen — Booking Assistant",
+  "direction": "inbound",
+  "defaultOutboundNumberId": 1,    // Automatic — required even for an inbound agent, which never calls out
+  "failoverOutboundNumberId": 202, // replace with a real owned number id (cloudtalk_list_numbers or the
+                                   // dashboard) — Automatic requires a real failover in BOTH directions
+  "language": "en",
+  "secondaryLanguages": ["de", "fr"], // forces ElevenLabs; runtime adds automatic language detection
+  "providerOverride": "elevenlabs", // pin multilingual to ElevenLabs — stops a stored Deepgram provider from rejecting the save
+  "maxCallDuration": 20,
+  "temperature": 0.5,
+  "voice": "cgSgspJ2msm6clMCkdW9", // Jessica — Female, American English; multilingual (speaks de/fr here too)
+  "optimizeStreamingLatency": 2,
+  "stability": 0.6,                // raised above the 0.3 baseline: agent also speaks non-English
+  "similarity": 0.7,
+  "startSpeakingFirst": true,
+  "elevenLabsSettings": {
+    "speculativeTurn": true,       // cut perceived latency; costs some extra LLM tokens
+    "turnEagerness": "patient",    // data collection: give callers time to finish names/dates
+    "turnModel": "turn_v3",        // safe through this API — ASR is pinned to Scribe Realtime
+    "vad": true,                   // filter background voices (callers often call from home)
+    "asrKeywords": ["Studio Lumen", "lymphatic massage", "deep tissue"]
+  },
+  "greeting": "Welcome to Studio Lumen, this is Ana. Would you like to book an appointment?",
+  "goalPrompt": "## Identity\nYou are Ana, the booking assistant for Studio Lumen, a massage and physiotherapy studio. You take appointment requests and pass them to the studio to confirm.\n\n## Tone\n- Warm and unhurried; two to three short sentences per turn.\n- One question at a time; give callers time to finish, especially with names and dates.\n- Say dates and times in words, in the caller's language.\n\n## Task flow\n1. Ask what treatment the caller would like: lymphatic massage, deep tissue, or physiotherapy.\n2. Ask for their preferred day and time.\n3. Ask for their full name and confirm the spelling back to them.\n4. Read the request back — treatment, day, time, and name — and confirm it is correct.\n5. Tell the caller the studio will confirm the appointment and send the details shortly.\n6. Ask if there is anything else before saying goodbye.\n\n## Guardrails\n- Do not promise a specific slot — the studio confirms availability and sends the final time.\n- Do not give medical or treatment advice; suggest discussing it with the therapist at the appointment.\n- Use only information from this prompt; if you cannot help, offer a callback from the studio.\n- Always read the request back to the caller before ending — this rule is important.",
+  "skills": {
+    "extractData": {
+      "enabled": true,
+      "properties": [
+        {
+          "name": "treatmentRequested",
+          "type": "STRING",
+          "description": "The treatment the caller asked for: lymphatic massage, deep tissue, or physiotherapy"
+        },
+        {
+          "name": "preferredDateTime",
+          "type": "STRING",
+          "description": "The caller's preferred day and time for the appointment"
+        },
+        {
+          "name": "callerName",
+          "type": "STRING",
+          "description": "The caller's full name for the booking request"
+        }
+      ]
+    }
+  },
+  "scenarios": [
+    {
+      "enabled": true,
+      "when": "the request has been taken and read back, and the caller has nothing else",
+      "reply": "You're all set — the studio will confirm your appointment and send the details shortly. Goodbye!",
+      "action": "hangup"
+    },
+    {
+      "enabled": true,
+      "when": "the caller does not want to leave a request after all",
+      "reply": "No problem — call us back anytime and we'll find a time that works. Goodbye!",
+      "action": "hangup"
+    },
+    {
+      "enabled": true,
+      "when": "the caller has not responded after you re-engaged them twice",
+      "reply": "It seems we got disconnected. Please call back anytime. Goodbye!",
+      "action": "hangup"
+    }
+  ],
+  // guardrails are accepted but INERT at runtime (the runtime has no `enabled` field for them, so each is
+  // silently skipped) — keep the array empty; the always-on rules live in the goalPrompt `## Guardrails`
+  // section instead (behavioral §2.1)
+  "guardrails": []
+}

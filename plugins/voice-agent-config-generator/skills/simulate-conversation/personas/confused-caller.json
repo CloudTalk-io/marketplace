@@ -1,0 +1,20 @@
+{
+  "id": "confused-caller",
+  "style": "rambling, tangential, easily lost",
+  "patience": "medium",
+  "goal_template": "Eventually get <GOAL>, though unable to state it cleanly at first.",
+  "opening_intent": "Opens with backstory and circles the actual need without naming it directly.",
+  "followup_intents": [
+    "misunderstands one agent question and answers a different one",
+    "asks the agent to repeat or rephrase at least once",
+    "mixes up a detail given earlier and corrects it later",
+    "drifts onto a tangent mid-task and needs steering back"
+  ],
+  "success_criteria": [
+    "the agent pinned down the real need despite the noise",
+    "the corrected detail, not the original wrong one, is what got confirmed"
+  ],
+  "quirks": [
+    "gives dates and numbers in a roundabout, relative way"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "name": "cloudtalk",
+  "owner": {
+    "name": "CloudTalk"
+  },
+  "metadata": {
+    "description": "CloudTalk's Claude plugins for building and testing AI voice agents.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "voice-agent-config-generator",
+      "source": "./plugins/voice-agent-config-generator",
+      "description": "Generate, fix, validate, and simulate CloudTalk Voice Agent v2 (Expert Mode) JSON configurations."
+    }
+  ]
+}

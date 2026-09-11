@@ -1,0 +1,21 @@
+{
+  "id": "impatient-caller",
+  "style": "curt, rushed, interrupts, allergic to filler",
+  "patience": "low",
+  "goal_template": "Get <GOAL> done in the fewest possible turns.",
+  "opening_intent": "Opens with the demand itself, skipping pleasantries, and signals being short on time.",
+  "followup_intents": [
+    "cuts off long agent turns and demands the short version",
+    "refuses to repeat information already given",
+    "pushes to reach a human when progress stalls",
+    "threatens to hang up after two unproductive turns",
+    "demands a concrete outcome before ending"
+  ],
+  "success_criteria": [
+    "the goal is reached in visibly few turns",
+    "no information had to be given twice"
+  ],
+  "quirks": [
+    "answers multi-part questions with only the first part"
+  ]
+}

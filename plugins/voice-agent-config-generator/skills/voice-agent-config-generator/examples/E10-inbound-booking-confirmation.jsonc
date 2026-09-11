@@ -1,0 +1,118 @@
+// E10 — Inbound appointment booking with a booking-confirmation SMS.
+// Resolved provider: ElevenLabs (V3 auto — "en" is a plain language; schema §5). Complex (3 scenarios)
+// → auto LLM Haiku 4.5, no llmOverride needed.
+//
+// Demonstrates the one archetype that books into a real calendar: `appointmentBooking` switched ON, plus
+// the `triggerType: "booking_confirmed"` + `sendSms` pair that texts the caller the details of the slot
+// they just took (schema §7.1). E5 is the self-contained sibling — it takes the request and lets the
+// business confirm; this one needs a connected calendar integration, which is why it ships values to
+// replace.
+//
+// ACCOUNT-SPECIFIC VALUES — three IDs/numbers to swap for real values from your own account, plus the
+// placeholder copy to rewrite, before saving:
+//   skills.appointmentBooking.integrationId  ("6a1b2c3d4e5f60718293a4b5") — the connected calendar
+//                                            integration (OAuth; connect it in the Dashboard first)
+//   skills.appointmentBooking.calendarId     ("primary") — a calendar inside that integration
+//   scenarios[0].params.senderNumber         ("+15555550188") — an SMS-capable number your company owns
+//   the business name, greeting, and prompt facts — all of it is placeholder copy for a fictional garage
+// There is no MCP read for calendar integrations, so those two IDs come from the Dashboard
+// (referenced-resources.md); an SMS sender you can read with `cloudtalk_list_numbers` (SMS-capable
+// numbers only). An unowned sender is refused at save; a wrong calendar ID fails when the agent tries
+// to book.
+//
+// {{appointment.*}} SPLIT — two families, and the difference decides where a variable may be used:
+//   FROM CONFIG, resolvable from the first second of the call — `event_name`, `service_description`,
+//     `duration_minutes` read straight off the skill's `eventName` / `serviceDescription` /
+//     `durationMinutes`. Safe to use anywhere, including `goalPrompt`.
+//   POST-BOOKING, empty until a booking actually succeeds — `start`, `start_pretty`, `end`, `event_id`,
+//     `caller_name`, `reason`. Only ever use these inside a `booking_confirmed` context (this SMS);
+//     anywhere else they render as an empty string, silently (variables.md).
+// NO LINK VARIABLE EXISTS: AIVA cannot produce a booking, calendar, or reschedule link, so the message
+// below carries no URL at all. If the user wants one, it must be a static address they supply verbatim
+// (behavioral §6).
+{
+  "agentName": "Kestrel Auto Service — Booking Assistant",
+  "direction": "inbound",
+  "defaultOutboundNumberId": 1,    // Automatic — required even for an inbound agent, which never calls out
+  "failoverOutboundNumberId": 202, // replace with a real owned number id (cloudtalk_list_numbers or the
+                                   // dashboard) — Automatic requires a real failover in BOTH directions
+  "language": "en",
+  "maxCallDuration": 20,
+  "temperature": 0.5,
+  "voice": "cgSgspJ2msm6clMCkdW9", // Jessica — American, young, female
+  "optimizeStreamingLatency": 2,
+  "stability": 0.3,
+  "similarity": 0.7,
+  "startSpeakingFirst": true,
+  "greeting": "Thanks for calling Kestrel Auto Service, this is Mira. Would you like to book your car in?",
+  "goalPrompt": "## Identity\nYou are Mira, the booking assistant for Kestrel Auto Service, an independent car service garage. You take calls from customers who want a service slot, and you book the slot in the calendar while the caller is still on the line.\n\n## Style\n- Warm and efficient: two to three short sentences per turn.\n- Ask exactly one question at a time and wait for the answer.\n- Say days and times in words, and read the registration back one character at a time to confirm it.\n\n## Response guidelines\n- If you did not catch a detail, say so and ask for that one detail again.\n- Never quote a price, a repair cost, or a diagnosis — the workshop confirms those at the visit.\n- If the caller drifts off topic, answer briefly and come back to the booking.\n\n## Task flow\n1. Ask what the car needs: a standard service, a seasonal tyre change, or something else.\n2. Ask for the make and model, then the registration, and read the registration back to confirm it.\n3. Ask which day suits the caller, then offer the free times you can see on that day.\n4. Ask for the caller's full name for the booking.\n5. Read the whole booking back — what the car needs, the car itself, the day, the time, and the name — and ask the caller to confirm it is right.\n6. Once they confirm, book that slot and tell the caller plainly that it is booked.\n7. Tell the caller a text with the appointment details is on its way, so they do not have to write anything down. Do not ask permission for it and do not offer to skip it: the text goes out automatically once the booking succeeds.\n8. Ask whether there is anything else before closing the call.\n9. When there is nothing else, close the call politely and end it. Do the same if the caller stops responding after you have checked twice that they are still there.\n\n## Guardrails\n- Use only the information in this prompt; do not invent services, prices, or opening hours.\n- Book at most one slot per call; for a second car, ask the caller to call again.\n- Only mention the text message; never offer email or any other channel.\n- Never promise a courtesy car, a collection, or a same-day repair.\n- Always read the booking back to the caller before you book it — this rule is important.",
+  "skills": {
+    "appointmentBooking": {
+      "enabled": true,
+      "integrationId": "6a1b2c3d4e5f60718293a4b5", // illustrative — your connected calendar integration
+      "calendarId": "primary",                     // illustrative — a calendar within that integration
+      "eventName": "Car service appointment",      // surfaces as {{appointment.event_name}} from the config
+      "durationMinutes": 60,                       // required, > 0; surfaces as {{appointment.duration_minutes}}
+      "serviceDescription": "Standard service or seasonal tyre change at the Kestrel workshop.",
+      "calendarEventDescription": "Booked by the Kestrel booking assistant"
+      // Server-managed and deliberately absent: integrationType, availabilityToolId, bookingToolId,
+      // errorCode. The platform fills those in; authoring them is a warning at best (schema §6.6).
+    },
+    // extractData is passive and post-call (behavioral §3.1) — the task flow above is what asks.
+    // Two properties, each earning its place:
+    //   requestedService — what the caller wanted, so the workshop can prepare (step 1 asks it)
+    //   bookingOutcome   — classifies the call: did a slot actually get booked, or not?
+    "extractData": {
+      "enabled": true,
+      "properties": [
+        {
+          "name": "requestedService",
+          "type": "STRING",
+          "description": "What the caller asked for: standard_service, tyre_change, or other"
+        },
+        {
+          "name": "bookingOutcome",
+          "type": "STRING",
+          "description": "Exactly one of: booked, no_suitable_slot, caller_declined"
+        }
+      ]
+    }
+  },
+  "scenarios": [
+    {
+      "enabled": true,
+      "triggerType": "booking_confirmed", // fires on a SUCCESSFUL in-call booking — not on a `when` you write
+      // NO `when` key here: the platform overwrites it with its own text ("the booking is confirmed"), so
+      // anything put there is discarded (schema §7.1). This is also why the prompt TELLS the caller the
+      // text is coming instead of asking: unlike E9's caller-gated sendSms, this one is not the agent's
+      // decision — the booking triggers it.
+      "action": "sendSms",
+      "params": {
+        "senderNumber": "+15555550188",
+        // FIXED config text — the LLM never writes or edits it, and on this trigger it does not even
+        // decide whether to send: the confirmed booking does. {{appointment.event_name}} comes from the
+        // config; {{appointment.start_pretty}} exists only because a booking just succeeded. No link —
+        // there is no booking/calendar-link variable to put in one.
+        "message": "Kestrel Auto Service: your {{appointment.event_name}} is booked for {{appointment.start_pretty}}. Please call us if you need to move it."
+      }
+      // No `reply`: the SMS is this scenario's output, so the agent says nothing extra for it (the
+      // spoken heads-up is step 7 of the task flow).
+    },
+    {
+      "enabled": true,
+      "when": "the booking is done or the caller decided not to book, and they have nothing else",
+      "reply": "Thanks for calling Kestrel Auto Service. Drive safely!",
+      "action": "hangup"
+    },
+    {
+      "enabled": true,
+      "when": "the caller has not responded after you re-engaged them twice",
+      "reply": "It sounds like we lost the line. Please call us back anytime. Goodbye!",
+      "action": "hangup"
+    }
+  ],
+  // guardrails are accepted but INERT at runtime (the runtime has no `enabled` field for them, so each is
+  // silently skipped) — keep the array empty; the always-on rules live in the goalPrompt `## Guardrails`
+  // section instead (behavioral §2.1)
+  "guardrails": []
+}

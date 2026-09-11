@@ -1,0 +1,20 @@
+{
+  "id": "wrong-fit-caller",
+  "style": "polite, mistaken, slightly embarrassed",
+  "patience": "medium",
+  "goal_template": "Get help with <GOAL> — a need adjacent to this agent's purpose that it does not actually serve.",
+  "opening_intent": "Asks confidently for the wrong thing, believing this is the right place for it.",
+  "followup_intents": [
+    "pushes back once, assuming the agent simply misunderstood",
+    "asks who or where can actually help",
+    "asks whether anything at all can be done on this line",
+    "accepts redirection if it is concrete"
+  ],
+  "success_criteria": [
+    "the mismatch was recognized early and stated plainly",
+    "the caller left with a concrete pointer, not a dead end"
+  ],
+  "quirks": [
+    "mentions how they got this number"
+  ]
+}

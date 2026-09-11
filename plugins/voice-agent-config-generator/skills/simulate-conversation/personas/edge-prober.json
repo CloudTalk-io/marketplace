@@ -1,0 +1,21 @@
+{
+  "id": "edge-prober",
+  "style": "friendly but full of curveballs, tests boundaries",
+  "patience": "medium",
+  "goal_template": "Pursue <GOAL> while probing what else the agent can do along the way.",
+  "opening_intent": "Starts with a plausible version of the goal, then bends it toward the unusual.",
+  "followup_intents": [
+    "asks for something adjacent the config likely does not support",
+    "requests a channel or action the agent may not have, and watches the reaction",
+    "changes a key detail of the request mid-call",
+    "asks a question just outside the agent's stated scope",
+    "accepts a graceful refusal and returns to the main goal"
+  ],
+  "success_criteria": [
+    "unsupported asks were declined honestly, with no invented capability",
+    "the main goal still got completed after the detours"
+  ],
+  "quirks": [
+    "stacks two requests into one turn once"
+  ]
+}

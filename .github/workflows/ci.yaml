@@ -1,0 +1,59 @@
+---
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# One run per ref: a force-push or a follow-up commit supersedes the run it replaces.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validator:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: plugins/voice-agent-config-generator/skills/voice-agent-config-generator
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validator tests
+        run: python3 scripts/test_validate.py
+      - name: Docs-sync check
+        # Unconditional on purpose: a renamed or deleted checker must fail the build loudly
+        # rather than skip itself into a green tick.
+        run: python3 scripts/check_docs_sync.py
+
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+      - name: Run pre-commit on the whole repo
+        # Blocking: the credential and large-file hooks are the ones that must not depend on a
+        # contributor having installed the git hook locally.
+        run: pipx run pre-commit run --all-files --show-diff-on-failure
+
+  plugin-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+      - name: Validate marketplace and plugin manifests
+        # Advisory for now — flips to blocking once verified green in CI.
+        continue-on-error: true
+        run: claude plugin validate .
