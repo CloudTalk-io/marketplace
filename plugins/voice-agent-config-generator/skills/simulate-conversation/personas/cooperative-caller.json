@@ -1,0 +1,17 @@
+{
+  "id": "cooperative-caller",
+  "style": "polite, focused, gives direct answers",
+  "patience": "high",
+  "goal_template": "Complete <GOAL> in one call with no follow-up needed.",
+  "opening_intent": "States the reason for calling in one plain sentence, then waits for the agent to lead.",
+  "followup_intents": [
+    "answers exactly what was asked, nothing extra",
+    "asks one clarifying question if an instruction is ambiguous",
+    "confirms details the agent reads back",
+    "asks what happens next before ending"
+  ],
+  "success_criteria": [
+    "the stated goal is completed or a concrete next step is promised",
+    "every detail the caller provided was confirmed back correctly"
+  ]
+}

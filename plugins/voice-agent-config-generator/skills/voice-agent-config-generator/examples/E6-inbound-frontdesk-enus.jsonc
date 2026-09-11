@@ -1,0 +1,81 @@
+// E6 — Inbound US-English front desk, demonstrating AUTO-selection of Deepgram (no override).
+// Resolved provider: Deepgram (V3 auto — "en-US" is supported exactly by Deepgram but NOT by
+// ElevenLabs, which has no regional variants; schema §5 rule 2). Contrast with E4, which forces
+// Deepgram via providerOverride on a plain "en". Auto LLM on Deepgram → Haiku 4.5 (any tier).
+//
+// Fully SELF-CONTAINED and zero-touch: no tools, no SMS, no KB, and no transferToHuman skill at all.
+// The front desk answers what it knows and takes the caller's details for a callback, so the prompt never
+// promises a handoff it cannot make. `routingDecision` records which team should follow up (useful in the
+// call detail and for reporting). To let this line put callers through, ask the user for a real agent or
+// ring group id AND extension and add a transfer rule — E1 shows the switched-off shape to ship until
+// then, and E3 shows the Call Flow variant for an agent that runs as a step inside a flow.
+//
+// REQUIRED RESOURCES: nothing to create, but the outbound number is ground truth — set a real owned
+//   `defaultOutboundNumberId`, and behind Automatic (1) a real owned `failoverOutboundNumberId` in both
+//   directions (only 1 is magic; never guess 2; a bare 1 with no failover 400s).
+{
+  "agentName": "Cedar Clinic — Front Desk (US)",
+  "direction": "inbound",
+  "defaultOutboundNumberId": 1,    // Automatic — required even for an inbound agent, which never calls out
+  "failoverOutboundNumberId": 202, // replace with a real owned number id (cloudtalk_list_numbers or the
+                                   // dashboard) — Automatic requires a real failover in BOTH directions
+  "language": "en-US",
+  "maxCallDuration": 20,
+  "temperature": 0.5,
+  "voice": "cjVigY5qzO86Huf0OWal", // Eric — American, middle-aged, male
+  "optimizeStreamingLatency": 2,
+  "stability": 0.3,
+  "similarity": 0.7,
+  "startSpeakingFirst": true,
+  "greeting": "Thanks for calling Cedar Clinic, this is the front desk. How can I help you today?",
+  "goalPrompt": "## Identity\nYou are the front-desk assistant for Cedar Clinic, a primary-care practice in the United States. You answer the main line, give basic information, and take details so the right team can follow up.\n\n## Tone\n- Friendly, clear, and brief: two to three short sentences per turn.\n- Ask one question at a time and wait for the answer.\n- Say numbers as words; read phone and date-of-birth numbers back in short groups to confirm.\n\n## Task flow\n1. Ask what the caller needs.\n2. For hours, location, directions, or how to reach a department: answer briefly from what you know here.\n3. For appointments, prescription refills, or anything clinical: take the caller's full name and best callback number, read the number back to confirm it, and tell them the front-desk team will call them back today.\n4. If the caller describes an emergency (chest pain, trouble breathing, severe bleeding): tell them to hang up and call 911 immediately, and do not keep them on the line.\n5. Before ending the call, ask if there's anything else.\n\n## Guardrails\n- Use only information in this prompt; if you don't know, say so and offer a callback from the team — never guess.\n- Do not give medical advice or interpret symptoms; take the caller's details so clinical staff can call back.\n- You cannot put callers through to a person on this line; always offer a callback instead.\n- Never discuss other patients or share any patient information.\n- For emergencies, always direct the caller to 911 — this rule is important.",
+  "skills": {
+    "answerQuestions": {
+      "enabled": true,
+      "action": "admitUncertainty"
+    },
+    "extractData": {
+      "enabled": true,
+      "properties": [
+        {
+          "name": "routingDecision",
+          "type": "STRING",
+          "description": "Exactly \"Reception\" if the front-desk team should follow up, otherwise exactly \"Resolved\""
+        },
+        {
+          "name": "callerName",
+          "type": "STRING",
+          "description": "Caller's full name"
+        },
+        {
+          "name": "callbackNumber",
+          "type": "STRING",
+          "description": "Best callback number the caller gave, digits only"
+        },
+        {
+          "name": "callReason",
+          "type": "STRING",
+          "description": "One short phrase describing why the caller called"
+        }
+      ]
+    }
+  },
+  "scenarios": [
+    {
+      "enabled": true,
+      "when": "the caller's question was answered and they have nothing else",
+      "reply": "Thanks for calling Cedar Clinic. Take care!",
+      "action": "hangup"
+    },
+    {
+      "enabled": true,
+      "when": "the caller has not responded after you re-engaged them twice",
+      "reply": "It seems we got disconnected. Please call us back anytime. Goodbye!",
+      "action": "hangup"
+    }
+  ],
+  // guardrails are accepted but INERT at runtime (the runtime has no `enabled` field for them, so each is
+  // silently skipped) — keep the array empty; the always-on rules live in the goalPrompt `## Guardrails`
+  // section instead (behavioral §2.1)
+  "guardrails": []
+}

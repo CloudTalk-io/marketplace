@@ -1,0 +1,157 @@
+// E9 — Inbound support line with a group transfer shipped as a DISABLED DRAFT plus a confirmation SMS.
+// Resolved provider: ElevenLabs (V3 auto — "en" is a plain language; schema §5). Complex (4 scenarios,
+// one of them switched off) → auto LLM Haiku 4.5, no llmOverride needed.
+//
+// Demonstrates the DEFAULT way the generator scaffolds a human handoff: `transferToHuman` switched OFF
+// (`enabled: false`) with a group rule whose intent is visible — `destination: "group"` — but whose
+// target keys are OMITTED (no `groupId`/`groupExtension`) for the user to complete in the dashboard. A
+// group's extension can't be read programmatically, so the target is theirs to finish, not the
+// generator's to guess; and groupId is an integer, so it is omitted, never blanked to "" (an INVALID_TYPE
+// the save rejects even on a disabled skill). It saves cleanly and the dashboard shows "Requires configuration";
+// the user picks the ring group and switches it on to make the handoff live. While it is off the prompt
+// stays honest — it arranges a callback, never a handoff it can't perform (behavioral §3.4/§9).
+// `includeProperties`/`customProperties` are scaffolded too: they are the data handed to the human who
+// eventually picks up the transferred call — the caller's name, a summary, and one extra fact. E1 ships
+// the same skill switched off with `rules: []` (no group in mind at all); this file keeps the group
+// scaffolded. Also demonstrates a `sendSms` scenario: `params.message` is FIXED config text — the LLM
+// only decides *whether* to send, never what it says — and it deliberately contains no link, because
+// AIVA cannot generate one and any URL would have to be a static, user-supplied address copied verbatim
+// (behavioral §6). Two more shapes worth copying: a `## Known facts` section that hands the agent CRM
+// values as `{{variables}}`, and a scenario shipped `enabled: false`.
+//
+// TO FINISH THE TRANSFER: in the dashboard, open the transfer skill, pick the ring group that should
+// answer, switch the skill on, and update the prompt to promise a live handoff instead of a callback. In
+// connected mode read groups with `cloudtalk_list_groups` (it returns the id and name; the extension
+// still comes from the Dashboard or the user). ACCOUNT-SPECIFIC VALUES still to replace before saving:
+// `params.senderNumber` ("+15555550100"), the SMS sender — an unowned sender number is refused at save
+// (offline: copy it from the Dashboard; connected: `cloudtalk_list_numbers`, SMS-capable numbers only) —
+// and the placeholder `failoverOutboundNumberId` (like every example here), which must be a real owned
+// number id (referenced-resources.md).
+{
+  "agentName": "Fibrelink — Support Line",
+  "direction": "inbound",
+  "defaultOutboundNumberId": 1,    // Automatic — required even for an inbound agent, which never calls out
+  "failoverOutboundNumberId": 202, // replace with a real owned number id (cloudtalk_list_numbers or the
+                                   // dashboard) — Automatic requires a real failover in BOTH directions
+  "language": "en",
+  "maxCallDuration": 25,
+  "temperature": 0.5,
+  "voice": "cgSgspJ2msm6clMCkdW9", // Jessica — Female, American English
+  "optimizeStreamingLatency": 2,
+  "stability": 0.3,
+  "similarity": 0.7,
+  "startSpeakingFirst": true,
+  "greeting": "Thanks for calling Fibrelink support, this is Robin. What's going on with your connection?",
+  // KNOWN FACTS — the goalPrompt below opens a dedicated `## Known facts` section holding the
+  // {{variables}} the platform resolves before the agent ever reads the prompt (variables.md). The
+  // section is what turns a substituted value into something the agent can act on; scattering the same
+  // variables through the flow gives them no role.
+  // THE SILENT TRAP: an unresolved variable — no matching CRM contact, a custom field this contact
+  // doesn't carry, a mistyped title — renders as an EMPTY STRING. No braces, no error, no cue that
+  // anything is missing, so "Caller on record:" simply ends mid-line. That is why the section tells the
+  // agent, in prose, what to do when a value is blank: ask for it. Never write a prompt that assumes a
+  // variable resolved.
+  // `{{contact.custom.service_plan}}` reads a CRM custom field BY ITS TITLE: the title written here has
+  // to match the field's title in your CRM exactly, or it resolves empty as silently as everything else.
+  "goalPrompt": "## Identity\nYou are Robin, the support assistant for Fibrelink, a home broadband provider. You take calls on the support line, work through the basic checks with the caller, and arrange for the support team to call them back.\n\n## Known facts\nThese values are filled in before you read this prompt, from the CRM record matching the caller. Any one of them can arrive empty — when a value is blank, simply ask the caller for it, and never say aloud that something is missing.\n- Name on record: {{contact.name}}\n- Company on the account: {{contact.company}}\n- Number they are calling from: {{caller_number}}\n- Plan on file: {{contact.custom.service_plan}}\n\n## Style\n- Calm and plain: two to three short sentences per turn.\n- Ask exactly one question at a time and wait for the answer.\n- Say numbers as words; read account and phone numbers back in blocks of three or four digits to confirm them.\n\n## Response guidelines\n- If you did not catch something, say so and ask the caller to repeat that one detail.\n- Never state a fault cause, an outage, or a repair time yourself — this line has no access to live network data.\n- If the caller drifts off topic, answer briefly and come back to the checks.\n\n## Task flow\n1. Ask what the caller is seeing: no connection at all, a slow connection, or something else.\n2. Settle the name on the account: if the Known facts section gave you one, read it back and ask whether that is right; if it is blank, ask for the full name on the account.\n3. Ask whether the router lights are on; once they answer, ask what colour the lights are — one question per turn.\n4. Ask whether they have already restarted the router and waited two minutes.\n5. If at any point the caller asks for a person, refuses the checks, or says they are short of time, skip the remaining checks: take the best number to reach them on, read it back, and tell them the support team will call them back within one working day.\n6. Otherwise decide using the answers:\n   - No connection at all: treat it as a priority — take the best callback number, read it back to confirm it, and tell them the support team will call back within one working day.\n   - Anything else: take the best number to reach them on, read it back to confirm it, and tell them a technician will call back within one working day.\n7. Offer to send a text confirming the callback, and ask the caller to say whether they want it.\n8. Restate the name and the number aloud, then ask if there is anything else.\n9. When there is nothing else, close the call politely and end it. Do the same if the caller stops responding after you have checked twice that they are still there.\n\n## Guardrails\n- Use only the information in this prompt; do not infer or add anything else.\n- Do not promise a credit, a refund, or a specific repair time — the support team owns those.\n- Do not read out or change any account details beyond the caller's own name and phone number.\n- Only offer a text message; never mention email or any other channel.\n- Always confirm the callback number back to the caller before ending — this rule is important.",
+  "skills": {
+    "transferToHuman": {
+      "enabled": false,               // shipped as a DISABLED DRAFT — the group intent is scaffolded, the
+                                      // target is blank for the user to finish in the dashboard (§3.4/§9)
+      "confirmationRequired": true,   // the agent asks before handing over — the right default for a
+                                      // customer-facing line (behavioral §3.4)
+      "rules": [
+        {
+          "condition": "the caller reports no connection at all, or explicitly asks to speak to a person",
+          "destination": "group"      // a group is the intended human target: more targets can answer
+                                      // before an attended transfer falls back.
+          // groupId / groupExtension OMITTED on purpose — the user picks the ring group on this skill in the
+          // dashboard; a group's extension isn't readable programmatically. groupId is an integer, so never
+          // blank it to "" — that is an INVALID_TYPE the save rejects even on a disabled skill
+        }
+      ],
+      "includeProperties": ["callerName", "summary"], // the only two valid values — the data handed to the
+                                                      // human who picks up the transfer: caller name + summary
+      // customProperties carries anything those two fixed values cannot — same {name, type, description}
+      // shape as extractData properties, UPPERCASE type. It is handover context for the person answering
+      // the transfer, not a second data-capture schema.
+      "customProperties": [
+        {
+          "name": "faultType",
+          "type": "STRING",
+          "description": "What the caller reported: no_connection, slow_connection, or other"
+        }
+      ]
+    },
+    // extractData is passive and post-call (behavioral §3.1) — the task flow above is what actually asks.
+    // Four atomic properties, each earning its place:
+    //   callerName            — matches the call to the account
+    //   faultType             — buckets the report for the support queue
+    //   callbackNumber        — the number a technician dials; step 7 reads it back so the transcript carries it
+    //   smsConfirmationAgreed — tells you whether the text should have gone out on this call
+    "extractData": {
+      "enabled": true,
+      "properties": [
+        {
+          "name": "callerName",
+          "type": "STRING",
+          "description": "The full name on the account, as the caller gave it"
+        },
+        {
+          "name": "faultType",
+          "type": "STRING",
+          "description": "Exactly one of: no_connection, slow_connection, other"
+        },
+        {
+          "name": "callbackNumber",
+          "type": "STRING",
+          "description": "Best callback number the caller gave, digits only"
+        },
+        {
+          "name": "smsConfirmationAgreed",
+          "type": "BOOLEAN",
+          "description": "Whether the caller agreed to receive the text confirming the callback"
+        }
+      ]
+    }
+  },
+  "scenarios": [
+    {
+      "enabled": true,
+      "when": "the caller has said yes to the text confirmation and you have their callback number",
+      "reply": "That's on its way — you'll get a text confirming the callback in a moment.",
+      "action": "sendSms",
+      "params": {
+        "senderNumber": "+15555550100",
+        "message": "Fibrelink support: thanks for calling. We've logged your report and a technician will call you back within one working day."
+      }
+    },
+    {
+      "enabled": true,
+      "when": "the caller's request is fully handled and they have nothing else",
+      "reply": "Thanks for calling Fibrelink. Have a good day!",
+      "action": "hangup"
+    },
+    {
+      "enabled": true,
+      "when": "the caller has not responded after you re-engaged them twice",
+      "reply": "It seems we got disconnected. Please call us back anytime. Goodbye!",
+      "action": "hangup"
+    },
+    {
+      // A SWITCHED-OFF unit: stored, complete, and completely inert until someone flips the toggle.
+      // `enabled: false` is a legal, deliberate shape — the same one E1 uses for its transfer skill —
+      // and it is how you ship a scenario that is drafted but not cleared to run yet. `enabled` is still
+      // REQUIRED here: omitting the key would fail the save (422), not switch the scenario off.
+      // Careful with hangup scenarios specifically: a disabled one grants no end_call, so this config
+      // still needs the two enabled ones above.
+      "enabled": false,
+      "when": "the caller asks to be told when the fault in their area is fixed",
+      "reply": "I can note that you'd like an update, and the support team will let you know once the work is finished."
+    }
+  ],
+  // guardrails are accepted but INERT at runtime (the runtime has no `enabled` field for them, so each is
+  // silently skipped) — keep the array empty; the always-on rules live in the goalPrompt `## Guardrails`
+  // section instead (behavioral §2.1)
+  "guardrails": []
+}

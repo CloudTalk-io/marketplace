@@ -1,0 +1,27 @@
+{
+  "name": "voice-agent-config-generator",
+  "version": "0.1.0",
+  "description": "Build and test CloudTalk AI voice agents: generate, fix, and validate Voice Agent v2 (Expert Mode) JSON configurations, and simulate caller conversations against them — for customers and partners creating inbound/outbound agents. Works fully offline, and can read and operate your CloudTalk account (numbers, knowledge bases, tools, agents) through the CloudTalk MCP when connected.",
+  "author": {
+    "name": "CloudTalk"
+  },
+  "homepage": "https://github.com/CloudTalk-io/marketplace",
+  "license": "Apache-2.0",
+  "userConfig": {
+    "api_key": {
+      "type": "string",
+      "title": "CloudTalk API key (base64)",
+      "description": "Optional — leave empty to use the plugin offline. Paste the base64 of API_KEY_ID:API_KEY_SECRET from Dashboard > Account > Settings > API keys; build it with: echo -n \"API_KEY_ID:API_KEY_SECRET\" | base64",
+      "sensitive": true
+    }
+  },
+  "mcpServers": {
+    "cloudtalk-voice-agents": {
+      "type": "http",
+      "url": "https://mcp.cloudtalk.io/voice-agents",
+      "headers": {
+        "Authorization": "Basic ${user_config.api_key}"
+      }
+    }
+  }
+}

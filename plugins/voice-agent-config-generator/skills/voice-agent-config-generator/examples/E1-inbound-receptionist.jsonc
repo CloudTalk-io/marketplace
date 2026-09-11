@@ -1,0 +1,79 @@
+// E1 — Inbound receptionist (the canonical "default" archetype). Self-contained except for one
+// deliberate dashboard step: the switched-off transfer skill (see TRANSFERS below).
+// Resolved provider: ElevenLabs (auto — `en` is a plain language; schema §5). Despite reading like a
+// small agent, its goalPrompt runs past 1500 characters, which on its own classifies the agent COMPLEX —
+// so auto-selection already lands on Haiku 4.5 (schema §5). The `llmOverride` below is therefore
+// DEFENSIVE, not load-bearing: it keeps Haiku pinned if the prompt is ever trimmed back under the
+// threshold, which would silently drop a routing-and-capture agent onto the lightweight Qwen default
+// (behavioral §7b). E3 and E7 are the examples whose pins really are doing the work — their prompts sit
+// below 1500 characters.
+//
+// Knowledge is folded into the prompt (a screenful of clinic facts — lower latency than a KB). For a
+// larger FAQ, create a knowledge base in the UI and add its ID to `knowledgeBaseIds`.
+//
+// TRANSFERS — the pattern to copy when you have no real target: `transferToHuman` ships SWITCHED OFF
+// (`enabled: false`, `rules: []`). A live transfer needs a real agent or ring group id AND extension from
+// the user's account; ask for the pair and this example ships a real rule with `enabled: true` instead
+// (that is also when `confirmationRequired` and `includeProperties` start earning their keep — schema §6.1).
+// Until then the prompt promises a callback rather than a handoff, so the agent never offers something it
+// cannot do, and `routingDecision` still records who should follow up.
+{
+  "agentName": "Bright Smile Dental — Receptionist",
+  "direction": "inbound",
+  "defaultOutboundNumberId": 1,    // Automatic — required even for an inbound agent, which never calls out
+  "failoverOutboundNumberId": 202, // replace with a real owned number id (cloudtalk_list_numbers or the
+                                   // dashboard) — Automatic requires a real failover in BOTH directions
+  "language": "en",
+  "maxCallDuration": 20,
+  "temperature": 0.5,
+  "voice": "cgSgspJ2msm6clMCkdW9", // Jessica — American, young, female
+  "optimizeStreamingLatency": 2,   // never 4 — it disables TTS number/date normalization
+  "stability": 0.3,
+  "similarity": 0.7,
+  "llmOverride": "anthropic - claude-haiku-4-5", // defensive pin — the prompt length already resolves
+                                                 // Haiku; this keeps it if the prompt is ever trimmed
+  "startSpeakingFirst": true,      // required true for inbound
+  "greeting": "Thank you for calling Bright Smile Dental, this is Mia. How can I help you today?",
+  "goalPrompt": "## Identity\nYou are Mia, the virtual receptionist for Bright Smile Dental, a family dental clinic. You answer the main phone line, help callers with common questions, and make sure the right team follows up.\n\n## Tone\n- Warm, calm, and professional.\n- Keep responses to 2-3 short sentences unless the caller asks for detail.\n- Ask one question at a time and wait for the answer.\n- Say numbers as words; read phone numbers back in blocks of three or four digits.\n\n## Clinic information\n- Hours: Monday to Friday, eight in the morning to six in the evening; closed weekends.\n- Services: general check-ups, hygiene cleanings, fillings, crowns, and teeth whitening.\n- New patients are welcome; ask them to bring any recent dental records they have.\n- The front desk confirms every appointment by text message.\n\n## Task flow\n1. Listen to why the caller is calling.\n2. If they ask about services, opening hours, or what to bring: answer using the clinic information above.\n3. If they want to book, change, or cancel an appointment: take their full name, preferred day and time, and reason for the visit, one item at a time, and tell them the front desk will confirm by text message.\n4. If they describe severe pain, swelling, or an injury: treat it as urgent. Take their full name and best callback number, read the number back to confirm it, and tell them the dental team will call them straight back.\n5. For a billing, invoice, or insurance question: take their name and the invoice or claim number and tell them the accounts team will call them back today.\n6. Before ending, ask if there is anything else you can help with.\n\n## Guardrails\n- Use only the information in this prompt; do not infer or add anything else.\n- If you do not know an answer, say so and offer to have the team follow up — never guess.\n- You cannot put callers through to a colleague on this line; always offer a callback instead.\n- Do not give medical advice; for clinical questions, offer a callback from a dentist.\n- Never discuss other dental clinics or recommend competitors.\n- Use only the information in this prompt — this rule is important.",
+  "skills": {
+    "transferToHuman": {
+      "enabled": false,  // no real target yet — never guess an id/extension: nothing validates them,
+                         // so a wrong one fails only mid-call — a cold fallback drops the caller
+      "rules": []        // [] is the no-group-in-mind draft shape (legal only while the skill is off).
+                         // E9 shows the other shape — a rule with destination "group" and the id/extension
+                         // OMITTED. The dashboard shows this skill as "Requires configuration" — pick the
+                         // agent/group there and switch it on
+    },
+    "answerQuestions": {
+      "enabled": true,
+      "action": "offerAlternative" // answer from the in-prompt facts; steer instead of auto-transferring
+    },
+    "extractData": {
+      "enabled": true,
+      "properties": [
+        { "name": "callerName", "type": "STRING", "description": "Caller's full name" },
+        { "name": "callbackNumber", "type": "STRING", "description": "Best callback number the caller gave, digits only" },
+        { "name": "routingDecision", "type": "STRING", "description": "Which team should follow up: urgent_clinical, billing, or general" },
+        { "name": "reasonForCall", "type": "STRING", "description": "Brief reason the caller gave for calling" }
+      ]
+    }
+  },
+  "scenarios": [
+    {
+      "enabled": true,
+      "when": "the caller's request is fully handled and they have nothing else",
+      "reply": "Thank you for calling Bright Smile Dental. Have a lovely day!",
+      "action": "hangup"
+    },
+    {
+      "enabled": true,
+      "when": "the caller has not responded after you re-engaged them twice",
+      "reply": "It seems we got disconnected. Please call us back anytime. Goodbye!",
+      "action": "hangup"
+    }
+  ],
+  // guardrails are accepted but INERT at runtime (the runtime has no `enabled` field for them, so each is
+  // silently skipped) — keep the array empty; the always-on safety rules live in the goalPrompt
+  // `## Guardrails` section instead (behavioral §2.1)
+  "guardrails": []
+}

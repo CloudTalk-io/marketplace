@@ -1,0 +1,113 @@
+// E3 — Inbound lead qualification with Call Flow Designer (CFD) routing.
+// Resolved provider: ElevenLabs (V3 auto — "en" is a plain language ElevenLabs supports; schema §5).
+// This agent is TRIVIAL-tier (no KB, no secondary langs, 0 custom tools, 1 transfer rule,
+// 2 scenarios, goal prompt < 1500 chars), so its auto LLM would be the lightweight
+// `qwen - qwen36-35b-a3b`. We therefore set llmOverride to Haiku 4.5 — a genuine upgrade for a
+// small but reasoning-heavy qualification agent.
+// Demonstrates: the CFD transfer pattern (transfer_to_human with destination "call_flow" — the
+// agent hangs up and the flow routes), extractData routing signal, llmOverride (real upgrade over
+// the trivial-tier default).
+//
+// WHY call_flow HERE — the exception, not the default: this user told us the agent runs as a step
+//   inside a Call Flow, which is the ONLY thing that makes "call_flow" meaningful (for a standalone
+//   agent it is just a hangup). The default way to reach a human is a DIRECT transfer to an agent or
+//   ring group, using the id + extension the user gives you — see E1 for the shape to ship when you
+//   don't have that pair yet.
+//
+// HOW THE CFD PATTERN WORKS (intended design — do not "fix" the hangups):
+//   This agent is one step inside a Call Flow. It qualifies the caller, then HANGS UP its own
+//   step; the flow continues and a condition splitter branches on the extracted
+//   `routingDecision` value ("Sales" / "Resolved") to ring the sales group or end the call.
+//   This pattern works for INBOUND flows only. TEST the extraction (e.g. against a webhook
+//   endpoint) before going live — a splitter that never matches silently drops calls.
+//
+// REQUIRED RESOURCES: nothing to create, but the outbound number is ground truth — set a real owned
+//   `defaultOutboundNumberId`, and behind Automatic (1) a real owned `failoverOutboundNumberId` in both
+//   directions (only 1 is magic; never guess 2; a bare 1 with no failover 400s).
+//   destination "call_flow" needs no ID — but it is only correct because this agent lives in a flow.
+// OPERATIONAL PREREQUISITE (not an import blocker): for the routing to actually happen, place this
+//   agent inside a CFD flow — [Voice Agent step] → [condition splitter on routingDecision] →
+//   [Sales group / hangup]. The config imports cleanly without it; routing just won't fire until
+//   the flow exists.
+{
+  "agentName": "NorthPeak Software — Lead Qualifier",
+  "direction": "inbound",
+  "defaultOutboundNumberId": 1,    // Automatic — required even for an inbound agent, which never calls out
+  "failoverOutboundNumberId": 202, // replace with a real owned number id (cloudtalk_list_numbers or the
+                                   // dashboard) — Automatic requires a real failover in BOTH directions
+  "language": "en",
+  "maxCallDuration": 15,
+  "temperature": 0.5,
+  "voice": "cjVigY5qzO86Huf0OWal", // Eric — American, middle-aged, male
+  "optimizeStreamingLatency": 2,
+  "stability": 0.3,
+  "similarity": 0.7,
+  "llmOverride": "anthropic - claude-haiku-4-5", // upgrade: a trivial-tier ElevenLabs agent would
+                                   // otherwise auto-default to the lightweight qwen model (§5)
+  "startSpeakingFirst": true,
+  "greeting": "Hi, you've reached NorthPeak Software. I can get you to the right person — may I ask a couple of quick questions first?",
+  "goalPrompt": "## Identity\nYou are the qualification assistant for NorthPeak Software, a B2B project-management platform. You take incoming sales-line calls, qualify the caller, and route them.\n\n## Tone\n- Friendly, efficient, and direct. Two to three short sentences per turn.\n- Ask exactly one question at a time and wait for the answer.\n- Never sound like a form being filled in — acknowledge each answer briefly.\n\n## Task flow\n1. Ask what brings them to NorthPeak today.\n2. Ask for their company name and roughly how many people work there.\n3. Ask whether they are actively choosing a tool right now or just exploring.\n4. Decide using ALL the answers — do not decide before you have them:\n   - QUALIFIED: actively choosing AND company size ten or more → tell them you'll connect them with the sales team now, then transfer.\n   - NOT QUALIFIED: exploring, a student, a job seeker, or an existing-support question → answer briefly if you can, suggest the website for self-serve resources, and end the call politely.\n5. Restate the company name and size aloud before ending, so the details are confirmed.\n\n## Guardrails\n- Use only information from this prompt; never invent product claims, prices, or discounts.\n- Do not commit to demos, trials, or pricing — the sales team owns those.\n- If asked something you cannot answer, say the sales team will cover it.\n- Never decide QUALIFIED or NOT QUALIFIED before hearing answers to all three questions — this rule is important.",
+  "skills": {
+    "transferToHuman": {
+      "enabled": true,
+      "rules": [
+        {
+          "condition": "the caller is qualified and should be connected to the sales team",
+          "destination": "call_flow" // no ID needed: the agent hangs up and the flow routes onward.
+                                     // Only used because the user runs this agent inside a Call Flow;
+                                     // otherwise a direct agent/group transfer is the default (E1)
+        }
+      ]
+    },
+    "extractData": {
+      "enabled": true,
+      "properties": [
+        {
+          "name": "routingDecision",
+          "type": "STRING",
+          "description": "Exactly \"Sales\" if the caller was qualified for the sales team, otherwise exactly \"Resolved\""
+        },
+        {
+          "name": "companyName",
+          "type": "STRING",
+          "description": "The caller's company name"
+        },
+        {
+          "name": "companySize",
+          "type": "NUMBER",
+          "description": "Approximate number of employees at the caller's company"
+        },
+        {
+          "name": "activelyEvaluating",
+          "type": "BOOLEAN",
+          "description": "Whether the caller is actively choosing a tool right now (true) or just exploring (false)"
+        }
+      ]
+    }
+  },
+  // NOTE: the QUALIFIED → route path has a SINGLE owner — the transferToHuman call_flow rule
+  // above (the agent announces, calls transfer_to_human, which hangs up via InitiateHangup and
+  // lets the CFD splitter route on routingDecision). We deliberately do NOT also add a
+  // "QUALIFIED → hangup" scenario: that would double-own the behavior (behavioral guidance §4.3)
+  // and a plain end_call may not store the extracted context for the splitter the way the
+  // call_flow transfer path does. Scenarios below cover only call-ending paths the transfer
+  // rule doesn't (not-qualified completion, silence).
+  "scenarios": [
+    {
+      "enabled": true,
+      "when": "the caller is NOT QUALIFIED and the conversation is finished",
+      "reply": "Thanks for your interest in NorthPeak! You'll find guides and a free trial on our website. Have a great day!",
+      "action": "hangup"
+    },
+    {
+      "enabled": true,
+      "when": "the caller has not responded after you re-engaged them twice",
+      "reply": "It seems we lost the connection. Feel free to call back anytime. Goodbye!",
+      "action": "hangup"
+    }
+  ],
+  // guardrails are accepted but INERT at runtime (the runtime has no `enabled` field for them, so each is
+  // silently skipped) — keep the array empty; the always-on rules live in the goalPrompt `## Guardrails`
+  // section instead (behavioral §2.1)
+  "guardrails": []
+}

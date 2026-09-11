@@ -1,0 +1,88 @@
+// E2 — Outbound appointment confirmation, German (language-consistency exemplar).
+// Resolved provider: ElevenLabs (V3 auto — "de" is a plain ElevenLabs language; schema §5). Auto LLM:
+// complex (≥3 scenarios) → Haiku 4.5.
+// Demonstrates: outbound greeting, dialTime, BOOLEAN/NUMBER extract properties, voicemail hangup, a
+// short outbound maxCallDuration, and ALL agent-language text — including every scenario `when` — in German.
+//
+// OUTBOUND VARIABLES: the trigger must pass {{customer_name}}, {{appointment_date}}, {{appointment_time}}
+// via call_properties (outbound context is NOT auto-injected) — the config alone cannot supply them.
+//
+// ANTI-PATTERN NOTE: a German agent with English replies or English `when` conditions will bleed English
+// into live calls. Every `reply` AND every `when` below is literal German — the `when` is injected into
+// the prompt the agent reads each turn (behavioral §1/§5), so it follows the language rule too.
+{
+  "agentName": "Praxis Dr. Weber — Terminbestätigung",
+  "direction": "outbound",
+  "defaultOutboundNumberId": 1,    // Automatic — outbound calls go out FROM the chosen number, so this matters here
+                                   // NO `failoverOutboundNumberId` on purpose: this is the one example that FAILS the
+                                   // wiring gate. Automatic (1) requires a real owned failover in BOTH directions
+                                   // (no inbound carve-out, no self-heal, no auto-pick) — set a real owned id before
+                                   // saving. The validator's save-blocking warning here is expected
+  "language": "de",
+  "maxCallDuration": 4,            // outbound confirmation: 3-5 min hard cap
+  "dialTime": 25,                  // give up ringing after 25 s (5-120; 0 = provider default).
+                                   // TRAP: anything above 90 still SAVES, then call dispatch refuses it
+                                   // and the call is never placed at all — keep it at 90 or below
+  "temperature": 0.5,
+  "voice": "cgSgspJ2msm6clMCkdW9", // Jessica — premade voices are multilingual: this one speaks German here
+  "optimizeStreamingLatency": 2,
+  "stability": 0.6,                // raised above the 0.3 baseline for non-English: steadier pronunciation
+                                   // (this agent resolves to ElevenLabs, where voice tuning applies)
+  "similarity": 0.7,
+  "startSpeakingFirst": true,      // true is REQUIRED only for inbound; on outbound it is a deliberate
+                                   // choice — this agent placed the call, so it speaks first
+  "greeting": "Guten Tag, hier ist die Praxis Dr. Weber. Ich rufe an, um Ihren Termin zu bestätigen.",
+  "goalPrompt": "## Identität\nDu bist die freundliche Terminassistentin der Zahnarztpraxis Dr. Weber. Du rufst Patienten an, um ihren bevorstehenden Termin zu bestätigen.\n\n## Kontakt\nDu rufst an: {{customer_name}}. Der Termin ist am {{appointment_date}} um {{appointment_time}}.\n\n## Ton\n- Höflich, klar und kurz: höchstens zwei bis drei Sätze pro Antwort.\n- Stelle immer nur eine Frage und warte auf die Antwort.\n- Sprich Datum und Uhrzeit in Worten aus, nicht als Ziffernfolge.\n\n## Ablauf\n1. Begrüße den Patienten und nenne den Grund des Anrufs.\n2. Frage, ob der Termin am {{appointment_date}} um {{appointment_time}} passt.\n3. Wenn ja: bestätige den Termin freundlich.\n4. Wenn nein: frage nach zwei Wunschterminen (Tag und Uhrzeit, nacheinander) und sage, dass die Praxis sich zur Bestätigung meldet.\n5. Bedanke dich und beende das Gespräch.\n\n## Guardrails\n- Verwende ausschließlich Informationen aus diesem Prompt; erfinde nichts dazu.\n- Gib keine medizinischen Auskünfte; verweise dafür auf die Praxis.\n- Sprich ausschließlich Deutsch, auch wenn der Patient kurz in eine andere Sprache wechselt.\n- Sprich ausschließlich Deutsch — diese Regel ist besonders wichtig.",
+  "skills": {
+    "extractData": {
+      "enabled": true,
+      "properties": [
+        {
+          "name": "appointmentConfirmed",
+          "type": "BOOLEAN",
+          "description": "Whether the patient confirmed the proposed appointment"
+        },
+        {
+          "name": "rescheduleRequested",
+          "type": "BOOLEAN",
+          "description": "Whether the patient asked to move the appointment"
+        },
+        {
+          "name": "preferredCallbackHour",
+          "type": "NUMBER",
+          "description": "Hour of day (0-23) the patient prefers to be called back, if they mentioned one"
+        }
+      ]
+    }
+  },
+  "scenarios": [
+    {
+      "enabled": true,
+      "when": "das Gespräch beendet ist – der Termin wurde bestätigt oder ein Verschiebungswunsch notiert",
+      "reply": "Vielen Dank für Ihre Zeit. Auf Wiederhören!",
+      "action": "hangup"
+    },
+    {
+      "enabled": true,
+      "when": "du eine Voicemail oder einen Anrufbeantworter erreichst",
+      "reply": "Guten Tag, hier ist die Praxis Dr. Weber. Wir wollten Ihren Termin bestätigen. Bitte rufen Sie uns zurück. Auf Wiederhören!",
+      "action": "hangup"
+    },
+    {
+      "enabled": true,
+      "when": "die Person sagt, dass du die falsche Nummer gewählt hast oder dass sie von keinem Termin weiß",
+      "reply": "Entschuldigen Sie bitte die Störung. Auf Wiederhören!",
+      "action": "hangup"
+    },
+    {
+      "enabled": true,
+      "when": "der Patient nicht mehr reagiert, nachdem du zweimal gefragt hast, ob er noch da ist",
+      "reply": "Es scheint eine Verbindungsstörung zu geben. Wir melden uns erneut. Auf Wiederhören!",
+      "action": "hangup"
+    }
+  ],
+  // guardrails are accepted but INERT at runtime (the runtime has no `enabled` field for them, so each is
+  // silently skipped) — keep the array empty; the always-on rules live in the goalPrompt `## Guardrails`
+  // section instead (behavioral §2.1)
+  "guardrails": []
+}
