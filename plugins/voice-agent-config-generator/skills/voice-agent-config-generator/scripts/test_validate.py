@@ -277,6 +277,11 @@ def specific_number_no_failover(c):
 expect_clean("inbound specific number, no failover needed", specific_number_no_failover)
 expect_clean("inbound specific number + failover", lambda c: c.update({"defaultOutboundNumberId": 101,
                                                                        "failoverOutboundNumberId": 202}))
+# A quoted id is a string, not a number: it must be a type error, never a clean "real number id".
+expect_error("quoted defaultOutboundNumberId", lambda c: c.__setitem__("defaultOutboundNumberId", "101"),
+             "bad-type")
+expect_error("quoted failoverOutboundNumberId", lambda c: c.__setitem__("failoverOutboundNumberId", "202"),
+             "bad-type")
 
 
 def outbound(c):

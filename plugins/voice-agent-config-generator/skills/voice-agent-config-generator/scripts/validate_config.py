@@ -482,7 +482,10 @@ def validate(cfg, fields, rep):
     # check, which only runs on values that are already numbers — so it would reach the API unremarked.
     if cfg.get("agentName") is not None and not isinstance(cfg["agentName"], str):
         rep.err("bad-type", "agentName", "Expected a string (schema §2).")
-    for p in ("maxCallDuration", "dialTime"):
+    # The two outbound number ids are here too: a quoted id ("101") is not a number, so it skips the
+    # integer check below, the sentinel check and the 0/1 comparisons in the outbound rules, and would
+    # otherwise read as a real number id that the save then rejects as a type error.
+    for p in ("maxCallDuration", "dialTime", "defaultOutboundNumberId", "failoverOutboundNumberId"):
         if cfg.get(p) is not None and not is_num(cfg[p]):
             rep.err("bad-type", p, "Expected a number, not %s (schema §2)." % type(cfg[p]).__name__)
     # The integer check in the range loop above only runs on fields that declare a `range`, so an
