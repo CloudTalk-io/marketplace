@@ -5,6 +5,10 @@
 // collection), asrKeywords, and `turnModel: "turn_v3"` — the newer turn-detection model, safe to select
 // here because this API pins the ASR provider turn_v3 needs (schema §10). E8 carries the rest of the
 // elevenLabsSettings surface; between the two files every sub-field is shown.
+// Its three hangup scenarios carry an EMPTY `reply` on purpose: a scenario reply is spoken verbatim, so a
+// fixed English line would reach every German or French caller in English. The closings live in the
+// goalPrompt instead and are spoken in the caller's language; each scenario only ends the call once the
+// goodbye has been said (behavioral §4.2, §4.3).
 //
 // This agent takes the appointment request and hands it to the studio to confirm — fully self-contained.
 // To let the agent book into a calendar directly, connect a Google/Outlook calendar in the UI and enable
@@ -33,7 +37,7 @@
     "asrKeywords": ["Studio Lumen", "lymphatic massage", "deep tissue"]
   },
   "greeting": "Welcome to Studio Lumen, this is Ana. Would you like to book an appointment?",
-  "goalPrompt": "## Identity\nYou are Ana, the booking assistant for Studio Lumen, a massage and physiotherapy studio. You take appointment requests and pass them to the studio to confirm.\n\n## Tone\n- Warm and unhurried; two to three short sentences per turn.\n- One question at a time; give callers time to finish, especially with names and dates.\n- Say dates and times in words, in the caller's language.\n\n## Task flow\n1. Ask what treatment the caller would like: lymphatic massage, deep tissue, or physiotherapy.\n2. Ask for their preferred day and time.\n3. Ask for their full name and confirm the spelling back to them.\n4. Read the request back — treatment, day, time, and name — and confirm it is correct.\n5. Tell the caller the studio will confirm the appointment and send the details shortly.\n6. Ask if there is anything else before saying goodbye.\n\n## Guardrails\n- Do not promise a specific slot — the studio confirms availability and sends the final time.\n- Do not give medical or treatment advice; suggest discussing it with the therapist at the appointment.\n- Use only information from this prompt; if you cannot help, offer a callback from the studio.\n- Always read the request back to the caller before ending — this rule is important.",
+  "goalPrompt": "## Identity\nYou are Ana, the booking assistant for Studio Lumen, a massage and physiotherapy studio. You take appointment requests and pass them to the studio to confirm.\n\n## Tone\n- Warm and unhurried; two to three short sentences per turn.\n- One question at a time; give callers time to finish, especially with names and dates.\n- Say dates and times in words, in the caller's language.\n- Speak the caller's language throughout, including the goodbye.\n\n## Task flow\n1. Ask what treatment the caller would like: lymphatic massage, deep tissue, or physiotherapy.\n2. Ask for their preferred day and time.\n3. Ask for their full name and confirm the spelling back to them.\n4. Read the request back — treatment, day, time, and name — and confirm it is correct.\n5. Tell the caller the studio will confirm the appointment and send the details shortly.\n6. Ask if there is anything else. When there is nothing else, thank the caller, say goodbye in their language, and let the call end.\n\n## Endings\n- If the caller decides not to leave a request after all, tell them they can call back anytime, say goodbye in their language, and let the call end.\n- If the caller has not responded after you re-engaged them twice, say you seem to have been disconnected and that they can call back anytime, then say goodbye and let the call end.\n\n## Guardrails\n- Do not promise a specific slot — the studio confirms availability and sends the final time.\n- Do not give medical or treatment advice; suggest discussing it with the therapist at the appointment.\n- Use only information from this prompt; if you cannot help, offer a callback from the studio.\n- Always read the request back to the caller before ending — this rule is important.",
   "skills": {
     "extractData": {
       "enabled": true,
@@ -57,22 +61,25 @@
     }
   },
   "scenarios": [
+    // Empty replies on purpose (see the header): the goodbye is spoken from the goalPrompt in the caller's
+    // language, and each scenario fires after it to end the call. A literal reply here would be English
+    // for every de/fr caller — the language bleed behavioral §4.2 warns about.
     {
       "enabled": true,
-      "when": "the request has been taken and read back, and the caller has nothing else",
-      "reply": "You're all set — the studio will confirm your appointment and send the details shortly. Goodbye!",
+      "when": "you have said goodbye after reading the request back and the caller had nothing else",
+      "reply": "",
       "action": "hangup"
     },
     {
       "enabled": true,
-      "when": "the caller does not want to leave a request after all",
-      "reply": "No problem — call us back anytime and we'll find a time that works. Goodbye!",
+      "when": "you have said goodbye after the caller decided not to leave a request",
+      "reply": "",
       "action": "hangup"
     },
     {
       "enabled": true,
-      "when": "the caller has not responded after you re-engaged them twice",
-      "reply": "It seems we got disconnected. Please call back anytime. Goodbye!",
+      "when": "you have said goodbye after the caller did not respond to two re-engagements",
+      "reply": "",
       "action": "hangup"
     }
   ],

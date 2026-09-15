@@ -53,14 +53,17 @@ handoff as a **disabled group draft** the user finishes in the dashboard:
 - **E4** — a Deepgram-pinned support line that is **intake only** as far as humans go: it gathers
   order/issue details and a callback number, with no transfer skill at all. It does show the two shapes
   that reach *systems*: a `toolCall` scenario firing a company custom tool (`toolReferenceId` — replace
-  it), and `extractData.endpoint`, the optional webhook the platform posts the captured properties to
-  (`https://example.com/webhook`, the IANA documentation domain — point it at your own receiver or drop
-  the key). It also carries `tone`/`verbosity`, which are provider-agnostic and so work here despite
+  it), and `extractData.endpoint`, the optional webhook the platform posts the captured properties to —
+  shipped **commented out**, so as saved the example keeps what it captures in CloudTalk; uncomment the
+  key and point it at a receiver you control to forward the data. It also carries `tone`/`verbosity`,
+  which are provider-agnostic and so work here despite
   Deepgram ignoring `elevenLabsSettings`.
 - **E6** — a front desk that answers what it knows and takes details for a callback, with no transfer skill.
 - **E5** — a multilingual agent that **takes the appointment request** and hands it to the studio, so it
   stays self-contained. **E10** is the other half of that choice: booking straight into a connected
-  calendar, which costs a calendar integration.
+  calendar, which costs a calendar integration. E5's three hangup scenarios carry an **empty `reply`** on
+  purpose: a scenario reply is spoken verbatim, so the closings live in the `goalPrompt` and reach a German
+  or French caller in their language rather than as a fixed English line (behavioral §4.2).
 - **E2** — outbound confirmation; it confirms verbally. To text a confirmation, add a `sendSms` scenario
   with a company-owned sender (**E9** shows the caller-gated shape, **E10** the booking-triggered one).
   Any URL in the message must be a **static user-supplied link, copied verbatim** — AIVA can't generate a
@@ -113,8 +116,8 @@ handoff as a **disabled group draft** the user finishes in the dashboard:
     draft with the id/extension **omitted** — finish it in the dashboard rather than substituting an ID here.
   - **E10** — `skills.appointmentBooking.integrationId` + `calendarId` (the connected calendar) and
     `params.senderNumber: "+15555550188"`.
-  - **E4** — `scenarios[0].toolReferenceId` (the custom tool) and `skills.extractData.endpoint`
-    (`https://example.com/webhook`, a documentation domain that resolves nowhere).
+  - **E4** — `scenarios[0].toolReferenceId` (the custom tool). Its `skills.extractData.endpoint` ships
+    commented out, so there is nothing to replace unless you enable the webhook.
 
   Replace them all before saving. Nothing validates a transfer id/extension, so a wrong pair fails only
   mid-call — the AI resumes where advanced transfer is enabled, but on a cold fallback the caller is
