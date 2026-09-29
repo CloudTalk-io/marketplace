@@ -2,7 +2,19 @@
 
 Each release bumps a semver (in the plugin manifest and `.claude-plugin/marketplace.json`) with a
 dated entry below, made whenever the config schema or the generation guidance materially changes.
-Installs still track the latest `main` — the version is a marker for the tooling and this log, not a pin.
+Claude Code installs a release when the manifest version changes; the Claude app picks it up from the
+marketplace (Check for updates, or Sync automatically).
+
+## 0.1.1 — 2026-09-30
+
+- **E4 (support intake) gives the complete answer.** Its prompt now matches its `thorough` verbosity —
+  order and returns questions get every step the caller needs, not the shortest reply.
+- **E4 keeps captured data in CloudTalk by default.** The `extractData` webhook ships commented out;
+  uncomment it and point it at a receiver you control to forward order and callback numbers.
+- **Behavioural guidance: multilingual cleanup** — scenario replies on multilingual agents may be written
+  in English.
+- **Scenario replies may be instructions.** The validator no longer warns on `Say: …`, placeholder, or
+  conditional replies: a reply is an instruction the agent follows, not text read out word for word.
 
 ## 0.1.0 — 2026-09-11
 

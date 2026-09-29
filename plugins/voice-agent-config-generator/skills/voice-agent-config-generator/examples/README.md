@@ -1,4 +1,4 @@
-# Voice Agent v2 — reference example configs (E1–E10)
+# VoiceAgent v2 — reference example configs (E1–E10)
 
 Ten archetype configs for the v2 Expert-Mode API, authored per the
 [corpus](../README.md). Each is schema-valid ([`schema.md`](../schema.md)) and passes the
@@ -61,9 +61,10 @@ handoff as a **disabled group draft** the user finishes in the dashboard:
 - **E6** — a front desk that answers what it knows and takes details for a callback, with no transfer skill.
 - **E5** — a multilingual agent that **takes the appointment request** and hands it to the studio, so it
   stays self-contained. **E10** is the other half of that choice: booking straight into a connected
-  calendar, which costs a calendar integration. E5's three hangup scenarios carry an **empty `reply`** on
-  purpose: a scenario reply is spoken verbatim, so the closings live in the `goalPrompt` and reach a German
-  or French caller in their language rather than as a fixed English line (behavioral §4.2).
+  calendar, which costs a calendar integration. E5's three hangup scenarios carry an **empty `reply`** by
+  design — the closings live in the `goalPrompt` and each scenario fires after the goodbye (behavioral
+  §4.3). A literal English `reply` would also work for a multilingual agent; the compiled prompt renders it
+  in the caller's language (§4.2).
 - **E2** — outbound confirmation; it confirms verbally. To text a confirmation, add a `sendSms` scenario
   with a company-owned sender (**E9** shows the caller-gated shape, **E10** the booking-triggered one).
   Any URL in the message must be a **static user-supplied link, copied verbatim** — AIVA can't generate a
@@ -135,10 +136,9 @@ handoff as a **disabled group draft** the user finishes in the dashboard:
 - **`guardrails` empty:** every example ships `"guardrails": []`. The array is accepted but **inert at
   runtime** (the runtime has no `enabled` field for it, so guardrails are silently skipped), so always-on
   safety rules live in the `goalPrompt` `## Guardrails` prose section instead (`schema.md` §7.2).
-- **Language:** every `reply` **and every scenario/guardrail `when` condition** is written in the
-  agent's primary `language` (behavioral §5). The English `when` clauses in E1/E3–E10 are correct only
-  because those agents are English-primary; the German agent **E2** shows localized German `when`
-  clauses — that is the rule for any non-English agent, not just the spoken `reply`.
+- **Language:** `reply` and scenario/guardrail `when` may be written in English for any agent; the runtime
+  makes the agent speak its configured `language` (behavioral §5). The German agent **E2** keeps its `when`
+  clauses in German as a preference, not a requirement.
 - **Voices are premade and work on both providers** — every example uses one of the four default voice IDs
   (`schema.md` §4.4), which is why none of them needs a voice of yours. The same voice speaks whatever the
   agent's `language` is: **E2** is German and keeps an American-English-labelled voice (Jessica) for exactly

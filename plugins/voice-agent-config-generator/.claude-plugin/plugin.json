@@ -1,12 +1,15 @@
 {
   "name": "voice-agent-config-generator",
-  "version": "0.1.0",
-  "description": "Build and test CloudTalk AI voice agents: generate, fix, and validate Voice Agent v2 (Expert Mode) JSON configurations, and simulate caller conversations against them — for customers and partners creating inbound/outbound agents. Works fully offline, and can read and operate your CloudTalk account (numbers, knowledge bases, tools, agents) through the CloudTalk MCP when connected.",
+  "displayName": "CloudTalk VoiceAgent Builder",
+  "version": "0.1.1",
+  "description": "Build, fix, validate, and test CloudTalk VoiceAgents. Generate a save-ready VoiceAgent (Expert Mode) configuration from a plain-language description, fix or validate an existing one, and simulate a caller before it goes live — for any inbound or outbound use case. Works fully offline, or connected to your CloudTalk account (numbers, knowledge bases, tools, agents) through the CloudTalk MCP.",
   "author": {
     "name": "CloudTalk"
   },
   "homepage": "https://github.com/CloudTalk-io/marketplace",
   "license": "Apache-2.0",
+  "icon": "./icon.png",
+  "privacyPolicyUrl": "https://www.cloudtalk.io/privacy-notice/",
   "userConfig": {
     "api_key": {
       "type": "string",
