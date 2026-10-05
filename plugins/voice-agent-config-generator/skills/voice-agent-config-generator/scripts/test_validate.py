@@ -816,6 +816,14 @@ for _language in ("en", "en-US"):
         failures.append("gemini-3-flash-preview on %s must not error or warn, got %s / %s"
                         % (_language, error_codes(_preview), warn_codes(_preview)))
 
+for _alias, _expected in {
+    "google - gemini-3-flash-preview": "google - gemini-3.5-flash",
+    "google - gemini-1.5-pro": "google - gemini-3.5-flash",
+    "google - gemini-2.0-flash-lite": "google - gemini-3.1-flash-lite",
+}.items():
+    if V.LEGACY_LLM_ALIASES.get(_alias) != _expected:
+        failures.append("legacy alias %r must resolve to %r, got %r"
+                        % (_alias, _expected, V.LEGACY_LLM_ALIASES.get(_alias)))
 # The old target, gemini-2.5-flash-lite, is ElevenLabs-only, so the alias used to 400 on Deepgram.
 expect_no_code("Deepgram agent may use the gemini-2.0-flash-lite alias",
                lambda c: c.update({"language": "en-US", "llmOverride": "google - gemini-2.0-flash-lite"}),
