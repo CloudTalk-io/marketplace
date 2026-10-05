@@ -66,17 +66,18 @@ ELEVENLABS_MODELS = {
     "openai - gpt-4o-mini", "openai - gpt-4o", "openai - gpt-4.1", "openai - gpt-4.1-mini",
     "openai - gpt-4.1-nano", "openai - gpt-5", "openai - gpt-5-mini", "openai - gpt-5-nano",
     "openai - gpt-5.1", "openai - gpt-5.2", "openai - gpt-5.4", "openai - gpt-5.4-mini",
-    "openai - gpt-5.4-nano", "openai - gpt-5.5", "anthropic - claude-haiku-4-5",
-    "anthropic - claude-sonnet-4-5", "anthropic - claude-sonnet-4-6", "google - gemini-2.5-flash",
-    "google - gemini-2.5-flash-lite", "google - gemini-3-flash-preview",
-    "google - gemini-3.1-flash-lite", "google - gemini-3.5-flash", "google - gemini-3.6-flash",
-    "qwen - qwen36-35b-a3b", "qwen - qwen35-397b-a17b",
+    "openai - gpt-5.4-nano", "openai - gpt-5.5", "openai - gpt-5.6-luna", "openai - gpt-5.6-terra",
+    "anthropic - claude-haiku-4-5", "anthropic - claude-sonnet-4-5", "anthropic - claude-sonnet-4-6",
+    "anthropic - claude-sonnet-5", "anthropic - claude-sonnet-5-5", "google - gemini-2.5-flash",
+    "google - gemini-2.5-flash-lite", "google - gemini-3.1-flash-lite", "google - gemini-3.5-flash",
+    "google - gemini-3.5-flash-lite", "google - gemini-3.6-flash", "google - gemini-3.8-flash",
+    "qwen - qwen36-35b-a3b", "qwen - qwen35-397b-a17b", "deepseek - deepseek-v41-flash",
 }
 DEEPGRAM_MODELS = {
     "openai - gpt-4o-mini", "openai - gpt-4o", "openai - gpt-4.1", "openai - gpt-4.1-mini",
     "openai - gpt-4.1-nano", "openai - gpt-5-mini", "openai - gpt-5-nano", "openai - gpt-5.4-mini",
-    "openai - gpt-5.4-nano", "anthropic - claude-haiku-4-5", "google - gemini-2.5-flash",
-    "google - gemini-3-flash-preview", "google - gemini-3.1-flash-lite", "google - gemini-3.5-flash",
+    "openai - gpt-5.4-nano", "openai - gpt-5.6-luna", "anthropic - claude-haiku-4-5",
+    "google - gemini-2.5-flash", "google - gemini-3.1-flash-lite", "google - gemini-3.5-flash",
 }
 # schema.md §4.2 — legacy aliases: accepted on input but normalized to a canonical ID on save.
 LEGACY_LLM_ALIASES = {
@@ -90,8 +91,9 @@ LEGACY_LLM_ALIASES = {
     "anthropic - claude-3-haiku": "anthropic - claude-haiku-4-5",
     "anthropic - claude-3-haiku-20240307": "anthropic - claude-haiku-4-5",
     "anthropic - claude-3-7-sonnet": "anthropic - claude-sonnet-4-5",
-    "google - gemini-2.0-flash-lite": "google - gemini-2.5-flash-lite",
-    "google - gemini-1.5-pro": "google - gemini-2.5-flash",
+    "google - gemini-2.0-flash-lite": "google - gemini-3.1-flash-lite",
+    "google - gemini-1.5-pro": "google - gemini-3.5-flash",
+    "google - gemini-3-flash-preview": "google - gemini-3.5-flash",
 }
 
 # schema.md §4.4 — built-in premade voice IDs (global, self-contained). These four are usable on BOTH
