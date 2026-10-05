@@ -801,23 +801,15 @@ for _model in _ELEVENLABS_ONLY_ADDITIONS:
                  lambda c, m=_model: c.update({"language": "en-US", "llmOverride": m}),
                  "llm-provider-mismatch")
 
-if "google - gemini-3-flash-preview" in V.ELEVENLABS_MODELS | V.DEEPGRAM_MODELS:
-    failures.append("google - gemini-3-flash-preview is retired: it must be a legacy alias, not canonical")
+# The public API's llmOverride enum is additive-only, so a canonical model never becomes an alias.
+if "google - gemini-3-flash-preview" in V.LEGACY_LLM_ALIASES:
+    failures.append("google - gemini-3-flash-preview must stay canonical, not a legacy alias")
 for _language in ("en", "en-US"):
-    _preview = copy.deepcopy(BASE)
-    _preview.update({"language": _language, "llmOverride": "google - gemini-3-flash-preview"})
-    _preview_rep = V.Report()
-    V.validate(_preview, FIELDS, _preview_rep)
-    if not any(i.level == "INFO" and i.code == "llm-legacy-alias" and "gemini-3.5-flash" in i.msg
-               for i in _preview_rep.issues):
-        failures.append("gemini-3-flash-preview on %s must report a legacy alias to gemini-3.5-flash, got %s"
-                        % (_language, [(i.level, i.code) for i in _preview_rep.issues]))
-    if error_codes(_preview) or warn_codes(_preview):
-        failures.append("gemini-3-flash-preview on %s must not error or warn, got %s / %s"
-                        % (_language, error_codes(_preview), warn_codes(_preview)))
+    expect_clean("%s agent may use google - gemini-3-flash-preview" % _language,
+                 lambda c, lang=_language: c.update({"language": lang,
+                                                     "llmOverride": "google - gemini-3-flash-preview"}))
 
 for _alias, _expected in {
-    "google - gemini-3-flash-preview": "google - gemini-3.5-flash",
     "google - gemini-1.5-pro": "google - gemini-3.5-flash",
     "google - gemini-2.0-flash-lite": "google - gemini-3.1-flash-lite",
 }.items():

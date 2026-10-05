@@ -143,9 +143,9 @@ never rely on the runtime fallback.
 
 ### 4.2 LLM models — canonical IDs (for `llmOverride`)
 
-The API keeps a fixed **registry of 31 canonical models**. The wire format is a canonical id
+The API keeps a fixed **registry of 32 canonical models**. The wire format is a canonical id
 `"<vendor> - <model>"`, vendor ∈ `openai` | `anthropic` | `google` | `qwen` | `deepseek`. **ElevenLabs
-offers all 31; Deepgram offers only the 14 marked ✅ in its column below.** The model must match the **resolved**
+offers all 32; Deepgram offers only the 15 marked ✅ in its column below.** The model must match the **resolved**
 provider or the save returns `400`. Use the **canonical ID**; native/legacy masks are also accepted and
 normalized server-side (responses return the canonical ID).
 
@@ -177,6 +177,7 @@ normalized server-side (responses return the canonical ID).
 | `anthropic - claude-sonnet-5-5` | ✅ | — |
 | `google - gemini-2.5-flash` | ✅ | ✅ |
 | `google - gemini-2.5-flash-lite` | ✅ | — |
+| `google - gemini-3-flash-preview` | ✅ | ✅ |
 | `google - gemini-3.1-flash-lite` | ✅ | ✅ |
 | `google - gemini-3.5-flash` | ✅ | ✅ |
 | `google - gemini-3.5-flash-lite` | ✅ | — |
@@ -196,9 +197,8 @@ normalized server-side (responses return the canonical ID).
 > **Legacy aliases** are accepted on input but **silently normalized to a current canonical ID** on
 > save (the export then shows the canonical one). Always author the canonical ID — the bundled validator
 > (§9) flags legacy aliases. Examples: `anthropic - claude-3-7-sonnet` → `anthropic - claude-sonnet-4-5`;
-> `anthropic - claude-3-haiku` → `anthropic - claude-haiku-4-5`; `google - gemini-3-flash-preview` →
-> `google - gemini-3.5-flash`; `google - gemini-1.5-pro` → `google - gemini-3.5-flash`;
-> `google - gemini-2.0-flash-lite` → `google - gemini-3.1-flash-lite`.
+> `anthropic - claude-3-haiku` → `anthropic - claude-haiku-4-5`; `google - gemini-1.5-pro` →
+> `google - gemini-3.5-flash`; `google - gemini-2.0-flash-lite` → `google - gemini-3.1-flash-lite`.
 
 ### 4.3 Languages (per provider)
 
