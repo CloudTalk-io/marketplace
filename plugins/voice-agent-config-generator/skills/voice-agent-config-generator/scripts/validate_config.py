@@ -93,7 +93,7 @@ LEGACY_LLM_ALIASES = {
     "anthropic - claude-3-haiku": "anthropic - claude-haiku-4-5",
     "anthropic - claude-3-haiku-20240307": "anthropic - claude-haiku-4-5",
     "anthropic - claude-3-7-sonnet": "anthropic - claude-sonnet-4-5",
-    "google - gemini-2.0-flash-lite": "google - gemini-3.1-flash-lite",
+    "google - gemini-2.0-flash-lite": "google - gemini-3.5-flash-lite",
     "google - gemini-1.5-pro": "google - gemini-3.5-flash",
 }
 

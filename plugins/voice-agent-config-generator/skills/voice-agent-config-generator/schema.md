@@ -198,7 +198,7 @@ normalized server-side (responses return the canonical ID).
 > save (the export then shows the canonical one). Always author the canonical ID — the bundled validator
 > (§9) flags legacy aliases. Examples: `anthropic - claude-3-7-sonnet` → `anthropic - claude-sonnet-4-5`;
 > `anthropic - claude-3-haiku` → `anthropic - claude-haiku-4-5`; `google - gemini-1.5-pro` →
-> `google - gemini-3.5-flash`; `google - gemini-2.0-flash-lite` → `google - gemini-3.1-flash-lite`.
+> `google - gemini-3.5-flash`; `google - gemini-2.0-flash-lite` → `google - gemini-3.5-flash-lite`.
 
 ### 4.3 Languages (per provider)
 

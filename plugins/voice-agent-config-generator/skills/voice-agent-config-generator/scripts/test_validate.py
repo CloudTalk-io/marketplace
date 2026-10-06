@@ -811,15 +811,15 @@ for _language in ("en", "en-US"):
 
 for _alias, _expected in {
     "google - gemini-1.5-pro": "google - gemini-3.5-flash",
-    "google - gemini-2.0-flash-lite": "google - gemini-3.1-flash-lite",
+    "google - gemini-2.0-flash-lite": "google - gemini-3.5-flash-lite",
 }.items():
     if V.LEGACY_LLM_ALIASES.get(_alias) != _expected:
         failures.append("legacy alias %r must resolve to %r, got %r"
                         % (_alias, _expected, V.LEGACY_LLM_ALIASES.get(_alias)))
-# The old target, gemini-2.5-flash-lite, is ElevenLabs-only, so the alias used to 400 on Deepgram.
-expect_no_code("Deepgram agent may use the gemini-2.0-flash-lite alias",
-               lambda c: c.update({"language": "en-US", "llmOverride": "google - gemini-2.0-flash-lite"}),
-               "llm-provider-mismatch")
+# gemini-2.0-flash-lite was only ever an ElevenLabs model, so its target must not open it up to Deepgram.
+expect_error("Deepgram agent cannot use the gemini-2.0-flash-lite alias",
+             lambda c: c.update({"language": "en-US", "llmOverride": "google - gemini-2.0-flash-lite"}),
+             "llm-provider-mismatch")
 for _alias, _target in V.LEGACY_LLM_ALIASES.items():
     if _target not in V.ELEVENLABS_MODELS:
         failures.append("legacy alias %r points at %r, which is not a canonical model" % (_alias, _target))

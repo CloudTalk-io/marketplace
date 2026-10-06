@@ -12,8 +12,8 @@ Installs still track the latest `main` — the version is a marker for the tooli
   `deepseek - deepseek-v41-flash`. All 32 are offered on ElevenLabs; 15 of them are also offered on
   Deepgram. No model was removed.
 - **Two legacy aliases retargeted.** `google - gemini-1.5-pro` now resolves to `google - gemini-3.5-flash`
-  and `google - gemini-2.0-flash-lite` to `google - gemini-3.1-flash-lite`, so the latter is also valid
-  on Deepgram-resolved agents.
+  and `google - gemini-2.0-flash-lite` to `google - gemini-3.5-flash-lite`. Both legacy names were only
+  ever ElevenLabs models, so `google - gemini-2.0-flash-lite` is still rejected on Deepgram-resolved agents.
 
 ## 0.1.0 — 2026-09-11
 
