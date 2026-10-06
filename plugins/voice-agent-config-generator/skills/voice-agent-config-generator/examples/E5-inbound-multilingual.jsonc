@@ -5,10 +5,10 @@
 // collection), asrKeywords, and `turnModel: "turn_v3"` — the newer turn-detection model, safe to select
 // here because this API pins the ASR provider turn_v3 needs (schema §10). E8 carries the rest of the
 // elevenLabsSettings surface; between the two files every sub-field is shown.
-// Its three hangup scenarios carry an EMPTY `reply` on purpose: a scenario reply is spoken verbatim, so a
-// fixed English line would reach every German or French caller in English. The closings live in the
-// goalPrompt instead and are spoken in the caller's language; each scenario only ends the call once the
-// goodbye has been said (behavioral §4.2, §4.3).
+// Its three hangup scenarios carry an EMPTY `reply` by design: the closings live in the goalPrompt so the
+// agent adapts the goodbye to the conversation, and each scenario only ends the call once the goodbye has
+// been said (behavioral §4.3). A multilingual agent may also write a literal English `reply` — the compiled
+// prompt renders it in the caller's language (§4.2).
 //
 // This agent takes the appointment request and hands it to the studio to confirm — fully self-contained.
 // To let the agent book into a calendar directly, connect a Google/Outlook calendar in the UI and enable
@@ -61,9 +61,9 @@
     }
   },
   "scenarios": [
-    // Empty replies on purpose (see the header): the goodbye is spoken from the goalPrompt in the caller's
-    // language, and each scenario fires after it to end the call. A literal reply here would be English
-    // for every de/fr caller — the language bleed behavioral §4.2 warns about.
+    // Empty replies by design (see the header): the goodbye is spoken from the goalPrompt, and each scenario
+    // fires after it to end the call. A literal English `reply` would also work for this multilingual
+    // agent — the compiled prompt renders it in the caller's language (behavioral §4.2).
     {
       "enabled": true,
       "when": "you have said goodbye after reading the request back and the caller had nothing else",

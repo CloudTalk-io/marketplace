@@ -1,4 +1,4 @@
-# Voice Agent v2 — generator contract
+# VoiceAgent v2 — generator contract
 
 > **Audience:** the config-generation skill (LLM). **This doc owns the *emit* mechanics**: per-tier
 > policy, intent-gating, the reference decision tree (reuse / fetch / substitute / ask / omit), and the
@@ -308,7 +308,7 @@ exist and can't be created, fall back to the offline endings: **ask**, or **omit
 on which agent, and what is still unwired. *After a confirmed save*, report
 
 - **what was written and where** — the agent's **name and id**, plus the fields that changed, and the
-  **`dashboard_url`** *when the write returned one*: the voice-agent create/update and a KB create do,
+  **`dashboard_url`** *when the write returned one*: the VoiceAgent create/update and a KB create do,
   the tool and assignment writes and `cloudtalk_trigger_aiva_call` do not — hand over the link where
   there is one rather than describing the navigation, and don't promise it where there isn't;
 - **the platform's own diagnostics** — a **successful** write can still carry
@@ -369,8 +369,8 @@ before the reply** — once the save lands, the fix is another live-agent write.
 
 **For non-trivial configs** (multilingual, any transfer, data capture, appointment booking, or a
 referenced resource), also run an **independent critique pass** before presenting — prefer a subagent
-with fresh context, else a deliberate adversarial self-review against the §8 lenses (language consistency
-incl. every `when`, greeting realism, prose coherence in the target language, scenario coverage,
+with fresh context, else a deliberate adversarial self-review against the §8 lenses (greeting realism in
+the agent's language, prose coherence, scenario coverage,
 `extractData` justification, schema + reuse/nothing-to-wire). Reconcile the findings and briefly note any you
 deliberately override. Trivial single-purpose agents can skip it.
 

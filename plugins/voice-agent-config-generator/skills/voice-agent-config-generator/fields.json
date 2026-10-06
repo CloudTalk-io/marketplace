@@ -1,5 +1,5 @@
 {
-  "_about": "Machine-readable field registry for Voice Agent v2 (Expert Mode). SINGLE SOURCE OF TRUTH for the field set and each field's `authoring` class. Human view: schema.md. Full authoring-class definitions: README.md#the-authoring-tiers-full-field-partition. If a field's class changes, change it HERE first. `resourceKind` appears only on reference/environment fields; `notes` reference schema.md section numbers. The top-level key `skills` has no `topLevel` row of its own: it is the container key for the whole `skills` section below, and the validator recognizes it from there.",
+  "_about": "Machine-readable field registry for VoiceAgent v2 (Expert Mode). SINGLE SOURCE OF TRUTH for the field set and each field's `authoring` class. Human view: schema.md. Full authoring-class definitions: README.md#the-authoring-tiers-full-field-partition. If a field's class changes, change it HERE first. `resourceKind` appears only on reference/environment fields; `notes` reference schema.md section numbers. The top-level key `skills` has no `topLevel` row of its own: it is the container key for the whole `skills` section below, and the validator recognizes it from there.",
   "_enabledRule": "Every skill object present in the config, every scenario, and every guardrail MUST carry an explicit `enabled` bool. Nothing defaults it: a missing key fails the save with 422 (`expected required property enabled to be present`), and a stored unit without it is silently inactive. `enabled: false` is a legal shape -- it ships a unit switched-off for the user to finish in the dashboard.",
   "authoringClasses": {
     "generate": "Generator authors freely (content/choice/number). Self-contained: nothing outside the JSON is required.",
@@ -106,7 +106,7 @@
       { "path": "skills.appointmentBooking.calendarId", "authoring": "reference", "resourceKind": "calendar" },
       { "path": "skills.appointmentBooking.eventName", "authoring": "generate" },
       { "path": "skills.appointmentBooking.durationMinutes", "authoring": "generate", "notes": "Any positive duration (e.g. 15 or 30 minutes); whatever the booked service needs." },
-      { "path": "skills.appointmentBooking.serviceDescription", "authoring": "generate", "notes": "A description of the service, made available to the voice-agent LLM so it knows what it is booking and can communicate it to the contact." },
+      { "path": "skills.appointmentBooking.serviceDescription", "authoring": "generate", "notes": "A description of the service, made available to the VoiceAgent LLM so it knows what it is booking and can communicate it to the contact." },
       { "path": "skills.appointmentBooking.calendarEventDescription", "authoring": "generate", "notes": "The description written onto the scheduled calendar event itself (may be customer-facing)." },
       { "path": "skills.appointmentBooking.integrationType", "authoring": "forbidden", "notes": "Server-resolved (google_calendar|outlook)." },
       { "path": "skills.appointmentBooking.availabilityToolId", "authoring": "forbidden", "notes": "Built-in tool ID created server-side." },

@@ -1,4 +1,4 @@
-# Voice Agent v2 — behavioral guidance (what performs well)
+# VoiceAgent v2 — behavioral guidance (what performs well)
 
 > Companion to [`schema.md`](./schema.md). The schema tells you what is **valid**; this doc tells
 > you what **performs well**. A config can pass every validation rule and still talk over callers,
@@ -25,12 +25,14 @@ Everything you write is **assembled into one system prompt** at call time. There
 "scenario engine" — scenarios, guardrails, skills, and language all become prompt text a single LLM
 interprets. Consequences:
 
-- **Scenario `when`/`reply` text is injected near-verbatim** — the `reply` is presented to the LLM as
-  the thing to say, and the `when` as the condition to watch for. Because **both** sit in the prompt the
-  model reads every turn, both belong in the agent's `language` (§5): an English `when` on a non-English
-  agent is foreign text in the live prompt.
-- **The runtime injects a language directive** (`Communicate in <language>`). Text in another
-  language fights it.
+- **Each scenario becomes one prompt line**, `- **<when>** — <reply> → then CALL <tool>`, under a header
+  telling the model to follow these instructions and rephrase naturally in its own words; guardrails
+  become `**When** <when>, **then** <reply>`. Nothing sends a `reply` to text-to-speech directly: the LLM
+  follows it as an instruction. So `reply` can be the line to say or an instruction for what to say or
+  do, and `when` is the condition to watch for (§4.2).
+- **The runtime injects a language directive** (`Communicate in <language>`; on a multilingual agent,
+  respond in the caller's language). It governs what the agent says whatever language the config text is
+  written in, so English config text on a non-English agent is spoken in the agent's language (§5).
 - **Built-in tools become callable functions** with protocol sections (TRANSFER/HANGUP/SMS/BOOKING)
   appended.
 - **`greeting` is injected** as a greet-the-caller instruction — so if `goalPrompt` *also* contains
@@ -228,17 +230,15 @@ Platform facts: the agent **cannot navigate IVR menus** (detection only, no DTMF
 measure silence duration** ("hang up after 30s of silence" is not implementable). A 30-second *audio*
 inactivity disconnect exists but is a transport safety net, not graceful ending.
 
-### 4.2 Scenario `reply` = exact spoken text, in the agent's language
+### 4.2 Scenario `reply` and `when` = instructions, not quoted text
 
-- **DO** write `reply` as the **literal sentence to speak**, in the agent's `language`.
-- **DON'T** write meta-instructions (`Say:"Goodbye." And proceed to end the call.`), `"."`,
-  `"Nothing"`, `"Say nothing"` — the quoted/literal fragment is spoken verbatim, word for word.
-- **DON'T** embed conditional logic (`"(if confirmed) X, (if not) Y"`) — parentheticals get read aloud.
-  One scenario per branch.
-- **AVOID** instructional replies (`"Politely end the call."`) — in a **non-English agent** an English
-  instruction causes **language bleed**. Prefer an empty `reply` over an English instruction.
-- **The sibling `when` follows the same language rule** — write it in the agent's `language` too (§5);
-  it is injected into the prompt, not an internal English matcher.
+- **`reply`** is what the agent should say or do when the scenario fires: the line itself, or an
+  instruction for what to say or do. It is not spoken word for word; the LLM follows it and phrases it
+  naturally. **`when`** is the condition the model watches for.
+- **Language.** `reply` and `when` are not quoted word for word: the agent speaks its configured
+  `language` (or the caller's, on a multilingual agent) whatever language they are written in, so English
+  is fine for any agent — no need to translate them or to leave `reply` empty. Phrasing them in the
+  agent's language is an optional preference for a single-language agent.
 
 ### 4.3 One owner per behavior
 
@@ -275,17 +275,16 @@ truncates a legitimate call.
   caller-language requirement, default `language` to the language the user is writing in during setup,
   resolved to a supported code (`schema.md` §4.3); provider auto-selection then follows `schema.md` §5.
   Name it as an overridable default the user can change in one word. If the setup conversation's language
-  is not a supported agent language, fall back to a supported one and say so. This decides which language
-  the content rules below are written in; it is a default, not a new field.
-- **DO** write `goalPrompt`, custom skills, `greeting`, all scenario/guardrail `reply` fields, **and all
-  scenario/guardrail `when` conditions** in the agent's **`language`**. The runtime injects
-  `Communicate in <language>`; substantial content in another language causes mid-call switching. The
-  `when` is injected near-verbatim (§1), so it is in-prompt content too — an English `when` on a Czech or
-  German agent is exactly the kind of foreign text that triggers switching. (See `examples/E2` — German
-  agent, German `when`.)
-- For **multilingual** (ElevenLabs + `secondaryLanguages`), the runtime adds auto language detection
- — keep prompt material in the primary language; don't write mixed-language prompts.
-- Structural English (markdown headers, field names) is fine; **sentences the model might echo** are not.
+  is not a supported agent language, fall back to a supported one and say so. It sets the language the
+  agent speaks and the `greeting` is written in; it is a default, not a new field.
+- **Config text may be written in English.** The runtime instructs the agent to speak its configured
+  `language` (`Communicate in <language>`), so `goalPrompt`, custom skills, and scenario/guardrail
+  `reply` and `when` written in English are honored in the agent's language: a Spanish agent instructed in
+  English speaks Spanish. Writing them in the agent's language is a fine preference, not a requirement
+  (`examples/E2` keeps its German agent's `when` in German). Write the `greeting` in the agent's
+  language: it is the opening line callers hear.
+- For **multilingual** (ElevenLabs + `secondaryLanguages`), the runtime tells the agent to detect and
+  answer in the caller's language, so the config text needs no per-language copies.
 - When several languages are needed but not in the *same* call, prefer **one agent per language**.
 
 ---
@@ -470,29 +469,28 @@ Run a generated config against this before presenting it:
 | 6 | `takeMessage` not enabled on outbound |
 | 7 | Transfer conditions specific, **< 120 chars**, no "anything/everything"; each **enabled** direct target carries **both** its id and extension, or the skill ships `enabled: false` as a draft — a scaffolded group rule with the id/extension **omitted** (never blanked to `""`), or `rules: []` — with the prompt offering a **callback** instead of a handoff (§3.4) |
 | 8 | Hangup scenarios present with an **explicit `action: "hangup"` and `enabled: true`** (an omitted action is a plain reply, and a switched-off scenario grants nothing): normal end + silence (+ voicemail if outbound) |
-| 9 | All `reply` fields literal spoken text **and all scenario/guardrail `when` conditions** in the agent's `language` (no `Say:"…"`, no English `when`/`reply` in non-English agents, no `"."`/`"Nothing"`) |
+| 9 | Every scenario without a `hangup`/`sendSms` action has a `reply`: the line to say or an instruction, not spoken word for word, in any language (§4.2) |
 | 10 | No behavior owned twice (greeting duplication, silence handling, conflicting rules) |
 | 11 | No call-start scenario competing with `greeting` |
 | 12 | `maxCallDuration` set with generous headroom (hard cap that truncates the call): ~10–15 min outbound / ~20–30 min inbound; never omit (the dashboard fills 30) (§4.4) |
 | 13 | Outbound: `startSpeakingFirst: true` + non-empty identifying `greeting` |
 | 14 | Single consistent business identity throughout |
-| 15 | All prompt/reply text **and `when` conditions** in the configured `language` (re-read each one; don't assume) |
+| 15 | `greeting` written in the configured `language` (it is spoken as written); other config text may be in English (§5) |
 | 16 | No nano/lite-class LLM on agents with transfers/tools/booking/data capture (§7b) |
 | 17 | Speech formatting rules present (numbers as words, digit blocks, dates in words — §7c) |
-| 18 | No conditional logic or negative meta-instructions in any `reply` |
-| 19 | Grounding instruction present; injected `{{variables}}` declared as facts |
-| 20 | No IVR-navigation or silence-timer instructions (not supported) |
-| 21 | Numeric settings per §7a-bis (esp. `optimizeStreamingLatency` ≠ 4; `temperature` 0.5 baseline — ~0.1–0.3 for highly structured flows, never above 0.7; `turnEagerness: patient` for data collection) |
-| 22 | Custom-tool prompts follow when/params(+format example)/usage/error-handling; confirmation before irreversible actions |
-| 23 | **Self-contained unless a `reference` was explicitly requested**; outbound number completed — `defaultOutboundNumberId` defaults to `1` (Automatic, as the dashboard seeds it) with a real owned `failoverOutboundNumberId` in both directions, or a real owned `defaultOutboundNumberId` set directly (reused, fetched, or asked). Never guessed, never `2`, never `null`; a bare `1` with no failover `400`s (`generator-contract.md`) |
-| 24 | `greeting` names the **real business** — **ask** for the name (it is ground truth, never coined from the use case); a clearly-marked `[placeholder]` is allowed **only** when the user explicitly wants a template. Reads like a person would say it — never a nameless/awkward opener (§6) |
-| 25 | **Prose coherence:** every prose field (`greeting`, `goalPrompt`, skills, replies) re-read in the target language — grammatical, complete, no garbled or truncated text |
-| 26 | `extractData` properties **presented to the user with a one-line rationale** and open to edit — not silently embedded (§3.1) |
-| 27 | **Save-ready:** schema-only JSON — no `_requiredResources`, no placeholder/sentinel IDs, no forbidden fields — saves cleanly **and** runs as-is, reusing the agent's existing setup (`generator-contract.md`) |
-| 28 | **Outbound `startSpeakingFirst` is a deliberate choice**, not a leftover default: `true` with a concrete identifying `greeting`, unless the user asked for an agent that waits (§6) |
-| 29 | `tone`/`verbosity` emitted **only when the use case wants a non-default**, every label from the closed set — otherwise the keys are absent and the platform default applies (§2.1) |
-| 30 | `dialTime` (outbound only) is `0` or **≤ 90 s** — 91–120 passes validation but the call is refused when it's dispatched (§9) |
-| 31 | **Connected:** the document being saved was **round-tripped from `cloudtalk_get_voice_agent`** — not assembled from the conversation — with `knowledgeBaseIds` and `elevenLabsSettings` carried forward (`generator-contract.md`) |
+| 18 | Grounding instruction present; injected `{{variables}}` declared as facts |
+| 19 | No IVR-navigation or silence-timer instructions (not supported) |
+| 20 | Numeric settings per §7a-bis (esp. `optimizeStreamingLatency` ≠ 4; `temperature` 0.5 baseline — ~0.1–0.3 for highly structured flows, never above 0.7; `turnEagerness: patient` for data collection) |
+| 21 | Custom-tool prompts follow when/params(+format example)/usage/error-handling; confirmation before irreversible actions |
+| 22 | **Self-contained unless a `reference` was explicitly requested**; outbound number completed — `defaultOutboundNumberId` defaults to `1` (Automatic, as the dashboard seeds it) with a real owned `failoverOutboundNumberId` in both directions, or a real owned `defaultOutboundNumberId` set directly (reused, fetched, or asked). Never guessed, never `2`, never `null`; a bare `1` with no failover `400`s (`generator-contract.md`) |
+| 23 | `greeting` names the **real business** — **ask** for the name (it is ground truth, never coined from the use case); a clearly-marked `[placeholder]` is allowed **only** when the user explicitly wants a template. Reads like a person would say it — never a nameless/awkward opener (§6) |
+| 24 | **Prose coherence:** every prose field (`greeting`, `goalPrompt`, skills, replies) re-read: grammatical, complete, no garbled or truncated text |
+| 25 | `extractData` properties **presented to the user with a one-line rationale** and open to edit — not silently embedded (§3.1) |
+| 26 | **Save-ready:** schema-only JSON — no `_requiredResources`, no placeholder/sentinel IDs, no forbidden fields — saves cleanly **and** runs as-is, reusing the agent's existing setup (`generator-contract.md`) |
+| 27 | **Outbound `startSpeakingFirst` is a deliberate choice**, not a leftover default: `true` with a concrete identifying `greeting`, unless the user asked for an agent that waits (§6) |
+| 28 | `tone`/`verbosity` emitted **only when the use case wants a non-default**, every label from the closed set — otherwise the keys are absent and the platform default applies (§2.1) |
+| 29 | `dialTime` (outbound only) is `0` or **≤ 90 s** — 91–120 passes validation but the call is refused when it's dispatched (§9) |
+| 30 | **Connected:** the document being saved was **round-tripped from `cloudtalk_get_voice_agent`** — not assembled from the conversation — with `knowledgeBaseIds` and `elevenLabsSettings` carried forward (`generator-contract.md`) |
 
 ---
 

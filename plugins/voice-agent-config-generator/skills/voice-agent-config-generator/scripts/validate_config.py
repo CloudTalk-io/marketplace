@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-validate_config.py — structural + dependency validator for Voice Agent v2 (Expert Mode) configs.
+validate_config.py — structural + dependency validator for VoiceAgent v2 (Expert Mode) configs.
 
 Validates the JSON body pasted into the dashboard's Advanced/code tab to edit an agent — the platform's
 Expert-Mode save; the same body is valid on create. It is the programmatic companion to
@@ -1146,8 +1146,6 @@ def validate_scenarios(cfg, rep):
         if reply in (None, "") and action not in ("hangup", "sendSms"):
             rep.warn("scenario-no-reply", "%s.reply" % loc,
                      "No reply text — the agent has nothing to say for this scenario (schema §7.1).")
-        if isinstance(reply, str) and reply:
-            _lint_reply(reply, "%s.reply" % loc, rep)
         if action is not None:
             if not isinstance(action, str) or action not in SCENARIO_ACTIONS:
                 rep.err("bad-enum", "%s.action" % loc,
@@ -1208,29 +1206,6 @@ def validate_guardrails(cfg, rep):
             v = g.get(k)
             if not isinstance(v, str) or not v.strip():
                 rep.err("missing-required", "%s.%s" % (loc, k), "Required (schema §7.2).")
-        if isinstance(g.get("reply"), str) and g["reply"]:
-            _lint_reply(g["reply"], "%s.reply" % loc, rep)
-
-
-_REPLY_BAD_EXACT = {".", "nothing", "say nothing", "none"}
-
-
-def _lint_reply(reply, where, rep):
-    """Behavioral §4.2: reply must be the literal spoken sentence, not a meta-instruction."""
-    stripped = reply.strip()
-    low = stripped.lower()
-    if low in _REPLY_BAD_EXACT:
-        rep.warn("reply-meta", where,
-                 "Reply %r is a placeholder/meta-instruction, not spoken text — it gets read aloud. Use a real "
-                 "sentence or an empty string (behavioral §4.2)." % reply)
-    if re.match(r'^\s*say\s*[:\"]', low):
-        rep.warn("reply-meta", where,
-                 "Reply looks like a meta-instruction (\"Say: ...\") — the quoted fragment is spoken verbatim "
-                 "(behavioral §4.2). Write just the sentence to speak.")
-    if re.search(r"\(\s*if\b.*\(\s*if\b", low) or re.search(r"\(\s*if\s+not\b", low):
-        rep.warn("reply-conditional", where,
-                 "Reply embeds branching conditional logic ((if X) … (if not) …) — parentheticals get read "
-                 "aloud. Use one scenario per branch (behavioral §4.2).")
 
 
 def behavioral_lints(cfg, rep, direction, provider):
@@ -1318,7 +1293,7 @@ def print_human(rep, src_label):
     glyph = report_glyphs()
     bullet = glyph["bullet"]
     issues = sorted(rep.issues, key=lambda i: (order[i.level], i.where))
-    print("Voice Agent v2 config validation — %s" % src_label)
+    print("VoiceAgent v2 config validation — %s" % src_label)
     print("=" * 64)
     if not issues:
         print("No structural or behavioral issues found.")
@@ -1372,7 +1347,7 @@ def print_human(rep, src_label):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Validate a Voice Agent v2 (Expert Mode) config.")
+    parser = argparse.ArgumentParser(description="Validate a VoiceAgent v2 (Expert Mode) config.")
     parser.add_argument("config", help="Path to the config JSON/JSONC, or - for stdin.")
     parser.add_argument("--json", action="store_true", help="Emit a machine-readable JSON report.")
     parser.add_argument("--strict", action="store_true", help="Exit non-zero if there are warnings too.")

@@ -1,4 +1,4 @@
-# Voice Agent v2 — Expert Mode schema (structural reference)
+# VoiceAgent v2 — Expert Mode schema (structural reference)
 
 > **What this is:** the structural reference for the **v2 request body**
 > (`VoiceAgentV2ConfigurationRequest`) — the canonical importable/exportable JSON. Human view of
@@ -475,7 +475,7 @@ skills. **`action` tells the agent how to behave when it *can't* answer a questi
 - `enabled: true` ⇒ `integrationId`, `calendarId`, `eventName` required; `durationMinutes > 0`.
 - **`durationMinutes`** — any positive duration (e.g. `15` or `30` minutes); set whatever the booked
   service needs.
-- **`serviceDescription`** — a description of the service, made available to the voice-agent LLM so it knows
+- **`serviceDescription`** — a description of the service, made available to the VoiceAgent LLM so it knows
   what it is booking and can communicate it to the contact.
 - **`calendarEventDescription`** — the description written onto the scheduled calendar event itself (may be
   customer-facing).

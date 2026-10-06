@@ -2,9 +2,10 @@
 
 Each release bumps a semver (in the plugin manifest and `.claude-plugin/marketplace.json`) with a
 dated entry below, made whenever the config schema or the generation guidance materially changes.
-Installs still track the latest `main` — the version is a marker for the tooling and this log, not a pin.
+Claude Code installs a release when the manifest version changes; the Claude app picks it up from the
+marketplace (Check for updates, or Sync automatically).
 
-## 0.2.0 - 2026-10-05
+## 0.2.0 - 2026-10-06
 
 - **LLM registry expanded to 32 models.** Added `openai - gpt-5.6-luna` (both providers) and, on
   ElevenLabs only, `openai - gpt-5.6-terra`, `anthropic - claude-sonnet-5`,
@@ -14,6 +15,17 @@ Installs still track the latest `main` — the version is a marker for the tooli
 - **Two legacy aliases retargeted.** `google - gemini-1.5-pro` now resolves to `google - gemini-3.5-flash`
   and `google - gemini-2.0-flash-lite` to `google - gemini-3.5-flash-lite`. Both legacy names were only
   ever ElevenLabs models, so `google - gemini-2.0-flash-lite` is still rejected on Deepgram-resolved agents.
+
+## 0.1.1 — 2026-09-30
+
+- **E4 (support intake) gives the complete answer.** Its prompt now matches its `thorough` verbosity —
+  order and returns questions get every step the caller needs, not the shortest reply.
+- **E4 keeps captured data in CloudTalk by default.** The `extractData` webhook ships commented out;
+  uncomment it and point it at a receiver you control to forward order and callback numbers.
+- **Behavioural guidance: multilingual cleanup** — scenario replies on multilingual agents may be written
+  in English.
+- **Scenario replies may be instructions.** The validator no longer warns on `Say: …`, placeholder, or
+  conditional replies: a reply is an instruction the agent follows, not text read out word for word.
 
 ## 0.1.0 — 2026-09-11
 
