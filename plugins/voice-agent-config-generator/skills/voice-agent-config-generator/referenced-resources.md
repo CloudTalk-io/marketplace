@@ -1,4 +1,4 @@
-# Voice Agent v2 — referenced & environment resources (wiring guide)
+# VoiceAgent v2 — referenced & environment resources (wiring guide)
 
 > **Audience:** anyone finishing a config that references company resources. **This doc owns the "how do
 > I make this real" knowledge** — what each `reference` / `environment` field needs, where the resource

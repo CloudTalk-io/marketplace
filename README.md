@@ -1,13 +1,13 @@
 # CloudTalk Claude Plugins
 
 CloudTalk's Claude plugin marketplace — plugins for building and testing
-[CloudTalk](https://www.cloudtalk.io) **AI voice agents** with Claude.
+[CloudTalk](https://www.cloudtalk.io) **AI VoiceAgents** with Claude.
 
-The `voice-agent-config-generator` plugin bundles two skills:
+**CloudTalk VoiceAgent Builder** (`voice-agent-config-generator`) bundles two skills:
 
 | Skill | What it does |
 |---|---|
-| [`voice-agent-config-generator`](./plugins/voice-agent-config-generator/skills/voice-agent-config-generator) | Generate, fix, and validate **Voice Agent v2 (Expert Mode)** JSON configurations for any inbound/outbound use case, with a structural + behavioral validator run before every hand-back. |
+| [`voice-agent-config-generator`](./plugins/voice-agent-config-generator/skills/voice-agent-config-generator) | Generate, fix, and validate **VoiceAgent v2 (Expert Mode)** JSON configurations for any inbound/outbound use case, with a structural + behavioral validator run before every hand-back. |
 | [`simulate-conversation`](./plugins/voice-agent-config-generator/skills/simulate-conversation/README.md) | Roleplay a caller persona against a config and score the transcript with an automated judge — test an agent before it takes real calls. |
 
 It works two ways:
@@ -16,16 +16,22 @@ It works two ways:
   generates a validated, save-ready JSON config that you paste into the CloudTalk dashboard's
   **Expert Mode** (Advanced/code tab).
 - **Connected (CloudTalk MCP).** Connect the CloudTalk MCP and Claude can also read and operate
-  your real account — numbers, knowledge bases, tools, and voice agents — and save configs for you.
+  your real account — numbers, knowledge bases, tools, and VoiceAgents — and save configs for you.
   **Every write to your account requires your explicit confirmation** (one no-op exception: an
   assign/unassign that changes nothing).
 
-## Install (Claude Code)
+## Install
+
+**In Claude Code (CLI or IDE):**
 
 ```
 /plugin marketplace add CloudTalk-io/marketplace
 /plugin install voice-agent-config-generator@cloudtalk
 ```
+
+**In the Claude app (claude.ai / desktop):** Customize → **Plugins** → **Add** → **Add marketplace** →
+`CloudTalk-io/marketplace`, then add **CloudTalk VoiceAgent Builder**. The plugin runs in the Claude app
+as well as in Claude Code.
 
 That's all you need for offline use. To let Claude operate your account, connect the MCP below.
 
@@ -46,17 +52,17 @@ authenticates with **HTTP Basic** using a company API key.
    This one step stays manual: the plugin can collect and store the value, but it cannot compute
    the base64 for you.
 
-3. **Easiest path — let the plugin ask.** The plugin bundles the MCP server and declares the key
-   as plugin configuration, so **Claude Code prompts you for it when the plugin is enabled**. Paste
-   the base64 string from step 2 into that prompt: the input is masked, and the value goes into
-   your OS keychain (or `~/.claude/.credentials.json` where there is no keychain) rather than into
-   a settings file or a shell profile. Nothing to export, nothing to keep in a dotfile.
+3. **Give Claude the key (easiest path).** The plugin bundles the MCP server and declares the key as
+   plugin configuration:
+   - **Claude Code** prompts you for it when the plugin is enabled — paste the base64 from step 2; the
+     input is masked and stored in your OS keychain (or `~/.claude/.credentials.json`), not a dotfile.
+     Needs Claude Code **2.1.207** or later (when `userConfig` prompting landed); on an older CLI, use step 4.
+   - **Claude app** — open the plugin (Customize → Plugins) and its **Connectors** tab. If the CloudTalk
+     connector shows **Not added**, add it; then **Connect** and paste the base64 into the popup. The
+     field may be labelled "Bearer" — that's cosmetic; the plugin sends the value with the correct
+     **Basic** scheme, so paste the base64 as-is.
 
-   Leave the prompt empty to stay offline. To replace the key later, update the plugin's stored
-   configuration from the `/plugin` manager.
-
-   **This needs a recent Claude Code** — `userConfig` prompting landed in **2.1.207**. On an older CLI
-   the placeholder is left unresolved, so add the server yourself instead (step 4).
+   Leave it empty to stay offline. To replace the key later, update the plugin's stored configuration.
 
 4. **Or add the server yourself** (independent of the plugin — useful for a machine-wide setup, or
    when you'd rather not install the plugin's MCP at all):
@@ -67,9 +73,9 @@ authenticates with **HTTP Basic** using a company API key.
      -H "Authorization: Basic <base64 of API_KEY_ID:API_KEY_SECRET>"
    ```
 
-> **claude.ai / Claude Desktop connectors:** the server authenticates via a custom
-> `Authorization: Basic …` header. A custom connector works only if the connector UI lets you set
-> a custom Authorization header — connector UIs that only accept a Bearer token cannot
+> **Adding the server as your own custom connector** (outside the plugin) in claude.ai or Claude Desktop:
+> the server authenticates via an `Authorization: Basic …` header, so this works only if the connector
+> UI lets you set a custom Authorization header. Connector UIs that only accept a Bearer token cannot
 > authenticate against it.
 
 **No key? Everything still works.** With no key configured the bundled server simply doesn't
@@ -81,7 +87,7 @@ configs offline; you paste the result into Expert Mode yourself.
 
 - **Authentication** is company API keys over HTTP Basic; OAuth is planned. The base64 step is
   yours to run once — the plugin stores the result, it does not compute it.
-- **A non-admin API key is more limited than it looks.** It can list your voice agents, but the other
+- **A non-admin API key is more limited than it looks.** It can list your VoiceAgents, but the other
   config reads (fetching one agent, listing knowledge bases or custom tools) and **every** write fail
   with an authorization error. If one list works and nothing else does, check the key's role
   (`cloudtalk_health_check` echoes it, along with `rollout_enabled` — which tells "this account isn't
@@ -98,9 +104,12 @@ configs offline; you paste the result into Expert Mode yourself.
 
 Each release carries a semver (in the plugin manifest and the marketplace catalog) and a matching
 dated entry in [CHANGELOG.md](./CHANGELOG.md), bumped whenever the config schema or the generation
-guidance materially changes. Installs still track the latest `main` — Claude Code picks changes up
-via `/plugin marketplace update cloudtalk` (or its background auto-update); the version is a marker,
-not a pin.
+guidance materially changes. Updates follow the version: a new release reaches Claude Code when the
+manifest version changes. Auto-update is off by default for third-party marketplaces, so either turn it
+on (`/plugin` → **Marketplaces** → `cloudtalk` → **Enable auto-update**) or update by hand with **Update
+now** on the plugin's **Installed** tab, or `claude plugin update voice-agent-config-generator@cloudtalk`.
+The Claude app picks up new versions from the marketplace (**Check for updates**, or **Sync
+automatically** for a marketplace you added yourself).
 
 ## Repo layout
 
@@ -112,6 +121,7 @@ marketplace/
     └── voice-agent-config-generator/
         ├── .claude-plugin/
         │   └── plugin.json              ← plugin manifest (incl. the bundled MCP server)
+        ├── icon.png                     ← directory-listing icon
         └── skills/
             ├── voice-agent-config-generator/
             │   ├── SKILL.md             ← skill entry point (trigger + router)

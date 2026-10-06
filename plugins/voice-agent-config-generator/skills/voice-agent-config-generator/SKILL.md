@@ -1,21 +1,21 @@
 ---
 name: voice-agent-config-generator
 description: >-
-  Generate, fix, or validate a CloudTalk Voice Agent v2 "Expert Mode" configuration — offline as the JSON
+  Generate, fix, or validate a CloudTalk VoiceAgent v2 "Expert Mode" configuration — offline as the JSON
   you paste into the dashboard's Advanced/code tab, or connected through the CloudTalk MCP, where it reads
   and writes the agent directly against your real account (numbers, knowledge bases, tools, transfer
   targets; every write needs your confirmation). Use whenever the user wants to create or edit ANY inbound
   or outbound AI voice/phone agent for CloudTalk — any use case or industry (reception, qualification,
   support, booking, surveys, reminders, notifications, lead capture, … — these are just examples, not the
-  limit) — or asks for a voiceAgent config, a goalPrompt/greeting/scenarios/skills, or pastes an existing
+  limit) — or asks for a VoiceAgent config, a goalPrompt/greeting/scenarios/skills, or pastes an existing
   config to review, edit, or reuse. Produces a behaviorally-sound, save-ready config that reuses the
   agent's existing setup, and runs a structural + behavioral validator first.
 license: Apache-2.0
 ---
 
-# Voice Agent v2 (Expert Mode) config generator
+# VoiceAgent v2 (Expert Mode) config generator
 
-Turn a use case — plus a few facts only the user can supply — into a **save-ready Voice Agent v2** JSON
+Turn a use case — plus a few facts only the user can supply — into a **save-ready VoiceAgent v2** JSON
 config.
 
 **Two modes, one contract.** If the CloudTalk MCP tools (`cloudtalk_*`) are available, you are
@@ -123,7 +123,8 @@ Emit only `generate` fields + the outbound number → nothing else to wire. Hand
 identity · style guardrails · response guidelines · task flow (**one question per turn**, explicit decision
 criteria) · ending. Numbered workflow, a `# Guardrails` heading, short action-based sentences. Custom
 skills: **2–4** recommended, up to 6 tolerated (the validator warns above 6), each a real capability.
-**All prose in the agent's `language`.**
+Prose may be written in English for any agent; the runtime makes the agent speak its configured `language`
+(`behavioral-guidance.md` §5).
 
 > **✓ Gate:** all 5 components present · one question per turn · greeting not duplicated inside `goalPrompt`.
 
@@ -134,11 +135,12 @@ skills: **2–4** recommended, up to 6 tolerated (the validator warns above 6), 
   read it back. Each property atomic.
 - `takeMessage` inbound-only, and emit it only deliberately: present-but-disabled renders an explicit
   "can't take messages". Don't auto-transfer `answerQuestions` without a KB/skills to try first.
-- Every `reply` = the **literal sentence spoken** (no `Say:"…"`, no parentheticals, no `"."`/`"Nothing"`).
+- Every `reply` = what the agent says or does when the scenario fires: the line itself or an instruction.
+  It is not spoken word for word (`behavioral-guidance.md` §4.2).
 - **Every scenario and every skill object carries an explicit `enabled`** — see the guardrail below. Never
   emit the `guardrails` array; keep it empty (`[]`).
 
-> **✓ Gate:** ≥1 hangup scenario · explicit `enabled` on every scenario and skill object · `guardrails: []` · every `reply` **and** every scenario `when` in the agent's `language`.
+> **✓ Gate:** ≥1 hangup scenario · explicit `enabled` on every scenario and skill object · `guardrails: []` · every scenario without a `hangup`/`sendSms` action has a `reply` (a line or an instruction, any language).
 
 ### 6 · Referenced features — only on explicit request — `referenced-resources.md`
 
@@ -185,9 +187,9 @@ Then run the `behavioral-guidance.md` §8 self-check once more.
 Multilingual / any transfer / data capture / appointment booking / a referenced resource → get an
 **independent** critique first. **Preferred: run the `simulate-conversation` skill** — a persona subagent
 plays a caller against the config and a blind judge reports gaps and awkward moments. Else a fresh-context
-subagent, else a deliberate adversarial self-review (read it as a skeptic). Lenses: language consistency
-**incl. every `when`**; greeting realism; **prose coherence** (re-read every prose field in the target
-language); scenario coverage; `extractData` justification; schema + reuse/nothing-to-wire. Reconcile; note
+subagent, else a deliberate adversarial self-review (read it as a skeptic). Lenses: greeting realism
+(in the agent's language, spoken as written); **prose coherence** (re-read every prose field);
+scenario coverage; `extractData` justification; schema + reuse/nothing-to-wire. Reconcile; note
 any finding you deliberately override.
 
 ### 10 · Return — `generator-contract.md` output shape
@@ -250,5 +252,6 @@ structured result replaces the paste-and-see smoke test.
   be **user-supplied and copied verbatim**; there is **no booking/calendar-link variable**. To "text the
   booking link": use `triggerType: "booking_confirmed"` + `sendSms` with `{{appointment.*}}`, or a static
   user-provided URL (`generator-contract.md`).
-- **All agent-`language` text** — `greeting`, every `reply`, `goalPrompt`, custom skills, **and every
-  scenario/guardrail `when`** — in the agent's `language`.
+- **Config text language** — `goalPrompt`, custom skills, every `reply`, and every scenario/guardrail
+  `when` may be written in English for any agent: the runtime instructs the agent to speak its configured
+  `language`, so they are honored in that language. Only the `greeting` is spoken as written.

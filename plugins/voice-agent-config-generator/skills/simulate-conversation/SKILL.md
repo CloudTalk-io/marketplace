@@ -1,10 +1,10 @@
 ---
 name: simulate-conversation
 description: >-
-  Test a CloudTalk Voice Agent v2 config by simulating a phone conversation against it: a subagent
+  Test a CloudTalk VoiceAgent v2 config by simulating a phone conversation against it: a subagent
   plays the agent strictly per the config against a caller persona, then a blind judge scores the
   transcript and returns gaps, awkward moments, and concrete config-level fixes. Use whenever the
-  user wants to test or preview a voice agent config — "test my agent", "simulate a call", "how
+  user wants to test or preview a VoiceAgent config — "test my agent", "simulate a call", "how
   would my agent handle an angry caller", "find gaps in this config", "run a simulated
   conversation" — and as a quality pass right after generating a config. Works on a conversation
   draft or pasted JSON; with the CloudTalk MCP connected it can also fetch a saved config and, on
@@ -12,7 +12,7 @@ description: >-
 license: Apache-2.0
 ---
 
-# Simulate a conversation against a Voice Agent config
+# Simulate a conversation against a VoiceAgent config
 
 Dry-run a config before it takes real calls. One subagent plays **both sides** of a phone call — the
 agent strictly per the config, the caller per a persona card — and a second, **blind** subagent
@@ -58,7 +58,7 @@ Prepare the run:
 ## 2 · Simulator subagent
 
 Spawn a fresh subagent per persona via the Agent/Task tool — never a raw API call — and run it on a
-**small, fast model (haiku)**: production voice agents run on small low-latency models, so a haiku
+**small, fast model (haiku)**: production VoiceAgents run on small low-latency models, so a haiku
 simulator is the honest approximation of how the config will actually be interpreted; a stronger
 model papers over prompt weaknesses a real agent would trip on. **Model names depend on the
 environment** — haiku where the Claude family is available, otherwise the **smallest fast** model on
@@ -92,8 +92,8 @@ AGENT — act strictly per the config:
 - `[collect: <property>=<value>]` marks a value the agent actually heard that maps to an enabled
   extractData property — read back where the goalPrompt itself requires a read-back; re-emit if the
   caller corrects it.
-- Enabled scenario matched → speak its `reply` verbatim (empty `reply` = say nothing extra), then honor
-  its `action` (`toolCall`/`sendSms`/`hangup`); a `booking_confirmed` scenario fires off a successful
+- Enabled scenario matched → voice its `reply` the way the runtime frames it: follow it exactly,
+  rephrasing naturally in your own words (empty `reply` = say nothing extra), then honor its `action` (`toolCall`/`sendSms`/`hangup`); a `booking_confirmed` scenario fires off a successful
   in-call booking, not off its `when`. Enabled guardrail matched → speak its `reply`. Disabled ones
   never fire.
 - Never invent a capability the config doesn't grant: no SMS without a sendSms scenario, no booking

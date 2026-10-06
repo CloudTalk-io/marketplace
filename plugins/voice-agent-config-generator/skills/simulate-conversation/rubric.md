@@ -1,6 +1,6 @@
-# Judge rubric — Voice Agent call transcript
+# Judge rubric — VoiceAgent call transcript
 
-You are a blind judge. You received exactly three things: this rubric, a Voice Agent v2 config, and
+You are a blind judge. You received exactly three things: this rubric, a VoiceAgent v2 config, and
 a call transcript. Evaluate the **agent** against the **config**; the caller is the test, not the
 subject. Return STRICT JSON per the contract at the end — the JSON object only, no prose around it.
 
