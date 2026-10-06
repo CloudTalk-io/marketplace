@@ -5,6 +5,17 @@ dated entry below, made whenever the config schema or the generation guidance ma
 Claude Code installs a release when the manifest version changes; the Claude app picks it up from the
 marketplace (Check for updates, or Sync automatically).
 
+## 0.2.0 - 2026-10-06
+
+- **LLM registry expanded to 32 models.** Added `openai - gpt-5.6-luna` (both providers) and, on
+  ElevenLabs only, `openai - gpt-5.6-terra`, `anthropic - claude-sonnet-5`,
+  `anthropic - claude-sonnet-5-5`, `google - gemini-3.8-flash`, `google - gemini-3.5-flash-lite` and
+  `deepseek - deepseek-v41-flash`. All 32 are offered on ElevenLabs; 15 of them are also offered on
+  Deepgram. No model was removed.
+- **Two legacy aliases retargeted.** `google - gemini-1.5-pro` now resolves to `google - gemini-3.5-flash`
+  and `google - gemini-2.0-flash-lite` to `google - gemini-3.5-flash-lite`. Both legacy names were only
+  ever ElevenLabs models, so `google - gemini-2.0-flash-lite` is still rejected on Deepgram-resolved agents.
+
 ## 0.1.1 — 2026-09-30
 
 - **E4 (support intake) gives the complete answer.** Its prompt now matches its `thorough` verbosity —

@@ -786,7 +786,48 @@ expect_warn("malformed language makes elevenLabsSettings ignored",
             lambda c: c.update({"language": "zz-ZZ", "elevenLabsSettings": {"vad": True}}),
             "elevenlabs-settings-ignored")
 
-# 23) Numeric thresholds: dialTime saves across 5-120 but dispatch refuses above 90, and maxCallDuration
+# 22c) LLM catalogue (schema §4.2): the validator accepts exactly what the API registry accepts.
+_ELEVENLABS_ONLY_ADDITIONS = (
+    "openai - gpt-5.6-terra", "anthropic - claude-sonnet-5", "anthropic - claude-sonnet-5-5",
+    "google - gemini-3.8-flash", "google - gemini-3.5-flash-lite", "deepseek - deepseek-v41-flash",
+)
+for _model in _ELEVENLABS_ONLY_ADDITIONS + ("openai - gpt-5.6-luna",):
+    expect_clean("ElevenLabs agent may use %s" % _model,
+                 lambda c, m=_model: c.__setitem__("llmOverride", m))
+expect_clean("Deepgram agent may use openai - gpt-5.6-luna",
+             lambda c: c.update({"language": "en-US", "llmOverride": "openai - gpt-5.6-luna"}))
+for _model in _ELEVENLABS_ONLY_ADDITIONS:
+    expect_error("Deepgram agent cannot use %s" % _model,
+                 lambda c, m=_model: c.update({"language": "en-US", "llmOverride": m}),
+                 "llm-provider-mismatch")
+
+# The public API's llmOverride enum is additive-only, so a canonical model never becomes an alias.
+if "google - gemini-3-flash-preview" in V.LEGACY_LLM_ALIASES:
+    failures.append("google - gemini-3-flash-preview must stay canonical, not a legacy alias")
+for _language in ("en", "en-US"):
+    expect_clean("%s agent may use google - gemini-3-flash-preview" % _language,
+                 lambda c, lang=_language: c.update({"language": lang,
+                                                     "llmOverride": "google - gemini-3-flash-preview"}))
+
+for _alias, _expected in {
+    "google - gemini-1.5-pro": "google - gemini-3.5-flash",
+    "google - gemini-2.0-flash-lite": "google - gemini-3.5-flash-lite",
+}.items():
+    if V.LEGACY_LLM_ALIASES.get(_alias) != _expected:
+        failures.append("legacy alias %r must resolve to %r, got %r"
+                        % (_alias, _expected, V.LEGACY_LLM_ALIASES.get(_alias)))
+# gemini-2.0-flash-lite was only ever an ElevenLabs model, so its target must not open it up to Deepgram.
+expect_error("Deepgram agent cannot use the gemini-2.0-flash-lite alias",
+             lambda c: c.update({"language": "en-US", "llmOverride": "google - gemini-2.0-flash-lite"}),
+             "llm-provider-mismatch")
+for _alias, _target in V.LEGACY_LLM_ALIASES.items():
+    if _target not in V.ELEVENLABS_MODELS:
+        failures.append("legacy alias %r points at %r, which is not a canonical model" % (_alias, _target))
+if not V.DEEPGRAM_MODELS <= V.ELEVENLABS_MODELS:
+    failures.append("Deepgram-only models %s are missing from ELEVENLABS_MODELS"
+                    % sorted(V.DEEPGRAM_MODELS - V.ELEVENLABS_MODELS))
+
+# 23)Numeric thresholds: dialTime saves across 5-120 but dispatch refuses above 90, and maxCallDuration
 # above 120 is refused by the save itself.
 expect_warn("dialTime above the dispatch limit", lambda c: c.__setitem__("dialTime", 100),
             "dialtime-dispatch-limit")
