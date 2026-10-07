@@ -1,7 +1,7 @@
 {
   "name": "voice-agent-config-generator",
   "displayName": "CloudTalk VoiceAgent Builder",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Build, fix, validate, and test CloudTalk VoiceAgents. Generate a save-ready VoiceAgent (Expert Mode) configuration from a plain-language description, fix or validate an existing one, and simulate a caller before it goes live — for any inbound or outbound use case. Works fully offline, or connected to your CloudTalk account (numbers, knowledge bases, tools, agents) through the CloudTalk MCP.",
   "author": {
     "name": "CloudTalk"

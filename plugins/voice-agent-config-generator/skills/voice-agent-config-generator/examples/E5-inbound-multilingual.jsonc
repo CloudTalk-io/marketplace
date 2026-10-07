@@ -1,6 +1,6 @@
 // E5 — Multilingual appointment-request agent with ElevenLabs tuning.
-// Resolved provider: ElevenLabs (pinned via providerOverride — multilingual must be ElevenLabs; Deepgram would reject it).
-// Auto LLM: complex (secondary languages) → Haiku 4.5.
+// Provider: ElevenLabs (set via `provider` — multilingual must be ElevenLabs; Deepgram cannot serve it).
+// LLM: Haiku 4.5 (complex: secondary languages).
 // Demonstrates: secondaryLanguages (multilingual), elevenLabsSettings (turn-taking tuned for data
 // collection), asrKeywords, and `turnModel: "turn_v3"` — the newer turn-detection model, safe to select
 // here because this API pins the ASR provider turn_v3 needs (schema §10). E8 carries the rest of the
@@ -20,8 +20,9 @@
   "failoverOutboundNumberId": 202, // replace with a real owned number id (cloudtalk_list_numbers or the
                                    // dashboard) — Automatic requires a real failover in BOTH directions
   "language": "en",
-  "secondaryLanguages": ["de", "fr"], // forces ElevenLabs; runtime adds automatic language detection
-  "providerOverride": "elevenlabs", // pin multilingual to ElevenLabs — stops a stored Deepgram provider from rejecting the save
+  "secondaryLanguages": ["de", "fr"], // needs ElevenLabs; runtime adds automatic language detection
+  "provider": "elevenlabs",        // multilingual needs ElevenLabs — a save keeps a stored Deepgram provider otherwise
+  "llm": "anthropic - claude-haiku-4-5",
   "maxCallDuration": 20,
   "temperature": 0.5,
   "voice": "cgSgspJ2msm6clMCkdW9", // Jessica — Female, American English; multilingual (speaks de/fr here too)

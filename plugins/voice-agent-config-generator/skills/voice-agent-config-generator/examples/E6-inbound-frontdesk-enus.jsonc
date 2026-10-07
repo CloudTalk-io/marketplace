@@ -1,7 +1,7 @@
-// E6 — Inbound US-English front desk, demonstrating AUTO-selection of Deepgram (no override).
-// Resolved provider: Deepgram (V3 auto — "en-US" is supported exactly by Deepgram but NOT by
-// ElevenLabs, which has no regional variants; schema §5 rule 2). Contrast with E4, which forces
-// Deepgram via providerOverride on a plain "en". Auto LLM on Deepgram → Haiku 4.5 (any tier).
+// E6 — Inbound US-English front desk, on the provider the platform's own tree picks: Deepgram.
+// Provider: Deepgram ("en-US" is supported exactly by Deepgram but NOT by ElevenLabs, which has no
+// regional variants; schema §5 rule 2). Contrast with E4, which chooses Deepgram on a plain "en".
+// LLM on Deepgram → Haiku 4.5 (any tier). Both are emitted: a save keeps whatever is stored otherwise.
 //
 // Fully SELF-CONTAINED and zero-touch: no tools, no SMS, no KB, and no transferToHuman skill at all.
 // The front desk answers what it knows and takes the caller's details for a callback, so the prompt never
@@ -26,6 +26,8 @@
   "optimizeStreamingLatency": 2,
   "stability": 0.3,
   "similarity": 0.7,
+  "provider": "deepgram",
+  "llm": "anthropic - claude-haiku-4-5",
   "startSpeakingFirst": true,
   "greeting": "Thanks for calling Cedar Clinic, this is the front desk. How can I help you today?",
   "goalPrompt": "## Identity\nYou are the front-desk assistant for Cedar Clinic, a primary-care practice in the United States. You answer the main line, give basic information, and take details so the right team can follow up.\n\n## Tone\n- Friendly, clear, and brief: two to three short sentences per turn.\n- Ask one question at a time and wait for the answer.\n- Say numbers as words; read phone and date-of-birth numbers back in short groups to confirm.\n\n## Task flow\n1. Ask what the caller needs.\n2. For hours, location, directions, or how to reach a department: answer briefly from what you know here.\n3. For appointments, prescription refills, or anything clinical: take the caller's full name and best callback number, read the number back to confirm it, and tell them the front-desk team will call them back today.\n4. If the caller describes an emergency (chest pain, trouble breathing, severe bleeding): tell them to hang up and call 911 immediately, and do not keep them on the line.\n5. Before ending the call, ask if there's anything else.\n\n## Guardrails\n- Use only information in this prompt; if you don't know, say so and offer a callback from the team — never guess.\n- Do not give medical advice or interpret symptoms; take the caller's details so clinical staff can call back.\n- You cannot put callers through to a person on this line; always offer a callback instead.\n- Never discuss other patients or share any patient information.\n- For emergencies, always direct the caller to 911 — this rule is important.",

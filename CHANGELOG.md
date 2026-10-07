@@ -5,6 +5,27 @@ dated entry below, made whenever the config schema or the generation guidance ma
 Claude Code installs a release when the manifest version changes; the Claude app picks it up from the
 marketplace (Check for updates, or Sync automatically).
 
+## 0.2.0 — 2026-10-07
+
+- **`provider` and `llm` are the agent's own fields.** They are writable and returned on every read: the
+  platform fills them once, at creation, and never changes them afterwards. They are not re-selected on
+  save, nor when the language changes or a knowledge base is linked. An omitted field keeps the stored
+  value, so every generated config (and every bundled example) now emits both. `providerOverride` /
+  `llmOverride` are retired request aliases: still accepted (and they win over the plain field when both
+  are sent), never returned, never emitted.
+- **Multilingual and knowledge-base agents set `provider: "elevenlabs"`.** Deepgram cannot serve secondary
+  languages or knowledge bases. A save keeps a Deepgram provider as sent instead of refusing it, so the
+  switch is yours to make. An `llm` the provider does not offer is refused with a `422`.
+- **`optimizedSettings` (response-only).** Reads and writes now list the values the platform would pick
+  for the agent's current setup (`changes` of `path`/`from`/`to`, plus display-only `effects`). Apply an
+  entry by setting its path yourself; never copy the key. `minorVersion` is now kept on every save and
+  moves only when the user applies Optimized settings on the dashboard.
+- **Removed:** `hasOverrides` and `upgradeAvailable` no longer exist (accepted and ignored, never
+  returned).
+- **Validator:** recognizes the retired names (aliases WARN with the rename, the two removed fields are an
+  INFO), resolves an alias the way the API does, reports an omitted `provider`/`llm` (INFO), warns on a
+  knowledge base on Deepgram, and treats `optimizedSettings` as a response-only INFO.
+
 ## 0.1.1 — 2026-09-30
 
 - **E4 (support intake) gives the complete answer.** Its prompt now matches its `thorough` verbosity —

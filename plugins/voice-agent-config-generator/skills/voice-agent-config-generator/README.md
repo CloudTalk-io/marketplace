@@ -32,7 +32,7 @@ config and judges the transcript.
 | [`SKILL.md`](./SKILL.md) | The Claude Skill entry point: trigger `description` + the lean workflow router that points at the lenses below. |
 | [`scripts/validate_config.py`](./scripts/validate_config.py) | Structural + behavioral validator (stdlib Python 3.8+). Keys off `fields.json`; reports errors, behavioral warnings, and what still needs wiring. |
 | [`fields.json`](./fields.json) | The field set + each field's `authoring` tag. Machine-readable spine. |
-| [`schema.md`](./schema.md) | Field shapes, enums, dependency rules, provider/LLM auto-selection. Human view of `fields.json`. |
+| [`schema.md`](./schema.md) | Field shapes, enums, dependency rules, choosing provider/LLM, `optimizedSettings`. Human view of `fields.json`. |
 | [`behavioral-guidance.md`](./behavioral-guidance.md) | What makes a config *perform well* (prompt architecture, hangup coverage, language, overriding platform defaults, self-check). Provider-agnostic quality. |
 | [`generator-contract.md`](./generator-contract.md) | How the skill *emits*: per-tier policy, the reference decision tree (reuse / fetch / substitute / ask / omit), the connected-mode write contract, output shape. |
 | [`referenced-resources.md`](./referenced-resources.md) | For each `reference`/`environment` field: what it is, how to create it, how to wire the ID — connected and Dashboard paths. |
@@ -50,7 +50,7 @@ the partition so "never emit" is an explicit signal, not folklore.
 | `generate` | Self-contained content/choice/number | Author it freely |
 | `reference` | Points to a company resource by ID | Reuse, fetch over MCP, substitute, ask the user for the real ID, ship the skill switched off (transfers), or omit + instruct; **never a placeholder, never a guess** |
 | `environment` | Env-specific phone-number selector | Defaults to `1` (Automatic), exactly as the dashboard seeds it — complete it with a real owned `failoverOutboundNumberId` in both directions, or set a real owned `defaultOutboundNumberId` directly (reuse/fetch/ask). Never guess `2`, never `null`, never a bare `1` with no failover — only `1` is magic and it still needs a real failover |
-| `forbidden` | Computed / response-only, **or** system-managed by the dashboard/platform (`presetType`, `status`, `lastConfigurationStep`, `hasOverrides`) | Never emit. The platform sets these on save/create; authoring them is stripped, ignored, or overridden on import |
+| `forbidden` | Server-stamped / response-only (`minorVersion`, `optimizedSettings`, …), **or** system-managed by the dashboard/platform (`presetType`, `status`, `lastConfigurationStep`) | Never emit. The platform sets these on save/create; authoring them is stripped, ignored, or overridden on import |
 
 ## "Nothing else to wire" — what's actually true
 
@@ -95,7 +95,7 @@ When the platform grows a field, the corpus absorbs it in one pass — touch eac
 CI runs [`scripts/check_docs_sync.py`](./scripts/check_docs_sync.py), which fails the build when
 `fields.json`, `schema.md` and the validator's mirrored enums drift apart. It checks exactly this: the
 §2 field set + `authoring` tiers, the §4.2 per-provider LLM matrix, the §4.3 Deepgram language list plus
-the plain-two-letter-code rule provider resolution keys off, the §4.4 premade voice IDs, the §11 `tone`
+the plain-two-letter-code rule the provider decision tree keys off, the §4.4 premade voice IDs, the §11 `tone`
 and `verbosity` enums, the §7.1 scenario actions, and the `elevenLabsSettings` sub-field set. Everything
 else — thresholds, skill shapes, the legacy-alias map — is on the author: steps 1–3 above are
 machine-checked, steps 4–7 are not.

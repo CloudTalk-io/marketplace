@@ -14,7 +14,7 @@ Checks:
      subFields paths == ELEVENLABS_SETTING_SHAPES keys / BACKGROUND_SOUND_FIELDS.
   3. The enums schema.md spells out in prose or tables == the ones the validator mirrors in code:
      §4.2's per-provider LLM matrix == ELEVENLABS_MODELS / DEEPGRAM_MODELS; §4.3's Deepgram language
-     list == DEEPGRAM_LANGS, plus the plain-two-letter-code rule provider resolution now keys off;
+     list == DEEPGRAM_LANGS, plus the plain-two-letter-code rule the provider decision tree keys off;
      §4.4's premade voice IDs == KNOWN_VOICE_IDS; §11's tone labels == TONE_PRESETS and its verbosity
      values == VERBOSITIES; §7.1's scenario actions == SCENARIO_ACTIONS (and fields.json's
      `scenarioActions` rows).
@@ -187,7 +187,7 @@ def check_llm_matrix(schema_text):
         if len(cells) < 3 or set(cells[0]) <= set("-: "):
             continue
         model = cells[0].strip("` ")
-        if not model or "llmOverride" in model:
+        if not model or model.lower().startswith("canonical id"):
             continue                        # header row
         seen_rows += 1
         if SUPPORTED_MARK in cells[1]:

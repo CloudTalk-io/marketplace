@@ -1,12 +1,12 @@
 // E3 — Inbound lead qualification with Call Flow Designer (CFD) routing.
-// Resolved provider: ElevenLabs (V3 auto — "en" is a plain language ElevenLabs supports; schema §5).
+// Provider: ElevenLabs ("en" is a plain language ElevenLabs supports; schema §5).
 // This agent is TRIVIAL-tier (no KB, no secondary langs, 0 custom tools, 1 transfer rule,
-// 2 scenarios, goal prompt < 1500 chars), so its auto LLM would be the lightweight
-// `qwen - qwen36-35b-a3b`. We therefore set llmOverride to Haiku 4.5 — a genuine upgrade for a
+// 2 scenarios, goal prompt < 1500 chars), so the platform's own LLM pick would be the lightweight
+// `qwen - qwen36-35b-a3b`. We therefore set `llm` to Haiku 4.5 — a genuine upgrade for a
 // small but reasoning-heavy qualification agent.
 // Demonstrates: the CFD transfer pattern (transfer_to_human with destination "call_flow" — the
-// agent hangs up and the flow routes), extractData routing signal, llmOverride (real upgrade over
-// the trivial-tier default).
+// agent hangs up and the flow routes), extractData routing signal, `llm` (real upgrade over
+// the trivial-tier pick).
 //
 // WHY call_flow HERE — the exception, not the default: this user told us the agent runs as a step
 //   inside a Call Flow, which is the ONLY thing that makes "call_flow" meaningful (for a standalone
@@ -42,8 +42,9 @@
   "optimizeStreamingLatency": 2,
   "stability": 0.3,
   "similarity": 0.7,
-  "llmOverride": "anthropic - claude-haiku-4-5", // upgrade: a trivial-tier ElevenLabs agent would
-                                   // otherwise auto-default to the lightweight qwen model (§5)
+  "provider": "elevenlabs",
+  "llm": "anthropic - claude-haiku-4-5", // upgrade over the lightweight qwen model the platform
+                                   // picks for a trivial-tier ElevenLabs agent (§5)
   "startSpeakingFirst": true,
   "greeting": "Hi, you've reached NorthPeak Software. I can get you to the right person — may I ask a couple of quick questions first?",
   "goalPrompt": "## Identity\nYou are the qualification assistant for NorthPeak Software, a B2B project-management platform. You take incoming sales-line calls, qualify the caller, and route them.\n\n## Tone\n- Friendly, efficient, and direct. Two to three short sentences per turn.\n- Ask exactly one question at a time and wait for the answer.\n- Never sound like a form being filled in — acknowledge each answer briefly.\n\n## Task flow\n1. Ask what brings them to NorthPeak today.\n2. Ask for their company name and roughly how many people work there.\n3. Ask whether they are actively choosing a tool right now or just exploring.\n4. Decide using ALL the answers — do not decide before you have them:\n   - QUALIFIED: actively choosing AND company size ten or more → tell them you'll connect them with the sales team now, then transfer.\n   - NOT QUALIFIED: exploring, a student, a job seeker, or an existing-support question → answer briefly if you can, suggest the website for self-serve resources, and end the call politely.\n5. Restate the company name and size aloud before ending, so the details are confirmed.\n\n## Guardrails\n- Use only information from this prompt; never invent product claims, prices, or discounts.\n- Do not commit to demos, trials, or pricing — the sales team owns those.\n- If asked something you cannot answer, say the sales team will cover it.\n- Never decide QUALIFIED or NOT QUALIFIED before hearing answers to all three questions — this rule is important.",
