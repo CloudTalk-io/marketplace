@@ -573,6 +573,7 @@ def validate(cfg, fields, rep):
 
     # -- provider / language / llm consistency (schema §4-5) -----------------
     provider = resolve_provider(cfg)
+    sent_provider = effective(cfg, "provider")
     for field in ("provider", "llm"):
         if not effective(cfg, field):
             rep.info("%s-unset" % field, field,
@@ -606,7 +607,6 @@ def validate(cfg, fields, rep):
                     "and a save without a provider keeps the agent's stored one: a Deepgram agent would stay "
                     "on Deepgram (schema §5).")
     if cfg.get("knowledgeBaseIds"):
-        sent_provider = effective(cfg, "provider")
         if sent_provider == "deepgram":
             rep.warn("deepgram-knowledge-base", "provider",
                      "Deepgram cannot serve knowledge bases — the save keeps the provider as sent, but the "
@@ -646,10 +646,15 @@ def validate(cfg, fields, rep):
             rep.err("llm-invalid", "llm",
                     "%r is not a model the API knows — the save is refused with a 422 LLM_OVERRIDE_INVALID. "
                     "Use a canonical ID from schema §4.2." % llm)
-        elif canonical not in offered:
+        elif canonical not in offered and sent_provider in ("elevenlabs", "deepgram"):
             rep.err("llm-provider-mismatch", "llm",
                     "%r is not offered by the provider (%s) — the save is refused with a 422 "
                     "LLM_OVERRIDE_NOT_AVAILABLE_FOR_PROVIDER (schema §4.2)." % (canonical, provider))
+        elif canonical not in offered:
+            # No provider sent: `provider` is the create decision tree's guess; an edit keeps the stored one.
+            rep.warn("llm-provider-mismatch-inferred", "llm",
+                     "%r is not offered by the provider this config would get on create (%s); on an edit the "
+                     "stored provider decides, so send provider explicitly (schema §4.2/§5)." % (canonical, provider))
 
     # -- dialTime (schema §3.8) ----------------------------------------------
     dt = cfg.get("dialTime")

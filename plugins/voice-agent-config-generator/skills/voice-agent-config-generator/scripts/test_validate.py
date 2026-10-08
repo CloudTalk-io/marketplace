@@ -771,9 +771,19 @@ expect_warn("en-US agent is Deepgram, so ElevenLabs settings are ignored",
             lambda c: (c.pop("provider"),
                        c.update({"language": "en-US", "elevenLabsSettings": {"vad": True}})),
             "elevenlabs-settings-ignored")
-expect_error("en-US agent cannot use an ElevenLabs-only model",
-             lambda c: (c.pop("provider"), c.update({"language": "en-US", "llm": "openai - gpt-5"})),
+# The llm, though, is checked against that guess only as a WARN: an edit keeps the stored provider,
+# which the validator cannot see. A sent provider makes the same mismatch an ERROR.
+_cfg = copy.deepcopy(BASE)
+_cfg.pop("provider")
+_cfg.update({"language": "en-US", "llm": "openai - gpt-5"})
+if error_codes(_cfg) or "llm-provider-mismatch-inferred" not in warn_codes(_cfg):
+    failures.append("no provider + llm the inferred provider lacks: expected a WARN only, got %s / %s"
+                    % (error_codes(_cfg), warn_codes(_cfg)))
+expect_error("sent provider + llm it does not offer",
+             lambda c: c.update({"provider": "deepgram", "language": "en-US", "llm": "openai - gpt-5"}),
              "llm-provider-mismatch")
+expect_clean("no provider + llm the inferred provider offers",
+             lambda c: (c.pop("provider"), c.update({"language": "en-US", "llm": "openai - gpt-4o-mini"})))
 expect_warn("en-US on an explicit ElevenLabs provider is a language mismatch",
             lambda c: c.__setitem__("language", "en-US"), "language-provider-mismatch")
 
