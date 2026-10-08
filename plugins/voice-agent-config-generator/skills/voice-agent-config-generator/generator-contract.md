@@ -41,8 +41,9 @@ omitted field keeps what the agent (usually a blank shell) has, so **always emit
 anything else so your other choices are consistent:
 
 - `provider`: plain language (`en`, `de`, …) → **`elevenlabs`**; Deepgram-exclusive code (`en-US`,
-  `pt-BR`, …) → **`deepgram`**; `secondaryLanguages` or `knowledgeBaseIds` → **`elevenlabs`** (Deepgram
-  cannot serve either, and a save keeps a stored Deepgram provider unless you send the switch).
+  `pt-BR`, …) → **`deepgram`**; a non-empty `secondaryLanguages` or `knowledgeBaseIds` → **`elevenlabs`**
+  (Deepgram cannot serve either, and a save keeps a stored Deepgram provider unless you send the switch;
+  an empty list changes nothing).
 - **Multilingual has two mechanisms — don't conflate them.** Default to **ElevenLabs via
   `secondaryLanguages`**. **Deepgram `multi`** (Deepgram-only, switches its listen model to `nova-3`) is
   **explicit-only**: emit `language: "multi"` with `provider: "deepgram"` **only when the user asks for

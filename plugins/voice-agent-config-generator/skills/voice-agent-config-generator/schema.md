@@ -194,6 +194,11 @@ normalized server-side (responses return the canonical ID).
 > (§9) flags legacy aliases. Examples: `anthropic - claude-3-7-sonnet` → `anthropic - claude-sonnet-4-5`;
 > `anthropic - claude-3-haiku` → `anthropic - claude-haiku-4-5`; `google - gemini-1.5-pro` →
 > `google - gemini-2.5-flash`; `google - gemini-2.0-flash-lite` → `google - gemini-2.5-flash-lite`.
+>
+> **Native masks:** Deepgram's own spelling of an OpenAI model is `open_ai - <model>` (e.g.
+> `open_ai - gpt-4o-mini`). It is accepted and normalized to the canonical `openai - <model>`, but only
+> for models Deepgram offers — there is no `open_ai - gpt-5`. Prefer the canonical ID. Any other string
+> is an unknown model: the save is refused with `422` `LLM_OVERRIDE_INVALID`.
 
 ### 4.3 Languages (per provider)
 
@@ -258,8 +263,9 @@ below (and §4.2). When editing a real agent, carry its values unless the change
 languages or a KB → ElevenLabs). (`providerOverride` / `llmOverride` are retired aliases — §2.)
 
 #### Provider — what to set
-1. `secondaryLanguages` or `knowledgeBaseIds` present → **ElevenLabs**. Deepgram can serve neither, and a
-   save keeps a Deepgram provider as sent, so set `provider: "elevenlabs"` yourself.
+1. `secondaryLanguages` or `knowledgeBaseIds` **non-empty** → **ElevenLabs**. Deepgram can serve neither, and
+   a save keeps a Deepgram provider as sent, so set `provider: "elevenlabs"` yourself. An empty list (`[]`)
+   does not count — it changes nothing about the provider.
 2. Language supported **exactly** by Deepgram but **not** ElevenLabs — the **non-plain** codes: `multi`
    and the regional variants (`en-US`, `en-GB`, `pt-BR`, `es-419`, `zh-Hans`, …) → **Deepgram**.
 3. Else ElevenLabs supports the language (**all plain codes** `en`, `de`, `es`, `fr`, …) → **ElevenLabs**.

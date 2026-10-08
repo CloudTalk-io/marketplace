@@ -93,6 +93,11 @@ LEGACY_LLM_ALIASES = {
     "google - gemini-2.0-flash-lite": "google - gemini-2.5-flash-lite",
     "google - gemini-1.5-pro": "google - gemini-2.5-flash",
 }
+# schema.md §4.2 — Deepgram's native masks spell OpenAI `open_ai - <model>`; the API maps each back to the
+# canonical `openai - <model>`. Derived from DEEPGRAM_MODELS, so only a model Deepgram offers has one.
+NATIVE_LLM_MASKS = {
+    "open_ai - " + m[len("openai - "):]: m for m in DEEPGRAM_MODELS if m.startswith("openai - ")
+}
 
 # schema.md §4.4 — built-in premade voice IDs (global, self-contained). These four are usable on BOTH
 # providers (CloudTalk serves ElevenLabs voices for every provider); the full catalog lives in the
@@ -600,10 +605,16 @@ def validate(cfg, fields, rep):
                     "secondaryLanguages is set — set provider: 'elevenlabs'. Multilingual requires ElevenLabs, "
                     "and a save without a provider keeps the agent's stored one: a Deepgram agent would stay "
                     "on Deepgram (schema §5).")
-    if cfg.get("knowledgeBaseIds") and provider == "deepgram":
-        rep.warn("deepgram-knowledge-base", "provider",
-                 "Deepgram cannot serve knowledge bases — the save keeps the provider as sent, but the agent "
-                 "will not use them. Set provider: 'elevenlabs' (schema §5).")
+    if cfg.get("knowledgeBaseIds"):
+        sent_provider = effective(cfg, "provider")
+        if sent_provider == "deepgram":
+            rep.warn("deepgram-knowledge-base", "provider",
+                     "Deepgram cannot serve knowledge bases — the save keeps the provider as sent, but the "
+                     "agent will not use them. Set provider: 'elevenlabs' (schema §5).")
+        elif sent_provider != "elevenlabs":
+            rep.warn("kb-needs-elevenlabs-pin", "provider",
+                     "knowledgeBaseIds is set — a KB needs ElevenLabs; set provider: 'elevenlabs' explicitly. "
+                     "An omitted provider keeps the agent's stored one, which may be Deepgram (schema §5).")
     if isinstance(sec, list):
         for i, code in enumerate(sec):
             if not isinstance(code, str):
@@ -623,18 +634,22 @@ def validate(cfg, fields, rep):
 
     llm = effective(cfg, "llm")
     if isinstance(llm, str) and llm:
-        canonical = LEGACY_LLM_ALIASES.get(llm, llm)
-        if canonical != llm:
+        canonical = LEGACY_LLM_ALIASES.get(llm) or NATIVE_LLM_MASKS.get(llm) or llm
+        if llm in LEGACY_LLM_ALIASES:
             rep.info("llm-legacy-alias", "llm",
                      "%r is a legacy alias — accepted but normalized to %r on save; prefer the canonical ID (schema §4.2)." % (llm, canonical))
+        elif llm in NATIVE_LLM_MASKS:
+            rep.info("llm-native-mask", "llm",
+                     "%r is Deepgram's native mask — accepted and normalized to %r on save; prefer the canonical ID (schema §4.2)." % (llm, canonical))
         offered = ELEVENLABS_MODELS if provider == "elevenlabs" else DEEPGRAM_MODELS
-        if canonical not in offered:
-            if canonical in (ELEVENLABS_MODELS | DEEPGRAM_MODELS):
-                rep.err("llm-provider-mismatch", "llm",
-                        "%r is not offered by the provider (%s) — the save is refused with a 422 (schema §4.2)." % (canonical, provider))
-            else:
-                rep.warn("llm-unknown", "llm",
-                         "%r is not a canonical model ID in schema §4.2 (it may still be an accepted native mask)." % llm)
+        if canonical not in (ELEVENLABS_MODELS | DEEPGRAM_MODELS):
+            rep.err("llm-invalid", "llm",
+                    "%r is not a model the API knows — the save is refused with a 422 LLM_OVERRIDE_INVALID. "
+                    "Use a canonical ID from schema §4.2." % llm)
+        elif canonical not in offered:
+            rep.err("llm-provider-mismatch", "llm",
+                    "%r is not offered by the provider (%s) — the save is refused with a 422 "
+                    "LLM_OVERRIDE_NOT_AVAILABLE_FOR_PROVIDER (schema §4.2)." % (canonical, provider))
 
     # -- dialTime (schema §3.8) ----------------------------------------------
     dt = cfg.get("dialTime")

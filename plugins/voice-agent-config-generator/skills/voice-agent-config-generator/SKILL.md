@@ -102,7 +102,8 @@ say so and offer the nearest supported path, never fake it:
 omitted one keeps whatever the agent (often a blank shell) has, so always emit both.
 
 - `provider`: plain code (`en`, `de`, …) → **`elevenlabs`** · Deepgram-exclusive (`en-US`, `pt-BR`,
-  …) → **`deepgram`** · `secondaryLanguages` or a KB → **`elevenlabs`** (Deepgram can serve neither).
+  …) → **`deepgram`** · a non-empty `secondaryLanguages` or `knowledgeBaseIds` → **`elevenlabs`** (Deepgram
+  can serve neither; an empty list changes nothing).
 - `llm`: **`anthropic - claude-haiku-4-5`** for an agent doing real work (transfers, careful data
   capture) — a trivial ElevenLabs agent would otherwise get the platform's lightweight pick. Any other
   model must be offered by the provider (§4.2). Departing from the platform's picks deliberately?

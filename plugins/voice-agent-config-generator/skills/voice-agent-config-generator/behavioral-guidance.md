@@ -427,9 +427,9 @@ from those picks — and what each departure costs — is §9.
   transfers/tools/name-capture. Don't downgrade for cost — the dashboard may list Qwen under **Optimized
   settings** afterwards; that is the cost-lean option, not a fix.
 - **Provider fit:** language-based — plain langs → `elevenlabs`; Deepgram-exclusive codes → `deepgram`;
-  `secondaryLanguages` or a KB → `elevenlabs`. Always emit `provider`; choose `deepgram` on a plain
+  a non-empty `secondaryLanguages` or a KB → `elevenlabs`. Always emit `provider`; choose `deepgram` on a plain
   language only for a single-language, no-KB agent where latency matters (E4). **Multilingual:** whenever
-  `secondaryLanguages` is set, `provider` **must** be `"elevenlabs"` — a save keeps the stored provider
+  `secondaryLanguages` is non-empty, `provider` **must** be `"elevenlabs"` — a save keeps the stored provider
   when none is sent, and Deepgram cannot serve secondary languages (it saves, then fails the caller).
   There are **two distinct multilingual mechanisms**: ElevenLabs via `secondaryLanguages` (the default for
   any multilingual agent), and Deepgram via the single language code `multi` (Deepgram-only, which
@@ -519,9 +519,9 @@ and usually the right one.
 ### `provider` — dictated by language, not preference
 
 - **What to set:** language decides it (`schema.md` §5).
-  - **`secondaryLanguages` or a KB ⇒ always `elevenlabs`.** Multilingual and knowledge bases are served
-    only there, and a re-saved agent whose stored provider is Deepgram stays on Deepgram until you send
-    the switch.
+  - **A non-empty `secondaryLanguages` or a KB ⇒ always `elevenlabs`** (an empty list changes nothing).
+    Multilingual and knowledge bases are served only there, and a re-saved agent whose stored provider is
+    Deepgram stays on Deepgram until you send the switch.
   - **A Deepgram-exclusive locale code ⇒ `deepgram`** (the platform's own pick too).
   - **A plain code ⇒ `elevenlabs`**, unless a single-language, no-KB agent wants Deepgram's latency (E4).
 - **Never set `deepgram` on an agent with `secondaryLanguages`** — it saves, but the agent cannot serve

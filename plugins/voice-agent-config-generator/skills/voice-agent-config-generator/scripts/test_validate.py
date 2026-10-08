@@ -1119,6 +1119,59 @@ for _field in ("provider", "llm"):
     if "%s-unset" % _field in info_codes(copy.deepcopy(BASE)):
         failures.append("BASE emits %s, so it must not be reported unset" % _field)
 
+# 33) A knowledge base needs ElevenLabs, and an omitted provider keeps the stored one (maybe Deepgram):
+# a KB without an explicit ElevenLabs provider is a WARN. An empty list changes nothing.
+_KB = "66aa11bb22cc33dd44ee55ff"
+
+
+def kb_without_provider(language):
+    return lambda c: (c.pop("provider"), c.update({"language": language, "knowledgeBaseIds": [_KB]}))
+
+
+expect_warn("knowledge base without a provider", kb_without_provider("en"), "kb-needs-elevenlabs-pin")
+expect_warn("knowledge base on the retired alias deepgram",
+            lambda c: (c.pop("provider"), c.update({"providerOverride": "deepgram", "knowledgeBaseIds": [_KB]})),
+            "deepgram-knowledge-base")
+expect_no_warn("knowledge base on ElevenLabs needs no pin", set_kbs([_KB]), "kb-needs-elevenlabs-pin")
+for _name, _mutate in (("empty knowledgeBaseIds without a provider",
+                        lambda c: (c.pop("provider"), c.__setitem__("knowledgeBaseIds", []))),
+                       ("empty secondaryLanguages without a provider",
+                        lambda c: (c.pop("provider"), c.__setitem__("secondaryLanguages", [])))):
+    _cfg = copy.deepcopy(BASE)
+    _mutate(_cfg)
+    if error_codes(_cfg) or warn_codes(_cfg):
+        failures.append("%s: expected clean, got %s / %s" % (_name, error_codes(_cfg), warn_codes(_cfg)))
+# en-US + KB with no provider: only the pin warning — no language check against a guessed provider, and
+# no "Deepgram cannot serve" claim about a provider the config never sent.
+_cfg = copy.deepcopy(BASE)
+kb_without_provider("en-US")(_cfg)
+if warn_codes(_cfg) != ["kb-needs-elevenlabs-pin"]:
+    failures.append("en-US + KB without a provider: expected only the pin warning, got %s" % warn_codes(_cfg))
+
+# 34) llm: the accepted set mirrors the API's registry — canonical IDs, legacy aliases and Deepgram's
+# `open_ai - <model>` masks (only for models Deepgram offers). Anything else is a 422 LLM_OVERRIDE_INVALID.
+expect_error("unknown llm", lambda c: c.__setitem__("llm", "not-a-model"), "llm-invalid")
+expect_error("native mask of a model Deepgram does not offer",
+             lambda c: c.update({"provider": "deepgram", "language": "en-US", "llm": "open_ai - gpt-5"}),
+             "llm-invalid")
+for _provider, _language in (("deepgram", "en-US"), ("elevenlabs", "en")):
+    _cfg = copy.deepcopy(BASE)
+    _cfg.update({"provider": _provider, "language": _language, "llm": "open_ai - gpt-4o-mini"})
+    if error_codes(_cfg) or warn_codes(_cfg) or "llm-native-mask" not in info_codes(_cfg):
+        failures.append("open_ai - gpt-4o-mini on %s: expected an INFO llm-native-mask only, got %s / %s / %s"
+                        % (_provider, error_codes(_cfg), warn_codes(_cfg), info_codes(_cfg)))
+expect_clean("gemini-3.6-flash on ElevenLabs", lambda c: c.__setitem__("llm", "google - gemini-3.6-flash"))
+expect_error("gemini-3.6-flash on Deepgram",
+             lambda c: c.update({"provider": "deepgram", "language": "en-US", "llm": "google - gemini-3.6-flash"}),
+             "llm-provider-mismatch")
+_cfg = copy.deepcopy(BASE)
+_cfg["llm"] = "anthropic - claude-3-7-sonnet"
+if error_codes(_cfg) or "llm-legacy-alias" not in info_codes(_cfg):
+    failures.append("legacy alias: expected an INFO llm-legacy-alias only, got %s / %s"
+                    % (error_codes(_cfg), info_codes(_cfg)))
+if set(V.NATIVE_LLM_MASKS.values()) - V.DEEPGRAM_MODELS:
+    failures.append("every native mask must map to a model Deepgram offers")
+
 if failures:
     print("FAIL — %d check(s):" % len(failures))
     for f in failures:

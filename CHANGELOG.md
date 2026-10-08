@@ -24,7 +24,9 @@ marketplace (Check for updates, or Sync automatically).
   returned).
 - **Validator:** recognizes the retired names (aliases WARN with the rename, the two removed fields are an
   INFO), resolves an alias the way the API does, reports an omitted `provider`/`llm` (INFO), warns on a
-  knowledge base on Deepgram, and treats `optimizedSettings` as a response-only INFO.
+  knowledge base on Deepgram or without an explicit `provider: "elevenlabs"`, and treats
+  `optimizedSettings` as a response-only INFO. An unknown `llm` is now an ERROR (the save is refused with
+  a `422`); Deepgram's native `open_ai - <model>` masks are accepted (INFO, prefer the canonical ID).
 
 ## 0.1.1 — 2026-09-30
 
