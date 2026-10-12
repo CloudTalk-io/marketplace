@@ -25,7 +25,7 @@ the dashboard's Expert Mode and copy IDs from the Dashboard
 | `cloudtalk_list_voice_agents` | List the company's VoiceAgents (id, name, direction) | **Pages** (see *Reading lists*) and cached a few minutes — a just-created agent can be missing; see *Write safety* |
 | `cloudtalk_get_voice_agent` | Fetch one agent's **complete config document** | The mandatory first step of every update — and the way to read a real, working `voice` ID. It does **not** pre-validate the 24-hex shape, so a numeric id fails upstream rather than at dispatch (`trigger_aiva_call` does check) |
 | `cloudtalk_create_voice_agent` | Create an agent from a config | Write — confirm-gated; the result carries the new `id`, a `dashboard_url`, and possibly `error_codes` (*Write safety*) |
-| `cloudtalk_update_voice_agent` | Save a config to an existing agent (`voice_agent_id`) | Write — **full-document replace**; see Write safety |
+| `cloudtalk_update_voice_agent` | Save a config to an existing agent (`voice_agent_id`) | Write — **merges** the fields you pass onto a fresh read (collections replaced wholesale); `apply_optimized_settings: true` applies the platform's optimized list; see Write safety |
 | `cloudtalk_list_knowledge_bases` | List KBs: id, name, `description`, type (`CUSTOM`/`URL`/`FILE`), status, attached agents | Link only `ACTIVE` KBs. **Pages**, and cached ~5 min — so a `SYNCHRONIZING` → `ACTIVE` flip can show up a cache TTL late |
 | `cloudtalk_create_knowledge_base` | Create a KB: `custom` (you supply the text, `ACTIVE` at once) or `url` (ingested asynchronously, starts `SYNCHRONIZING`) | Write — name ≤ 50 chars; **text is frozen after creation**; **`description` is unsettable on create** — there is no input field for it, though the create response and the list read both carry it; file KBs are Dashboard-only |
 | `cloudtalk_list_voice_agent_tools` | List custom tools, optionally filtered to one agent | **Never returns header/param values** — secrets go in, never come back out. **Pages** |
@@ -95,16 +95,29 @@ called. Only the get and write responses carry the numeric one, and there it is 
   `unassign` that changes nothing is idempotent and needs no confirmation.
 - **Never send `null` for any argument.** The MCP rejects a null argument before the handler sees it, on
   every tool — omit the argument instead of passing null.
-- **Updates replace the full document.** `cloudtalk_update_voice_agent` **replaces the document you
-  send** — with the per-field exceptions below, since the server's own contract preserves some omitted
-  system and Expert-Mode fields. Always **get → modify → update**; never compose an update from memory
-  or a stale copy.
-- **Both config writes demand the full set of required scalars.** `agentName`, `direction`,
+- **Updates merge onto the stored agent.** `cloudtalk_update_voice_agent` reads the agent and merges the
+  fields you pass onto it before the upstream full replace, so only `voice_agent_id` is required and an
+  omitted field keeps its stored value. **Collections are replaced, not merged** (`skills`, `scenarios`,
+  `guardrails`, `secondaryLanguages`, `knowledgeBaseIds`): to change one entry, pass the whole list.
+  Still **get → modify → update** — the read gives you the current lists and the real IDs; never compose an
+  update from memory or a stale copy.
+- **Applying optimized settings is its own opt-in.** The update preview reports
+  `optimized_settings_available` and `optimized_settings` — the platform's `optimizedSettings` for the
+  agent's current setup (`provider`, `llm`, the ElevenLabs turn settings, the latest `minorVersion`;
+  `schema.md` §5). Nothing in it is applied on its own. `apply_optimized_settings: true` copies every
+  change's `to` into this save, `minorVersion` included, and is refused when nothing is available, when
+  you also send a value for a listed path that is neither its `from` nor its `to`, or when you send a
+  retired alias (`providerOverride` / `llmOverride`). **It must be its own save** when the call also
+  changes `language`, `secondaryLanguages`, `knowledgeBaseIds`, `skills.custom`,
+  `skills.transferToHuman`, `scenarios` or `goalPrompt`: the list was computed for the stored setup, so
+  save that change first, then apply. Use it only when the user asks to take the platform's picks — it
+  moves the agent's behaviour version.
+- **The create demands the full set of required scalars.** `agentName`, `direction`,
   `defaultOutboundNumberId`, `language`, `maxCallDuration`, `temperature`, `voice`, `stability`,
-  `similarity`, `startSpeakingFirst` and `goalPrompt` — plus `voice_agent_id` on the update. A partial
-  payload comes back as *missing required*, never as a merge onto what is stored.
-- **Omission is not neutral, and not uniform** — one habit covers all three cases: send back the document
-  `cloudtalk_get_voice_agent` gave you, modified.
+  `similarity`, `startSpeakingFirst` and `goalPrompt`. A partial create payload comes back as *missing
+  required*.
+- **On a full-document save (Expert Mode, or the create), omission is not neutral, and not uniform** —
+  one habit covers all three cases: send back the document `cloudtalk_get_voice_agent` gave you, modified.
   - `knowledgeBaseIds` **omitted = every KB unlinked** — carry the current list through each update.
   - `elevenLabsSettings` omitted = stored settings **preserved**; present = **replaced wholesale** —
     when connected, edit individual sub-fields on the fetched object rather than authoring the

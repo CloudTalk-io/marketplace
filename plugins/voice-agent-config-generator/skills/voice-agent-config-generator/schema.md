@@ -36,7 +36,9 @@ The legacy v1 wizard fields (`voiceAgentPrompt`, `extractionPrompt`, `transferEn
 > **Server-stamped / response-only (do not author):** `version` is always `2`. `minorVersion` is the
 > agent's **behaviour version**: a new agent gets the latest (currently `3` → **v2.3**), and every save
 > keeps it — an update accepts only the stored value or the latest, so a GET response round-trips safely
-> into an update. It moves only when the user applies **Optimized settings** on the dashboard (§5).
+> into an update. It moves when the optimized settings are applied (§5): `apply_optimized_settings: true` on
+> `cloudtalk_update_voice_agent`, or the dashboard's **Optimized settings** notice where it is enabled. The
+> API would also take the latest on a replace; never writing it yourself is this plugin's rule.
 > `id` / `voiceAgentId` / `createdAt` / `updatedAt` are response-only. They appear on GET/export but are
 > ignored on import — do not author them.
 >
@@ -124,7 +126,7 @@ never rely on the runtime fallback.
 4. `temperature`, `stability`, `similarity` ∈ `[0, 1]`; `optimizeStreamingLatency` ∈ `[0, 4]`.
 5. `voice` must exist in the voice library.
 6. `llm` must be a model offered by the agent's `provider` (§4.2) — else `422` (`LLM_OVERRIDE_NOT_AVAILABLE_FOR_PROVIDER`; an unknown model is `LLM_OVERRIDE_INVALID`).
-7. **Deepgram + `secondaryLanguages`** (or a knowledge base) is saved as sent, but Deepgram cannot serve it (it has no `secondaryLanguages` mode) — so set `provider: "elevenlabs"` for any multilingual or KB config (§5).
+7. **Deepgram + `secondaryLanguages`** (or a knowledge base) is saved as sent only when Deepgram serves every language — a code it does not serve (e.g. `hr`) is refused with `422 LANGUAGE_NOT_SUPPORTED` — and even then Deepgram cannot serve it (it has no `secondaryLanguages` mode) — so set `provider: "elevenlabs"` for any multilingual or KB config (§5).
 8. `dialTime`, if non-zero, must be `5`–`120` s. Values above `90` pass validation but fail when the
    call is dispatched — recommend ≤ `90`. Omitted preserves the stored value.
 9. `elevenLabsSettings.turnEagerness` ∈ {`patient`,`normal`,`eager`}, `.turnModel` ∈ {`turn_v2`,`turn_v3`}, `.backgroundSound.preset` ∈ {`office`,`office2`,`restaurant`,`city`,`typing`,`elevator`,`elevator2`,`elevator3`,`elevator4`} (required when `backgroundSound` is present), `.backgroundSound.volume` ∈ `[0,1]`; `.interruptionIgnoreTerms` / `.interruptionIgnoreTermLanguages` are lists of non-empty strings.
@@ -202,15 +204,19 @@ normalized server-side (responses return the canonical ID).
 
 ### 4.3 Languages (per provider)
 
-- **ElevenLabs**: a wide accepted list (~66 codes), including all the plain two-letter codes
-  (`en`, `de`, `es`, `fr`, `pt`, …) — when in doubt, the plain code is supported.
+- **ElevenLabs** (plain codes only): `af, ar, as, az, be, bg, bn, bs, ca, cs, cy, da, de, el, en, es, et,
+  fa, fi, fil, fr, gl, gu, ha, he, hi, hr, hu, hy, id, is, it, ja, jv, ka, kk, kn, ko, ky, lb, lt, lv, mk,
+  ml, mr, ms, ne, nl, no, pa, pl, pt, ro, ru, sk, sl, sr, sv, sw, ta, te, th, tr, uk, vi, zh`.
 - **Deepgram** (`multi` + regional variants): `multi, en, en-US, en-AU, en-GB, en-NZ, en-IN, bg, ca,
   zh, zh-CN, zh-Hans, zh-TW, zh-Hant, zh-HK, cs, da, da-DK, nl, et, fi, nl-BE, fr, fr-CA, de, de-CH,
   el, hi, hu, id, it, ja, ko, lv, lt, ms, no, pl, pt, pt-BR, pt-PT, ro, ru, sk, es, es-419, sv, th,
   tr, uk, vi`.
 
-> The server normalizes languages to the agent's provider's set. Pick a language the provider supports
-> (§5 shows which provider fits which language).
+> **The save refuses a language the agent's provider does not serve**, primary or secondary, with
+> `422 LANGUAGE_NOT_SUPPORTED`; nothing is normalized or dropped. A provider serves a code its list holds,
+> or a regional code through its base code (`en-US` and `de-AT` on ElevenLabs are served as `en` / `de`) —
+> except `zh-TW`, `zh-Hant` and `zh-HK`, distinct languages that never fall back to `zh`. Pick a language
+> the provider serves (§5 shows which provider fits which language).
 >
 > **Multilingual combinations are validated server-side** — not every code can join a multilingual set:
 > an incompatible `language` + `secondaryLanguages` combination is rejected on save with per-code errors.
@@ -224,8 +230,9 @@ normalized server-side (responses return the canonical ID).
 > - **Deepgram multilingual** is the single language code **`multi`** — Deepgram-only, and it switches
 >   Deepgram's listen model to `nova-3`. It is **never the answer to a multilingual request by default**:
 >   reach it only by explicitly setting `language: "multi"` **together with** `provider: "deepgram"`.
-> - **Deepgram + `secondaryLanguages` is saved as sent but cannot be served** (Deepgram has no
->   `secondaryLanguages` mode) — the dashboard then lists the switch under Optimized settings.
+> - **Deepgram + `secondaryLanguages` is saved as sent only when Deepgram serves every code**, and even
+>   then it **cannot be served** (Deepgram has no `secondaryLanguages` mode) — `optimizedSettings` then
+>   lists the switch to ElevenLabs (§5).
 >
 > So: **default to ElevenLabs for multilingual; use Deepgram `multi` only on explicit request.**
 
@@ -272,12 +279,13 @@ languages or a KB → ElevenLabs). (`providerOverride` / `llmOverride` are retir
    (`en-US`, `pt-BR`, …) must also become its plain code (`en`, `pt`), or ask the user whether the variant
    matters: a multilingual set takes exact ElevenLabs codes only and the save refuses it otherwise (§4.3).
    A knowledge base alone does not need this.
-2. Language supported **exactly** by Deepgram but **not** ElevenLabs — the **non-plain** codes: `multi`
+2. Language listed **exactly** by Deepgram but **not** ElevenLabs — the **non-plain** codes: `multi`
    and the regional variants (`en-US`, `en-GB`, `pt-BR`, `es-419`, `zh-Hans`, …) → **Deepgram**.
-3. Else ElevenLabs supports the language (**all plain codes** `en`, `de`, `es`, `fr`, …) → **ElevenLabs**.
-4. Else → **Deepgram**.
+3. Else ElevenLabs serves the language (a code in its §4.3 list, or a regional code through its base code,
+   `de-AT` → `de`) → **ElevenLabs**.
+4. Else → **Deepgram** (and a code neither provider serves is refused on save).
 
-> Plain languages go to **ElevenLabs**; Deepgram fits a Deepgram-exclusive code (rule 2) or the rule-4
+> Languages ElevenLabs serves go to **ElevenLabs**; Deepgram fits a Deepgram-exclusive code (rule 2) or the rule-4
 > fallback. A plain two-letter code that the §4.3 Deepgram list *also* carries (`ca`, `et`, `lv`, `lt`,
 > `th`, …) is **not** exclusive — it still goes to ElevenLabs, so ElevenLabs-only settings and models stay
 > valid on it. Choosing Deepgram on a plain language (E4) is legitimate — lower latency for a
@@ -310,10 +318,14 @@ It lists what the decision tree, at the newest `minorVersion`, would pick for th
 setup. `path` is a request field (`provider`, `llm`, `elevenLabsSettings.vad`,
 `elevenLabsSettings.turnModel`, `elevenLabsSettings.speculativeTurn`, `elevenLabsSettings.turnEagerness`,
 `minorVersion`); `effects` are display-only consequences of the version move (e.g. backup models added).
-Applying it = setting each `path` to its `to` and saving; the dashboard shows it as **Optimized settings
-available**. When a pasted or fetched config carries it: never copy it into the output; mention a listed
-change worth taking (e.g. a Deepgram agent that now has secondary languages) and, if the user wants it,
-set those paths yourself — `minorVersion` excepted, which the user applies from the dashboard. A config
+Applying it = setting each `path` to its `to` and saving. Connected, `cloudtalk_update_voice_agent` with
+`apply_optimized_settings: true` applies the whole list in one save, `minorVersion` included — its own save
+when the call also changes `language`, `secondaryLanguages`, `knowledgeBaseIds`, `skills.custom`,
+`skills.transferToHuman`, `scenarios` or `goalPrompt` ([`mcp-tools.md`](./mcp-tools.md)). The dashboard's
+**Optimized settings** notice does the same where it is enabled. When a pasted or fetched config carries
+it: never copy it into the output; mention a listed change worth taking (e.g. a Deepgram agent that now has
+secondary languages) and, if the user wants it, set those paths yourself — `minorVersion` excepted, which
+moves only through one of the apply paths above (the user opts into a behaviour change). A config
 that deliberately differs (Haiku on a trivial ElevenLabs agent) will list the tree's pick there; that is
 expected.
 

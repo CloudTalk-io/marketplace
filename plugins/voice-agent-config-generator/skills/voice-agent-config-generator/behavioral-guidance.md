@@ -424,8 +424,8 @@ from those picks — and what each departure costs — is §9.
   count sums enabled `skills.custom` entries and scenarios with `action == "toolCall"`** — either kind on
   its own counts toward "≥1 custom tool". Always emit `llm`; on any agent doing real work (transfers, data
   capture) set `"anthropic - claude-haiku-4-5"`. Small/nano-class models fail at
-  transfers/tools/name-capture. Don't downgrade for cost — the dashboard may list Qwen under **Optimized
-  settings** afterwards; that is the cost-lean option, not a fix.
+  transfers/tools/name-capture. Don't downgrade for cost — `optimizedSettings` may list Qwen
+  afterwards; that is the cost-lean option, not a fix.
 - **Provider fit:** language-based — plain langs → `elevenlabs`; Deepgram-exclusive codes → `deepgram`;
   a non-empty `secondaryLanguages` or a KB → `elevenlabs`. Always emit `provider`; choose `deepgram` on a plain
   language only for a single-language, no-KB agent where latency matters (E4). **Multilingual:** whenever
@@ -500,7 +500,8 @@ and the shape of the agent (§7b). `provider` and `llm` are the agent's **own st
 them, chosen with `schema.md` §5 — and every value you emit **stays as written**: nothing re-evaluates it
 on a later save, and a later edit keeps it unless that edit sends a new one. So depart from the platform's
 pick, or set an optional knob below, **only when you can name the reason**. When the setup moves away from
-what the platform would pick, the dashboard lists its pick under **Optimized settings**; that is a
+what the platform would pick, its pick is listed in `optimizedSettings` (the MCP update preview's
+`optimized_settings`, and the dashboard's Optimized settings notice where it is enabled); that is a
 suggestion for the user, not an error. For the optional knobs, silence (an omitted key) is a real answer,
 and usually the right one.
 
@@ -524,8 +525,9 @@ and usually the right one.
     Deepgram stays on Deepgram until you send the switch.
   - **A Deepgram-exclusive locale code ⇒ `deepgram`** (the platform's own pick too).
   - **A plain code ⇒ `elevenlabs`**, unless a single-language, no-KB agent wants Deepgram's latency (E4).
-- **Never set `deepgram` on an agent with `secondaryLanguages`** — it saves, but the agent cannot serve
-  the extra languages.
+- **Never set `deepgram` on an agent with `secondaryLanguages`** — it saves only when Deepgram serves
+  every code (any other is a `422 LANGUAGE_NOT_SUPPORTED`), and even then the agent cannot serve the extra
+  languages.
 - **Validate locally before saving:** the bundled validator checks the enum and the provider's language
   and model sets, so a mismatch is caught before the save.
 - **Consequences:** the provider decides **which voices exist**, **which languages are available**, and

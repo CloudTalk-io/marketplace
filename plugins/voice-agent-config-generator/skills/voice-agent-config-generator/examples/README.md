@@ -155,8 +155,10 @@ handoff as a **disabled group draft** the user finishes in the dashboard:
   `interruptionIgnoreTermLanguages` pair and `backgroundSound` with its `preset`, `volume` and
   `crossfadeLoop` — plus `turnEagerness: "normal"`, the one leaf both files carry.
 - **Create-shaped, so preserve-on-omit is invisible here.** Every file is a complete document, which is
-  what you want for a create or a full-document paste. On the connected **get → modify → update** path
-  the same completeness is a *requirement*, because omission is not neutral and not uniform:
+  what you want for a create or a full-document paste. On an Expert-Mode paste over an existing agent the
+  same completeness is a *requirement* (the connected `cloudtalk_update_voice_agent` merges onto a fresh
+  read instead, so there an omitted field keeps its stored value), because omission is not neutral and
+  not uniform:
   `knowledgeBaseIds` omitted **unlinks every KB**, `optimizeStreamingLatency` omitted **resets to `0`**,
   `elevenLabsSettings` present **replaces the whole object** (omitted preserves it), and `dialTime`
   omitted preserves. No example can demonstrate that — it only shows up on the second write — so it is

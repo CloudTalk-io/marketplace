@@ -41,12 +41,15 @@ import sys
 
 # ---------------------------------------------------------------------------
 # Enumerations sourced from schema.md (kept here so the validator is self-contained).
-# schema.md §4.3 — provider language sets. ElevenLabs' real accepted set is far wider than this (~66
-# codes, essentially every plain two-letter one), so a code missing from here is NOT proof of an invalid
-# language: unknown codes WARN, and the platform validates the authoritative set on save.
+# schema.md §4.3 — provider language sets, mirroring voice-agent-api's `ProviderSupportedLangs`. A save
+# refuses a primary or secondary code the provider does not serve (422 LANGUAGE_NOT_SUPPORTED), matching
+# exactly, else through the base code before the `-` (`provider_serves_language`).
 ELEVENLABS_LANGS = {
-    "ar", "bg", "zh", "hr", "cs", "da", "nl", "en", "fi", "fr", "de", "el", "hu", "hi", "id",
-    "it", "ja", "ko", "ms", "no", "pl", "pt", "ro", "ru", "sk", "es", "sv", "ta", "tr", "uk", "vi",
+    "af", "ar", "as", "az", "be", "bg", "bn", "bs", "ca", "cs", "cy", "da", "de", "el", "en", "es",
+    "et", "fa", "fi", "fil", "fr", "gl", "gu", "ha", "he", "hi", "hr", "hu", "hy", "id", "is", "it",
+    "ja", "jv", "ka", "kk", "kn", "ko", "ky", "lb", "lt", "lv", "mk", "ml", "mr", "ms", "ne", "nl",
+    "no", "pa", "pl", "pt", "ro", "ru", "sk", "sl", "sr", "sv", "sw", "ta", "te", "th", "tr", "uk",
+    "vi", "zh",
 }
 DEEPGRAM_LANGS = {
     "multi", "en", "en-US", "en-AU", "en-GB", "en-NZ", "en-IN", "bg", "ca", "zh", "zh-CN", "zh-Hans",
@@ -54,12 +57,13 @@ DEEPGRAM_LANGS = {
     "de-CH", "el", "hi", "hu", "id", "it", "ja", "ko", "lv", "lt", "ms", "no", "pl", "pt", "pt-BR",
     "pt-PT", "ro", "ru", "sk", "es", "es-419", "sv", "th", "tr", "uk", "vi",
 }
-# schema.md §4.3/§5 — ElevenLabs takes every plain two-letter code, so the provider decision tree cannot key
-# off absence from the short list above: the codes only Deepgram has are the NON-plain ones (`multi` and
-# the regional variants, en-US / pt-BR / es-419 / zh-Hans …). Deriving the exclusive set keeps the two
-# lists from disagreeing when a code is added to DEEPGRAM_LANGS.
-PLAIN_LANG_CODE_RE = re.compile(r"^[a-z]{2}$")
-DEEPGRAM_EXCLUSIVE_LANGS = {c for c in DEEPGRAM_LANGS if not PLAIN_LANG_CODE_RE.match(c)}
+# schema.md §4.3/§5 — the codes only Deepgram lists exactly are the NON-plain ones (`multi` and the
+# regional variants, en-US / pt-BR / es-419 / zh-Hans …); a create puts those on Deepgram. Deriving the set
+# keeps the two lists from disagreeing when a code is added to either.
+PLAIN_LANG_CODE_RE = re.compile(r"^[a-z]{2,3}$")
+DEEPGRAM_EXCLUSIVE_LANGS = {c for c in DEEPGRAM_LANGS if c.lower() not in ELEVENLABS_LANGS}
+# Regional codes that are distinct languages, never served through their base code (`zh`).
+UNMAPPABLE_LANG_VARIANTS = {"zh-tw", "zh-hant", "zh-hk"}
 
 # schema.md §4.2 — canonical LLM IDs offered per provider (the only valid `llm` values).
 ELEVENLABS_MODELS = {
@@ -579,20 +583,26 @@ def validate(cfg, fields, rep):
             rep.info("%s-unset" % field, field,
                      "No `%s` — a save keeps the agent's stored one and nothing re-selects it, so whatever "
                      "the agent (often a blank shell) has stays. Emit it (schema §5)." % field)
-    lang = cfg.get("language")
-    if isinstance(lang, str):
-        if lang not in (ELEVENLABS_LANGS | DEEPGRAM_LANGS):
-            rep.warn("unknown-language", "language",
-                     "%r is not in the validator's known language list, which trails the platform's — the "
-                     "authoritative set is validated on save, so a plain two-letter code is likely fine "
-                     "and a typo is not (schema §4.3)." % lang)
+    def check_served(code, where):
+        # The save refuses a code the provider does not serve. As for the llm: an ERROR when the provider
+        # is sent (or no provider serves the code at all), a WARN when it is only the create tree's guess,
+        # since an edit keeps the stored provider, which this cannot see.
+        if provider_serves_language(provider, code):
+            return
+        if sent_provider in ("elevenlabs", "deepgram") or not any(
+                provider_serves_language(p, code) for p in ("elevenlabs", "deepgram")):
+            rep.err("language-not-supported", where,
+                    "%r is not served by the provider (%s) — the save is refused with a 422 "
+                    "LANGUAGE_NOT_SUPPORTED. Pick a language it serves, or a provider that serves this one "
+                    "(schema §4.3/§5)." % (code, provider))
         else:
-            supported = (elevenlabs_supports_language(lang) if provider == "elevenlabs"
-                         else lang in DEEPGRAM_LANGS)
-            if not supported:
-                rep.warn("language-provider-mismatch", "language",
-                         "Language %r is not in the provider's set (%s). Pick a language the provider "
-                         "supports, or set `provider` to one that does (schema §4.3/§5)." % (lang, provider))
+            rep.warn("language-provider-mismatch", where,
+                     "%r is not served by the provider this config would get on create (%s); on an edit the "
+                     "stored provider decides, so send provider explicitly (schema §4.3/§5)." % (code, provider))
+
+    lang = cfg.get("language")
+    if isinstance(lang, str) and lang:
+        check_served(lang, "language")
 
     sec = cfg.get("secondaryLanguages")
     if sec:
@@ -620,15 +630,22 @@ def validate(cfg, fields, rep):
             if not isinstance(code, str):
                 rep.err("bad-type", "secondaryLanguages[%d]" % i,
                         "Expected a language-code string, not %s (schema §4.3)." % type(code).__name__)
-            elif not elevenlabs_supports_language(code):
-                # Same helper as the primary language, so a plain code (ca/et/lv/lt/th/af…) is accepted
-                # here too. Which codes may join a given multilingual COMBINATION is server-validated —
-                # this check only judges the code itself.
-                rep.warn("bad-secondary-language", "secondaryLanguages[%d]" % i,
-                         "%r is not a plain two-letter code and is not in the validator's known "
-                         "ElevenLabs language list, which trails the platform's — the authoritative set "
-                         "(and which codes may join a multilingual combination) is validated on save "
-                         "(schema §4.3)." % code)
+            else:
+                check_served(code, "secondaryLanguages[%d]" % i)
+        # A multilingual set takes only codes ElevenLabs lists exactly, the primary included (voice-agent-api
+        # `validateLanguageCombination`, whatever the provider): en-US or pt-BR cannot join it.
+        seen = set()
+        entries = [("language", lang)] + [("secondaryLanguages[%d]" % i, c) for i, c in enumerate(sec)]
+        for where, code in entries if sec else []:
+            if not isinstance(code, str) or not code or code.lower() in seen:
+                continue
+            seen.add(code.lower())
+            served_anywhere = any(provider_serves_language(p, code) for p in ("elevenlabs", "deepgram"))
+            if served_anywhere and not provider_lists_language("elevenlabs", code):
+                rep.err("multilingual-combination", where,
+                        "%r cannot join a multilingual set — every code in it, the primary included, must be "
+                        "one ElevenLabs lists exactly, or the save is refused with a 422. Use the plain code "
+                        "(en-US → en, pt-BR → pt) (schema §4.3)." % code)
     elif sec is not None:
         rep.err("bad-type", "secondaryLanguages", "Expected a list of language codes (schema §3.7).")
 
@@ -773,10 +790,23 @@ def validate(cfg, fields, rep):
 
 
 # ---------------------------------------------------------------------------
-def elevenlabs_supports_language(code):
-    """schema.md §4.3 — ElevenLabs' accepted set is ~66 codes: essentially every plain two-letter one,
-    so a plain code counts as supported even when ELEVENLABS_LANGS (a documented subset) omits it."""
-    return isinstance(code, str) and (bool(PLAIN_LANG_CODE_RE.match(code)) or code in ELEVENLABS_LANGS)
+def provider_lists_language(provider, code):
+    """The provider's set holds `code` exactly (case-insensitive) — the bar a multilingual set must clear."""
+    langs = ELEVENLABS_LANGS if provider == "elevenlabs" else DEEPGRAM_LANGS
+    return isinstance(code, str) and code.lower() in {c.lower() for c in langs}
+
+
+def provider_serves_language(provider, code):
+    """schema.md §4.3 — the save's rule (voice-agent-api `isLanguageSupportedByProvider`): the exact code,
+    else its base code before the `-` (`en-US` on ElevenLabs is served as `en`), except the regional codes
+    that are distinct languages (`zh-TW`, `zh-Hant`, `zh-HK`)."""
+    if not isinstance(code, str):
+        return False
+    if provider_lists_language(provider, code):
+        return True
+    lower = code.lower()
+    return lower not in UNMAPPABLE_LANG_VARIANTS and "-" in lower and \
+        provider_lists_language(provider, lower.split("-", 1)[0])
 
 
 def effective(cfg, field):
@@ -797,15 +827,13 @@ def resolve_provider(cfg):
         return "elevenlabs"
     lang = cfg.get("language")
     if isinstance(lang, str) and lang.strip():
-        if lang in DEEPGRAM_EXCLUSIVE_LANGS:
-            return "deepgram"             # `multi` or a regional variant ElevenLabs lacks (en-US, pt-BR…)
-        # Every plain two-letter code resolves to ElevenLabs (schema §5 rule 3) — including ca/et/lv/lt
-        # and any other code this file's documented subset has not caught up with.
-        if PLAIN_LANG_CODE_RE.match(lang):
+        # voice-agent-api `selectProviderV3`: a code only Deepgram lists exactly (`multi`, en-US, pt-BR…)
+        # goes to Deepgram (rule 2), anything ElevenLabs serves to ElevenLabs (rule 3) — a plain code
+        # Deepgram also lists (ca/et/lv/lt/th) included — and the rest to Deepgram (rule 4).
+        if provider_lists_language("deepgram", lang) and not provider_lists_language("elevenlabs", lang):
+            return "deepgram"
+        if provider_serves_language("elevenlabs", lang):
             return "elevenlabs"
-        # schema §5 rule 4: anything left is a non-plain code ElevenLabs does not take — an unlisted
-        # regional variant or a malformed value. Falling through to ElevenLabs here made rule 4
-        # unreachable and suppressed the consequences (elevenlabs-settings-ignored, model mismatch).
         return "deepgram"
     return "elevenlabs"
 

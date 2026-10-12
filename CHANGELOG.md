@@ -18,17 +18,29 @@ marketplace (Check for updates, or Sync automatically).
   switch is yours to make. An `llm` the provider does not offer is refused with a `422`. A multilingual
   set takes exact ElevenLabs codes only, the primary included, so a regional primary such as `en-US`
   becomes its plain code (`en`) once `secondaryLanguages` is set.
+- **A language the provider does not serve is refused.** The save no longer normalizes languages: a
+  primary or secondary code the agent's provider does not serve is a `422 LANGUAGE_NOT_SUPPORTED`. A
+  regional code counts through its base code (`en-US` on ElevenLabs is served as `en`). The ElevenLabs
+  language list (66 codes) is now spelled out in `schema.md` §4.3.
 - **`optimizedSettings` (response-only).** Reads and writes now list the values the platform would pick
   for the agent's current setup (`changes` of `path`/`from`/`to`, plus display-only `effects`). Apply an
   entry by setting its path yourself; never copy the key. `minorVersion` is now kept on every save and
-  moves only when the user applies Optimized settings on the dashboard.
+  moves only when the optimized settings are applied: `apply_optimized_settings: true` on
+  `cloudtalk_update_voice_agent` (documented in `mcp-tools.md`, its own save when the call changes the
+  setup), or the dashboard's Optimized settings notice where it is enabled.
+- **`cloudtalk_update_voice_agent` merges.** `mcp-tools.md` now says so: only `voice_agent_id` is required,
+  an omitted field keeps its stored value, and collections are replaced wholesale.
 - **Removed:** `hasOverrides` and `upgradeAvailable` no longer exist (accepted and ignored, never
   returned).
 - **Validator:** recognizes the retired names (aliases WARN with the rename, the two removed fields are an
   INFO), resolves an alias the way the API does, reports an omitted `provider`/`llm` (INFO), warns on a
   knowledge base on Deepgram or without an explicit `provider: "elevenlabs"`, and treats
   `optimizedSettings` as a response-only INFO. An unknown `llm` is now an ERROR (the save is refused with
-  a `422`), and so is an `llm` / `llmOverride` that is not a string; Deepgram's native `open_ai - <model>` masks are accepted (INFO, prefer the canonical ID).
+  a `422`), and so is an `llm` / `llmOverride` that is not a string; Deepgram's native `open_ai - <model>`
+  masks are accepted (INFO, prefer the canonical ID). Languages follow the API: a primary or secondary
+  code the provider does not serve is an ERROR when `provider` is sent and a WARN when it is inferred, a
+  regional code is served through its base code, and a multilingual set with a code ElevenLabs does not
+  list exactly is an ERROR. The language lists and the create-time provider pick mirror voice-agent-api.
 
 ## 0.1.1 — 2026-09-30
 

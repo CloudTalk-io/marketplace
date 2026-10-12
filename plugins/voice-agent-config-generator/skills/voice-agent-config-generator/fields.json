@@ -126,7 +126,7 @@
   ],
   "forbidden": [
     { "path": "version", "reason": "server-stamped (always 2)" },
-    { "path": "minorVersion", "reason": "the agent's behaviour version: filled at creation and kept on every save. It moves only when the user applies the dashboard's optimized settings, never from a change set" },
+    { "path": "minorVersion", "reason": "the agent's behaviour version: filled at creation and kept on every save. It moves when the optimized settings are applied (apply_optimized_settings on cloudtalk_update_voice_agent, or the dashboard's Optimized settings notice where it is enabled). The API would also take the latest on a replace; this plugin never writes it itself" },
     { "path": "warnings", "reason": "response-only diagnostics: the platform emits them alongside a read or a save to describe what it found. Never author them -- they are the server talking back, not config" },
     { "path": "errorCodes", "reason": "response-only diagnostics: per-reference failure codes the platform attaches to a config (an unusable voice, an unowned number). A SUCCESSFUL save can carry them -- read them, never write them" },
     { "path": "id", "reason": "response-only" },

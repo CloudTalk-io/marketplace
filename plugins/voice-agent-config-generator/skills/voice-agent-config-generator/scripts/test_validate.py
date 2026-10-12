@@ -706,24 +706,42 @@ expect_clean("real secondaryLanguages with the ElevenLabs pin",
              lambda c: c.update({"secondaryLanguages": ["de", "fr"], "provider": "elevenlabs"}))
 expect_no_code("real knowledgeBaseIds", set_kbs(["66aa11bb22cc33dd44ee55ff"]), "bad-type")
 
-# 22) An unknown language code is the validator's list trailing the platform's, not proof of an invalid
-# config: WARN, never ERROR (the authoritative set is validated on save). Same for a secondary code.
-expect_warn("unknown primary language", lambda c: c.__setitem__("language", "af"), "unknown-language")
-expect_no_code("unknown primary language is not an error",
-               lambda c: c.__setitem__("language", "af"), "unknown-language")
-# A SECONDARY code goes through the same acceptance helper as the primary one, so a plain two-letter
-# code ElevenLabs takes (af, ca, th, …) is not second-guessed just because the documented subset omits it.
-expect_no_warn("plain secondary language is accepted",
+# 22) Languages mirror voice-agent-api: the save refuses a primary or secondary code the provider does not
+# serve (422 LANGUAGE_NOT_SUPPORTED), exact or through its base code. ERROR when the provider is sent,
+# WARN when it is only inferred, like the llm.
+expect_clean("an ElevenLabs code outside the old subset", lambda c: c.__setitem__("language", "af"))
+expect_clean("a three-letter ElevenLabs code", lambda c: c.__setitem__("language", "fil"))
+expect_error("a language the sent provider does not serve",
+             lambda c: c.update({"provider": "deepgram", "language": "hr", "llm": "anthropic - claude-haiku-4-5"}),
+             "language-not-supported")
+expect_error("a secondary language the sent provider does not serve",
+             lambda c: c.update({"provider": "deepgram", "language": "en", "secondaryLanguages": ["hr"]}),
+             "language-not-supported")
+# No provider sent: secondary languages infer ElevenLabs, which lacks zh-TW. The stored provider may serve
+# it, so that is a WARN, not an ERROR (the missing pin and the combination are errors of their own).
+_cfg = copy.deepcopy(BASE)
+_cfg.pop("provider")
+_cfg.update({"language": "zh-TW", "secondaryLanguages": ["de"]})
+if "language-provider-mismatch" not in warn_codes(_cfg) or "language-not-supported" in error_codes(_cfg):
+    failures.append("zh-TW with an inferred ElevenLabs: expected a language WARN, not an ERROR, got %s / %s"
+                    % (error_codes(_cfg), warn_codes(_cfg)))
+expect_error("a code no provider serves", lambda c: c.__setitem__("language", "xx"), "language-not-supported")
+expect_clean("a regional code served through its base code",
+             lambda c: c.update({"provider": "elevenlabs", "language": "en-US"}))
+expect_error("zh-TW is never served through zh",
+             lambda c: c.update({"provider": "elevenlabs", "language": "zh-TW"}), "language-not-supported")
+expect_no_code("an ElevenLabs code outside the old subset as a secondary",
                lambda c: c.update({"secondaryLanguages": ["af"], "provider": "elevenlabs"}),
-               "bad-secondary-language")
-# A non-plain secondary code keeps the hedged warning — the platform owns the authoritative set and
-# decides which codes may join a given combination.
-expect_warn("non-plain secondary language",
-            lambda c: c.update({"secondaryLanguages": ["pt-BR"], "provider": "elevenlabs"}),
-            "bad-secondary-language")
-expect_no_code("non-plain secondary language is not an error",
-               lambda c: c.update({"secondaryLanguages": ["pt-BR"], "provider": "elevenlabs"}),
-               "bad-secondary-language")
+               "language-not-supported")
+# A multilingual set takes only codes ElevenLabs lists exactly, the primary included, whatever the provider.
+expect_error("a regional secondary language",
+             lambda c: c.update({"secondaryLanguages": ["pt-BR"], "provider": "elevenlabs"}),
+             "multilingual-combination")
+expect_error("a regional primary language with secondary languages",
+             lambda c: c.update({"language": "en-US", "secondaryLanguages": ["de"], "provider": "elevenlabs"}),
+             "multilingual-combination")
+expect_no_code("a regional primary language alone",
+               lambda c: c.update({"language": "en-US", "provider": "elevenlabs"}), "multilingual-combination")
 # ...but the multilingual provider rules are independent and must keep erroring.
 expect_error("multilingual without a provider",
              lambda c: (c.pop("provider"), c.__setitem__("secondaryLanguages", ["de"])),
@@ -784,8 +802,8 @@ expect_error("sent provider + llm it does not offer",
              "llm-provider-mismatch")
 expect_clean("no provider + llm the inferred provider offers",
              lambda c: (c.pop("provider"), c.update({"language": "en-US", "llm": "openai - gpt-4o-mini"})))
-expect_warn("en-US on an explicit ElevenLabs provider is a language mismatch",
-            lambda c: c.__setitem__("language", "en-US"), "language-provider-mismatch")
+expect_clean("en-US on an explicit ElevenLabs provider is served as en",
+             lambda c: c.__setitem__("language", "en-US"))
 
 # 22b) Schema §5 rule 4 ("else Deepgram") must be reachable: a code that is neither plain nor a listed
 # Deepgram variant used to fall through to ElevenLabs, which suppressed every Deepgram consequence.
@@ -794,10 +812,12 @@ for _malformed in ("zz-ZZ", "pt-br", "EN_us-Garbage!"):
     if _got != "deepgram":
         failures.append("non-plain unknown language %r must resolve to deepgram (schema §5 rule 4), "
                         "got %r" % (_malformed, _got))
-# ...while an unknown PLAIN code stays ElevenLabs territory and only draws the hedged language warning.
-if V.resolve_provider({"language": "xx"}) != "elevenlabs":
-    failures.append("unknown plain language 'xx' must resolve to elevenlabs")
-expect_warn("unknown plain language warns", lambda c: c.__setitem__("language", "xx"), "unknown-language")
+# ...as does a plain code no provider lists (the API's tree gives ElevenLabs only what it serves), while a
+# regional code ElevenLabs serves through its base code goes to ElevenLabs.
+if V.resolve_provider({"language": "xx"}) != "deepgram":
+    failures.append("unknown plain language 'xx' must resolve to deepgram, as the API's create tree does")
+if V.resolve_provider({"language": "de-AT"}) != "elevenlabs":
+    failures.append("de-AT is served by ElevenLabs through de, so it must resolve to elevenlabs")
 expect_no_warn("unknown plain language keeps its ElevenLabs settings",
                lambda c: c.update({"language": "xx", "elevenLabsSettings": {"vad": True}}),
                "elevenlabs-settings-ignored")

@@ -13,8 +13,8 @@ Checks:
   2. fields.json's `tone` enum == validate_config.TONE_PRESETS, and the `elevenLabsSettings`
      subFields paths == ELEVENLABS_SETTING_SHAPES keys / BACKGROUND_SOUND_FIELDS.
   3. The enums schema.md spells out in prose or tables == the ones the validator mirrors in code:
-     §4.2's per-provider LLM matrix == ELEVENLABS_MODELS / DEEPGRAM_MODELS; §4.3's Deepgram language
-     list == DEEPGRAM_LANGS, plus the plain-two-letter-code rule the provider decision tree keys off;
+     §4.2's per-provider LLM matrix == ELEVENLABS_MODELS / DEEPGRAM_MODELS; §4.3's language lists ==
+     ELEVENLABS_LANGS / DEEPGRAM_LANGS;
      §4.4's premade voice IDs == KNOWN_VOICE_IDS; §11's tone labels == TONE_PRESETS and its verbosity
      values == VERBOSITIES; §7.1's scenario actions == SCENARIO_ACTIONS (and fields.json's
      `scenarioActions` rows).
@@ -203,26 +203,24 @@ def check_llm_matrix(schema_text):
 
 
 def check_languages(schema_text):
-    """§4.3: the Deepgram list is enumerated, so it is compared code-for-code. ElevenLabs' real set is
-    ~66 codes and is NOT enumerated there — the doc's rule is "every plain two-letter code", which is
-    what provider resolution keys off, so that rule is what gets checked instead of a list."""
+    """§4.3: both provider lists are enumerated (mirroring voice-agent-api), so each is compared
+    code-for-code; ElevenLabs lists plain codes only."""
     body = "\n".join(section_lines(schema_text, re.compile(r"^###\s+4\.3")))
     problems = []
-    match = re.search(r"\*\*Deepgram\*\*.*?:\s*`([^`]+)`", body, re.S)
-    if not match:
-        problems.append("schema.md: could not parse the §4.3 Deepgram language list")
-    else:
+    for label, mirrored, name in (("ElevenLabs", V.ELEVENLABS_LANGS, "ELEVENLABS_LANGS"),
+                                  ("Deepgram", V.DEEPGRAM_LANGS, "DEEPGRAM_LANGS")):
+        match = re.search(r"\*\*%s\*\*.*?:\s*`([^`]+)`" % label, body, re.S)
+        if not match:
+            problems.append("schema.md: could not parse the §4.3 %s language list" % label)
+            continue
         documented = {c.strip() for c in match.group(1).split(",") if c.strip()}
-        problems += compare("Deepgram languages", documented, V.DEEPGRAM_LANGS,
-                            "schema.md §4.3", "validate_config.DEEPGRAM_LANGS")
-    if "plain two-letter" not in body:
-        problems.append("schema.md §4.3 no longer states the plain-two-letter-code rule that "
-                        "validate_config.resolve_provider keys off — restate it or change the code")
+        problems += compare("%s languages" % label, documented, mirrored,
+                            "schema.md §4.3", "validate_config.%s" % name)
     stray = sorted(c for c in V.ELEVENLABS_LANGS if not V.PLAIN_LANG_CODE_RE.match(c))
     if stray:
         problems.append("ElevenLabs languages: %s in validate_config.ELEVENLABS_LANGS are not plain "
-                        "two-letter codes — that list is a documented subset of the plain codes, and "
-                        "membership in it must never be decisive (schema.md §4.3)" % stray)
+                        "codes — schema.md §4.3 and §5 rule 2 rely on regional codes being Deepgram's "
+                        "exact territory" % stray)
     plain_exclusive = sorted(c for c in V.DEEPGRAM_EXCLUSIVE_LANGS if V.PLAIN_LANG_CODE_RE.match(c))
     if plain_exclusive:
         problems.append("Deepgram-exclusive languages: %s are plain two-letter codes, which schema.md "
