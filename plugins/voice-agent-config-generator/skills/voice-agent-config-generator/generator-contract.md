@@ -43,7 +43,8 @@ anything else so your other choices are consistent:
 - `provider`: plain language (`en`, `de`, …) → **`elevenlabs`**; Deepgram-exclusive code (`en-US`,
   `pt-BR`, …) → **`deepgram`**; a non-empty `secondaryLanguages` or `knowledgeBaseIds` → **`elevenlabs`**
   (Deepgram cannot serve either, and a save keeps a stored Deepgram provider unless you send the switch;
-  an empty list changes nothing).
+  an empty list changes nothing). With `secondaryLanguages`, make a regional primary its plain code
+  (`en-US` → `en`, `pt-BR` → `pt`) or ask: a multilingual set takes exact ElevenLabs codes only (schema §4.3).
 - **Multilingual has two mechanisms — don't conflate them.** Default to **ElevenLabs via
   `secondaryLanguages`**. **Deepgram `multi`** (Deepgram-only, switches its listen model to `nova-3`) is
   **explicit-only**: emit `language: "multi"` with `provider: "deepgram"` **only when the user asks for

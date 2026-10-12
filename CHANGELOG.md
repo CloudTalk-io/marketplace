@@ -15,7 +15,9 @@ marketplace (Check for updates, or Sync automatically).
   are sent), never returned, never emitted.
 - **Multilingual and knowledge-base agents set `provider: "elevenlabs"`.** Deepgram cannot serve secondary
   languages or knowledge bases. A save keeps a Deepgram provider as sent instead of refusing it, so the
-  switch is yours to make. An `llm` the provider does not offer is refused with a `422`.
+  switch is yours to make. An `llm` the provider does not offer is refused with a `422`. A multilingual
+  set takes exact ElevenLabs codes only, the primary included, so a regional primary such as `en-US`
+  becomes its plain code (`en`) once `secondaryLanguages` is set.
 - **`optimizedSettings` (response-only).** Reads and writes now list the values the platform would pick
   for the agent's current setup (`changes` of `path`/`from`/`to`, plus display-only `effects`). Apply an
   entry by setting its path yourself; never copy the key. `minorVersion` is now kept on every save and
@@ -26,7 +28,7 @@ marketplace (Check for updates, or Sync automatically).
   INFO), resolves an alias the way the API does, reports an omitted `provider`/`llm` (INFO), warns on a
   knowledge base on Deepgram or without an explicit `provider: "elevenlabs"`, and treats
   `optimizedSettings` as a response-only INFO. An unknown `llm` is now an ERROR (the save is refused with
-  a `422`); Deepgram's native `open_ai - <model>` masks are accepted (INFO, prefer the canonical ID).
+  a `422`), and so is an `llm` / `llmOverride` that is not a string; Deepgram's native `open_ai - <model>` masks are accepted (INFO, prefer the canonical ID).
 
 ## 0.1.1 — 2026-09-30
 

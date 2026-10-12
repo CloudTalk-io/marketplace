@@ -1161,6 +1161,9 @@ if warn_codes(_cfg) != ["kb-needs-elevenlabs-pin"]:
 # 34) llm: the accepted set mirrors the API's registry — canonical IDs, legacy aliases and Deepgram's
 # `open_ai - <model>` masks (only for models Deepgram offers). Anything else is a 422 LLM_OVERRIDE_INVALID.
 expect_error("unknown llm", lambda c: c.__setitem__("llm", "not-a-model"), "llm-invalid")
+expect_error("llm as a list", lambda c: c.__setitem__("llm", ["openai - gpt-4o"]), "bad-type")
+expect_error("llm as a number", lambda c: c.__setitem__("llm", 42), "bad-type")
+expect_error("llmOverride as a list", lambda c: c.__setitem__("llmOverride", ["openai - gpt-4o"]), "bad-type")
 expect_error("native mask of a model Deepgram does not offer",
              lambda c: c.update({"provider": "deepgram", "language": "en-US", "llm": "open_ai - gpt-5"}),
              "llm-invalid")

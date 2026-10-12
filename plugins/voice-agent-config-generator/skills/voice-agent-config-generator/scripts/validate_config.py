@@ -632,6 +632,12 @@ def validate(cfg, fields, rep):
     elif sec is not None:
         rep.err("bad-type", "secondaryLanguages", "Expected a list of language codes (schema §3.7).")
 
+    for key in ("llm", "llmOverride"):
+        value = cfg.get(key)
+        if value is not None and not isinstance(value, str):
+            rep.err("bad-type", key,
+                    "Expected a canonical model-ID string such as 'anthropic - claude-haiku-4-5', not %s — "
+                    "the API refuses any other type (schema §4.2)." % type(value).__name__)
     llm = effective(cfg, "llm")
     if isinstance(llm, str) and llm:
         canonical = LEGACY_LLM_ALIASES.get(llm) or NATIVE_LLM_MASKS.get(llm) or llm

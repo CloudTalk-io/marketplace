@@ -214,6 +214,9 @@ normalized server-side (responses return the canonical ID).
 >
 > **Multilingual combinations are validated server-side** — not every code can join a multilingual set:
 > an incompatible `language` + `secondaryLanguages` combination is rejected on save with per-code errors.
+> Every code in the set, **the primary `language` included**, must be one ElevenLabs lists exactly, so a
+> regional variant (`en-US`, `en-GB`, `pt-BR`, `es-419`, …) cannot join it: use its plain code (`en`,
+> `pt`, `es`). A single-language agent is not held to this — ElevenLabs serves `en-US` through `en`.
 >
 > **Two distinct multilingual mechanisms — do not conflate them:**
 > - **ElevenLabs multilingual** is driven by **`secondaryLanguages`**, which needs `provider: "elevenlabs"`
@@ -265,7 +268,10 @@ languages or a KB → ElevenLabs). (`providerOverride` / `llmOverride` are retir
 #### Provider — what to set
 1. `secondaryLanguages` or `knowledgeBaseIds` **non-empty** → **ElevenLabs**. Deepgram can serve neither, and
    a save keeps a Deepgram provider as sent, so set `provider: "elevenlabs"` yourself. An empty list (`[]`)
-   does not count — it changes nothing about the provider.
+   does not count — it changes nothing about the provider. With `secondaryLanguages`, a regional primary
+   (`en-US`, `pt-BR`, …) must also become its plain code (`en`, `pt`), or ask the user whether the variant
+   matters: a multilingual set takes exact ElevenLabs codes only and the save refuses it otherwise (§4.3).
+   A knowledge base alone does not need this.
 2. Language supported **exactly** by Deepgram but **not** ElevenLabs — the **non-plain** codes: `multi`
    and the regional variants (`en-US`, `en-GB`, `pt-BR`, `es-419`, `zh-Hans`, …) → **Deepgram**.
 3. Else ElevenLabs supports the language (**all plain codes** `en`, `de`, `es`, `fr`, …) → **ElevenLabs**.
