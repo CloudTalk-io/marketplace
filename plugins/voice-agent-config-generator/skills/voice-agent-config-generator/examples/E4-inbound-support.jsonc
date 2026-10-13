@@ -1,6 +1,6 @@
-// E4 — Inbound support line, pinned to Deepgram via providerOverride.
-// Demonstrates: providerOverride (meaningful here — "en" would auto-resolve to ElevenLabs under V3, so
-// the override forces Deepgram for latency), substantial custom skills (each a real capability), an
+// E4 — Inbound support line, set to Deepgram via `provider`.
+// Demonstrates: choosing the provider (meaningful here — the platform would pick ElevenLabs for "en", so
+// `provider` chooses Deepgram for latency), substantial custom skills (each a real capability), an
 // ARRAY extract property, answerQuestions "admitUncertainty", a `toolCall` scenario wired to a custom
 // tool, an extractData `endpoint` webhook (shipped commented out), and a second point in the
 // tone/verbosity space (`["empathetic"]` + "thorough", where E8 sits at `["professional","calm"]` + "concise").
@@ -17,9 +17,10 @@
 // Create the tool in the Dashboard (or, connected, with `cloudtalk_create_voice_agent_tool`, which can
 // attach it to this agent in the same call) and copy its ID — referenced-resources.md.
 //
-// PROVIDER NOTE: language is plain "en" (→ ElevenLabs under V3 auto-selection), so providerOverride
-// "deepgram" actively forces Deepgram (single language, no KB → lowest latency). Deepgram +
-// secondaryLanguages would be rejected; elevenLabsSettings would be ignored. `tone` and `verbosity` are
+// PROVIDER NOTE: language is plain "en" (the platform would pick ElevenLabs), so provider "deepgram"
+// actively chooses Deepgram (single language, no KB → lowest latency). Deepgram cannot serve
+// secondaryLanguages or a knowledge base; elevenLabsSettings would be ignored. `llm` must be one of the
+// models Deepgram offers (schema §4.2) — Haiku 4.5 is. `tone` and `verbosity` are
 // NOT ElevenLabs-only — they are provider-agnostic, which is why this Deepgram agent carries them
 // (schema §11). Niche product names are handled via the canonical-name list in the prompt.
 {
@@ -35,7 +36,8 @@
   "optimizeStreamingLatency": 2,
   "stability": 0.3,
   "similarity": 0.7,
-  "providerOverride": "deepgram",
+  "provider": "deepgram",
+  "llm": "anthropic - claude-haiku-4-5", // offered by Deepgram; not every model is (schema §4.2)
   "startSpeakingFirst": true,
   "tone": ["empathetic"],          // one label, deliberately: a support line meeting annoyed callers.
                                    // A single preset expresses more strongly than a blend (schema §11)

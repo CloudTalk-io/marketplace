@@ -10,27 +10,28 @@ setting a real `defaultOutboundNumberId` instead) is the one wiring step every f
 **E4, E9 and E10** carry further account-specific values to swap for your own (see the notes below). They
 double as few-shot material and as executable documentation.
 
-Provider/LLM columns reflect **V3 auto-selection** (all new configs; `schema.md` §5): provider is
-language-based, and a *trivial* ElevenLabs agent defaults to lightweight Qwen unless made complex or
-overridden.
+Every example emits `provider` and `llm` (`schema.md` §5): a save keeps the agent's stored values when
+they are omitted, and nothing re-selects them. The provider follows the language (secondary languages or
+a KB → ElevenLabs); the platform's own LLM pick for a *trivial* ElevenLabs agent is lightweight Qwen, so
+the examples doing real work set Haiku 4.5.
 
 > **Filename convention:** `E<n>-<direction>-<archetype>-<teaching-tag>.jsonc`. The stable ID is the
 > `E<n>` (what the other docs reference); the rest is a human mnemonic. `direction` is always present;
 > the optional `teaching-tag` names what the example demonstrates beyond its archetype, and is dropped
 > where the archetype says it all.
 
-| File | Archetype | Direction | Resolved provider (V3) |
+| File | Archetype | Direction | `provider` / `llm` |
 |---|---|---|---|
-| `E1-inbound-receptionist.jsonc` | Receptionist; knowledge in the prompt; **switched-off transfer** | inbound | ElevenLabs (auto `en`); complex via prompt length → Haiku 4.5, with a defensive `llmOverride` |
-| `E2-outbound-confirmation-de.jsonc` | Appointment confirmation, German | outbound | ElevenLabs (auto `de`); complex via scenarios → Haiku 4.5 |
-| `E3-inbound-qualification-cfd.jsonc` | Lead qualification → CFD routing (**explicit-Call-Flow exception**) | inbound | ElevenLabs (auto `en`); trivial-tier, `llmOverride` → Haiku 4.5 |
-| `E4-inbound-support.jsonc` | Support intake, Deepgram-pinned, no transfer; **`toolCall` scenario + `extractData` webhook**, `tone`/`verbosity` on a Deepgram agent | inbound | Deepgram (`providerOverride` on plain `en`) → Haiku 4.5 |
-| `E5-inbound-multilingual.jsonc` | Multilingual appointment-request intake | inbound | ElevenLabs (pinned via `providerOverride`; multilingual) → Haiku 4.5 |
-| `E6-inbound-frontdesk-enus.jsonc` | US-English front desk; callback instead of a handoff | inbound | Deepgram (auto `en-US` — Deepgram-exclusive) → Haiku 4.5 |
-| `E7-inbound-afterhours-message.jsonc` | After-hours message taker (`takeMessage`) | inbound | ElevenLabs (auto `en`); trivial-tier, `llmOverride` → Haiku 4.5 |
-| `E8-inbound-frontdesk-identity.jsonc` | Hotel front desk; **`tone`/`verbosity` + `elevenLabsSettings` showcase** | inbound | ElevenLabs (auto `en`); complex via prompt length → Haiku 4.5 |
-| `E9-inbound-support-transfer-sms.jsonc` | Support line; **group transfer as a disabled draft (id/extension omitted) + `sendSms`** (the default scaffold), a `## Known facts` variables section, a switched-off scenario | inbound | ElevenLabs (auto `en`); complex via scenarios → Haiku 4.5 |
-| `E10-inbound-booking-confirmation.jsonc` | Appointment booking; **`appointmentBooking` + `booking_confirmed` → `sendSms`** with `{{appointment.*}}` | inbound | ElevenLabs (auto `en`); complex via scenarios → Haiku 4.5 |
+| `E1-inbound-receptionist.jsonc` | Receptionist; knowledge in the prompt; **switched-off transfer** | inbound | ElevenLabs (`en`); complex via prompt length → Haiku 4.5, the platform's pick too |
+| `E2-outbound-confirmation-de.jsonc` | Appointment confirmation, German | outbound | ElevenLabs (`de`); complex via scenarios → Haiku 4.5 |
+| `E3-inbound-qualification-cfd.jsonc` | Lead qualification → CFD routing (**explicit-Call-Flow exception**) | inbound | ElevenLabs (`en`); trivial-tier, Haiku 4.5 over the Qwen pick |
+| `E4-inbound-support.jsonc` | Support intake on Deepgram by choice, no transfer; **`toolCall` scenario + `extractData` webhook**, `tone`/`verbosity` on a Deepgram agent | inbound | Deepgram (chosen on plain `en`) → Haiku 4.5 |
+| `E5-inbound-multilingual.jsonc` | Multilingual appointment-request intake | inbound | ElevenLabs (required: multilingual) → Haiku 4.5 |
+| `E6-inbound-frontdesk-enus.jsonc` | US-English front desk; callback instead of a handoff | inbound | Deepgram (`en-US` — Deepgram-exclusive) → Haiku 4.5 |
+| `E7-inbound-afterhours-message.jsonc` | After-hours message taker (`takeMessage`) | inbound | ElevenLabs (`en`); trivial-tier, Haiku 4.5 over the Qwen pick |
+| `E8-inbound-frontdesk-identity.jsonc` | Hotel front desk; **`tone`/`verbosity` + `elevenLabsSettings` showcase** | inbound | ElevenLabs (`en`); complex via prompt length → Haiku 4.5 |
+| `E9-inbound-support-transfer-sms.jsonc` | Support line; **group transfer as a disabled draft (id/extension omitted) + `sendSms`** (the default scaffold), a `## Known facts` variables section, a switched-off scenario | inbound | ElevenLabs (`en`); complex via scenarios → Haiku 4.5 |
+| `E10-inbound-booking-confirmation.jsonc` | Appointment booking; **`appointmentBooking` + `booking_confirmed` → `sendSms`** with `{{appointment.*}}` | inbound | ElevenLabs (`en`); complex via scenarios → Haiku 4.5 |
 
 ## Self-contained — references handled without new resources
 
@@ -72,8 +73,8 @@ handoff as a **disabled group draft** the user finishes in the dashboard:
 - **E8** — a hotel front desk carrying the **structured identity presets** (`tone`, `verbosity`) and the
   ElevenLabs conversation knobs (`turnEagerness`, the `interruptionIgnoreTerms` /
   `interruptionIgnoreTermLanguages` pair, a low-volume `backgroundSound` bed). Fully self-contained: no
-  transfer skill, so the prompt offers a callback like E6. It also shows another route to Haiku **without
-  an `llmOverride`**: its `goalPrompt` is over 1500 characters, which on its own marks the agent complex
+  transfer skill, so the prompt offers a callback like E6. It also shows another route to the platform picking
+  Haiku itself: its `goalPrompt` is over 1500 characters, which on its own marks the agent complex
   (E2/E9/E10 get there on scenario count and E5 on `secondaryLanguages` — among other routes: E9 and E10
   are long-prompted too, and E5 also runs several scenarios). Note what the presets *replace*: the
   prompt's style section covers only one-question-per-turn and speech formatting, and never restates "be
@@ -97,9 +98,9 @@ handoff as a **disabled group draft** the user finishes in the dashboard:
   booking/calendar-link variable to put in one. `when` is omitted on that scenario because the platform
   overwrites it. Replace the calendar `integrationId`/`calendarId` and the SMS `senderNumber`.
 
-> **Provider coverage:** E4 *forces* Deepgram via `providerOverride` (on a language that would otherwise
-> auto-pick ElevenLabs); E5 pins ElevenLabs via `providerOverride` for its multilingual config; E6 shows
-> Deepgram *auto-selected* via the Deepgram-exclusive `en-US`.
+> **Provider coverage:** E4 *chooses* Deepgram on a language the platform would give ElevenLabs; E5 sets
+> ElevenLabs because its multilingual config needs it; E6 lands on Deepgram because `en-US` is
+> Deepgram-exclusive.
 
 ## Conventions
 
@@ -154,8 +155,10 @@ handoff as a **disabled group draft** the user finishes in the dashboard:
   `interruptionIgnoreTermLanguages` pair and `backgroundSound` with its `preset`, `volume` and
   `crossfadeLoop` — plus `turnEagerness: "normal"`, the one leaf both files carry.
 - **Create-shaped, so preserve-on-omit is invisible here.** Every file is a complete document, which is
-  what you want for a create or a full-document paste. On the connected **get → modify → update** path
-  the same completeness is a *requirement*, because omission is not neutral and not uniform:
+  what you want for a create or a full-document paste. On an Expert-Mode paste over an existing agent the
+  same completeness is a *requirement* (the connected `cloudtalk_update_voice_agent` merges onto a fresh
+  read instead, so there an omitted field keeps its stored value), because omission is not neutral and
+  not uniform:
   `knowledgeBaseIds` omitted **unlinks every KB**, `optimizeStreamingLatency` omitted **resets to `0`**,
   `elevenLabsSettings` present **replaces the whole object** (omitted preserves it), and `dialTime`
   omitted preserves. No example can demonstrate that — it only shows up on the second write — so it is

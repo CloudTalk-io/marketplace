@@ -95,8 +95,8 @@ find the resource kind below.
     that matters.
   - Tiny KBs (≈ a screenful) are better folded into a custom skill (lower latency); content > ~500
     words belongs in a KB. (Behavioral §7.)
-  - Under V3 routing a KB does **not** change the provider; it marks the agent "complex", upgrading
-    the ElevenLabs auto LLM from Qwen to Haiku 4.5 (`schema.md` §5).
+  - A KB needs **ElevenLabs** (Deepgram cannot serve it): set `provider: "elevenlabs"` in the same
+    config — linking a KB never switches the stored provider or LLM (`schema.md` §5).
 
 ### Custom tools — `scenarios[].toolReferenceId` (with `action: "toolCall"`)  *(action: create)*
 

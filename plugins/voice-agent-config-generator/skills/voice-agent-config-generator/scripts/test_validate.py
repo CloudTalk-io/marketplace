@@ -42,6 +42,8 @@ BASE = {
     "optimizeStreamingLatency": 2,
     "stability": 0.5,
     "similarity": 0.75,
+    "provider": "elevenlabs",
+    "llm": "anthropic - claude-haiku-4-5",
     "startSpeakingFirst": True,
     "greeting": "Hello, thanks for calling Acme. How can I help you today?",
     "goalPrompt": (
@@ -695,38 +697,57 @@ expect_error("maxCallDuration as a string", lambda c: c.__setitem__("maxCallDura
 expect_error("dialTime as a string", lambda c: c.__setitem__("dialTime", "20"), "bad-type")
 expect_error("agentName as a number", lambda c: c.__setitem__("agentName", 123), "bad-type")
 expect_error("secondaryLanguages holding a number",
-             lambda c: c.update({"secondaryLanguages": [123], "providerOverride": "elevenlabs"}), "bad-type")
+             lambda c: c.update({"secondaryLanguages": [123], "provider": "elevenlabs"}), "bad-type")
 expect_error("secondaryLanguages as a bare string",
-             lambda c: c.update({"secondaryLanguages": "de", "providerOverride": "elevenlabs"}), "bad-type")
+             lambda c: c.update({"secondaryLanguages": "de", "provider": "elevenlabs"}), "bad-type")
 expect_error("knowledgeBaseIds holding a number", set_kbs([123]), "bad-type")
 expect_error("knowledgeBaseIds as a bare string", set_kbs("66aa11bb22cc33dd44ee55ff"), "bad-type")
 expect_clean("real secondaryLanguages with the ElevenLabs pin",
-             lambda c: c.update({"secondaryLanguages": ["de", "fr"], "providerOverride": "elevenlabs"}))
+             lambda c: c.update({"secondaryLanguages": ["de", "fr"], "provider": "elevenlabs"}))
 expect_no_code("real knowledgeBaseIds", set_kbs(["66aa11bb22cc33dd44ee55ff"]), "bad-type")
 
-# 22) An unknown language code is the validator's list trailing the platform's, not proof of an invalid
-# config: WARN, never ERROR (the authoritative set is validated on save). Same for a secondary code.
-expect_warn("unknown primary language", lambda c: c.__setitem__("language", "af"), "unknown-language")
-expect_no_code("unknown primary language is not an error",
-               lambda c: c.__setitem__("language", "af"), "unknown-language")
-# A SECONDARY code goes through the same acceptance helper as the primary one, so a plain two-letter
-# code ElevenLabs takes (af, ca, th, …) is not second-guessed just because the documented subset omits it.
-expect_no_warn("plain secondary language is accepted",
-               lambda c: c.update({"secondaryLanguages": ["af"], "providerOverride": "elevenlabs"}),
-               "bad-secondary-language")
-# A non-plain secondary code keeps the hedged warning — the platform owns the authoritative set and
-# decides which codes may join a given combination.
-expect_warn("non-plain secondary language",
-            lambda c: c.update({"secondaryLanguages": ["pt-BR"], "providerOverride": "elevenlabs"}),
-            "bad-secondary-language")
-expect_no_code("non-plain secondary language is not an error",
-               lambda c: c.update({"secondaryLanguages": ["pt-BR"], "providerOverride": "elevenlabs"}),
-               "bad-secondary-language")
+# 22) Languages mirror voice-agent-api: the save refuses a primary or secondary code the provider does not
+# serve (422 LANGUAGE_NOT_SUPPORTED), exact or through its base code. ERROR when the provider is sent,
+# WARN when it is only inferred, like the llm.
+expect_clean("an ElevenLabs code outside the old subset", lambda c: c.__setitem__("language", "af"))
+expect_clean("a three-letter ElevenLabs code", lambda c: c.__setitem__("language", "fil"))
+expect_error("a language the sent provider does not serve",
+             lambda c: c.update({"provider": "deepgram", "language": "hr", "llm": "anthropic - claude-haiku-4-5"}),
+             "language-not-supported")
+expect_error("a secondary language the sent provider does not serve",
+             lambda c: c.update({"provider": "deepgram", "language": "en", "secondaryLanguages": ["hr"]}),
+             "language-not-supported")
+# No provider sent: secondary languages infer ElevenLabs, which lacks zh-TW. The stored provider may serve
+# it, so that is a WARN, not an ERROR (the missing pin and the combination are errors of their own).
+_cfg = copy.deepcopy(BASE)
+_cfg.pop("provider")
+_cfg.update({"language": "zh-TW", "secondaryLanguages": ["de"]})
+if "language-provider-mismatch" not in warn_codes(_cfg) or "language-not-supported" in error_codes(_cfg):
+    failures.append("zh-TW with an inferred ElevenLabs: expected a language WARN, not an ERROR, got %s / %s"
+                    % (error_codes(_cfg), warn_codes(_cfg)))
+expect_error("a code no provider serves", lambda c: c.__setitem__("language", "xx"), "language-not-supported")
+expect_clean("a regional code served through its base code",
+             lambda c: c.update({"provider": "elevenlabs", "language": "en-US"}))
+expect_error("zh-TW is never served through zh",
+             lambda c: c.update({"provider": "elevenlabs", "language": "zh-TW"}), "language-not-supported")
+expect_no_code("an ElevenLabs code outside the old subset as a secondary",
+               lambda c: c.update({"secondaryLanguages": ["af"], "provider": "elevenlabs"}),
+               "language-not-supported")
+# A multilingual set takes only codes ElevenLabs lists exactly, the primary included, whatever the provider.
+expect_error("a regional secondary language",
+             lambda c: c.update({"secondaryLanguages": ["pt-BR"], "provider": "elevenlabs"}),
+             "multilingual-combination")
+expect_error("a regional primary language with secondary languages",
+             lambda c: c.update({"language": "en-US", "secondaryLanguages": ["de"], "provider": "elevenlabs"}),
+             "multilingual-combination")
+expect_no_code("a regional primary language alone",
+               lambda c: c.update({"language": "en-US", "provider": "elevenlabs"}), "multilingual-combination")
 # ...but the multilingual provider rules are independent and must keep erroring.
-expect_error("multilingual without the ElevenLabs pin",
-             lambda c: c.__setitem__("secondaryLanguages", ["de"]), "multilingual-needs-elevenlabs-pin")
-expect_error("multilingual pinned to Deepgram",
-             lambda c: c.update({"secondaryLanguages": ["de"], "providerOverride": "deepgram"}),
+expect_error("multilingual without a provider",
+             lambda c: (c.pop("provider"), c.__setitem__("secondaryLanguages", ["de"])),
+             "multilingual-needs-elevenlabs-pin")
+expect_error("multilingual on Deepgram",
+             lambda c: c.update({"secondaryLanguages": ["de"], "provider": "deepgram"}),
              "deepgram-multilingual")
 
 # 22a) PROVIDER RESOLUTION (schema §4.3/§5): a plain two-letter code is ElevenLabs territory, so
@@ -742,8 +763,10 @@ for _exclusive in ("en-US", "en-GB", "pt-BR", "es-419", "zh-Hans", "multi"):
     if _got != "deepgram":
         failures.append("Deepgram-exclusive language %r must resolve to deepgram, got %r"
                         % (_exclusive, _got))
-if V.resolve_provider({"language": "ca", "providerOverride": "deepgram"}) != "deepgram":
-    failures.append("providerOverride must still win over the language rule")
+if V.resolve_provider({"language": "ca", "provider": "deepgram"}) != "deepgram":
+    failures.append("provider must win over the language rule")
+if V.resolve_provider({"language": "ca", "provider": "elevenlabs", "providerOverride": "deepgram"}) != "deepgram":
+    failures.append("the retired providerOverride alias must win over provider, as the API resolves it")
 
 expect_clean("Catalan agent keeps its ElevenLabs settings",
              lambda c: c.update({"language": "ca",
@@ -754,19 +777,33 @@ expect_no_warn("Catalan agent does not get the settings-ignored warning",
 expect_no_warn("Latvian agent does not get a language mismatch",
                lambda c: c.__setitem__("language", "lv"), "language-provider-mismatch")
 expect_no_code("Estonian agent may use an ElevenLabs-only model",
-               lambda c: c.update({"language": "et", "llmOverride": "openai - gpt-5"}),
+               lambda c: c.update({"language": "et", "llm": "openai - gpt-5"}),
                "llm-provider-mismatch")
 expect_clean("Catalan multilingual agent with ElevenLabs settings and the pin",
              lambda c: c.update({"language": "ca", "secondaryLanguages": ["es"],
-                                 "providerOverride": "elevenlabs",
+                                 "provider": "elevenlabs",
                                  "elevenLabsSettings": {"turnModel": "turn_v3"}}))
-# A Deepgram-exclusive code still gets the Deepgram consequences.
+# A Deepgram-exclusive code still gets the Deepgram consequences when no provider is sent (the tree a
+# create fills it from).
 expect_warn("en-US agent is Deepgram, so ElevenLabs settings are ignored",
-            lambda c: c.update({"language": "en-US", "elevenLabsSettings": {"vad": True}}),
+            lambda c: (c.pop("provider"),
+                       c.update({"language": "en-US", "elevenLabsSettings": {"vad": True}})),
             "elevenlabs-settings-ignored")
-expect_error("en-US agent cannot use an ElevenLabs-only model",
-             lambda c: c.update({"language": "en-US", "llmOverride": "openai - gpt-5"}),
+# The llm, though, is checked against that guess only as a WARN: an edit keeps the stored provider,
+# which the validator cannot see. A sent provider makes the same mismatch an ERROR.
+_cfg = copy.deepcopy(BASE)
+_cfg.pop("provider")
+_cfg.update({"language": "en-US", "llm": "openai - gpt-5"})
+if error_codes(_cfg) or "llm-provider-mismatch-inferred" not in warn_codes(_cfg):
+    failures.append("no provider + llm the inferred provider lacks: expected a WARN only, got %s / %s"
+                    % (error_codes(_cfg), warn_codes(_cfg)))
+expect_error("sent provider + llm it does not offer",
+             lambda c: c.update({"provider": "deepgram", "language": "en-US", "llm": "openai - gpt-5"}),
              "llm-provider-mismatch")
+expect_clean("no provider + llm the inferred provider offers",
+             lambda c: (c.pop("provider"), c.update({"language": "en-US", "llm": "openai - gpt-4o-mini"})))
+expect_clean("en-US on an explicit ElevenLabs provider is served as en",
+             lambda c: c.__setitem__("language", "en-US"))
 
 # 22b) Schema §5 rule 4 ("else Deepgram") must be reachable: a code that is neither plain nor a listed
 # Deepgram variant used to fall through to ElevenLabs, which suppressed every Deepgram consequence.
@@ -775,15 +812,18 @@ for _malformed in ("zz-ZZ", "pt-br", "EN_us-Garbage!"):
     if _got != "deepgram":
         failures.append("non-plain unknown language %r must resolve to deepgram (schema §5 rule 4), "
                         "got %r" % (_malformed, _got))
-# ...while an unknown PLAIN code stays ElevenLabs territory and only draws the hedged language warning.
-if V.resolve_provider({"language": "xx"}) != "elevenlabs":
-    failures.append("unknown plain language 'xx' must resolve to elevenlabs")
-expect_warn("unknown plain language warns", lambda c: c.__setitem__("language", "xx"), "unknown-language")
+# ...as does a plain code no provider lists (the API's tree gives ElevenLabs only what it serves), while a
+# regional code ElevenLabs serves through its base code goes to ElevenLabs.
+if V.resolve_provider({"language": "xx"}) != "deepgram":
+    failures.append("unknown plain language 'xx' must resolve to deepgram, as the API's create tree does")
+if V.resolve_provider({"language": "de-AT"}) != "elevenlabs":
+    failures.append("de-AT is served by ElevenLabs through de, so it must resolve to elevenlabs")
 expect_no_warn("unknown plain language keeps its ElevenLabs settings",
                lambda c: c.update({"language": "xx", "elevenLabsSettings": {"vad": True}}),
                "elevenlabs-settings-ignored")
 expect_warn("malformed language makes elevenLabsSettings ignored",
-            lambda c: c.update({"language": "zz-ZZ", "elevenLabsSettings": {"vad": True}}),
+            lambda c: (c.pop("provider"),
+                       c.update({"language": "zz-ZZ", "elevenLabsSettings": {"vad": True}})),
             "elevenlabs-settings-ignored")
 
 # 23) Numeric thresholds: dialTime saves across 5-120 but dispatch refuses above 90, and maxCallDuration
@@ -854,19 +894,21 @@ V.validate(_long_cond, FIELDS, _long_rep)
 if not any("limit 120" in i.msg for i in _long_rep.issues if i.code == "transfer-vague-condition"):
     failures.append("the transfer-condition warning must name the same 120-char limit the code applies")
 
-# 27) `upgradeAvailable` is a response-only diagnostic (recomputed server-side): an INFO note, not a WARN,
-# and never an unknown-field error. (There is no `upgradeSummary` field — it does not exist.)
-_upgrade = copy.deepcopy(BASE)
-_upgrade["upgradeAvailable"] = True
-_upgrade_rep = V.Report()
-V.validate(_upgrade, FIELDS, _upgrade_rep)
-if not any(i.level == "INFO" and i.code == "response-only" and i.where == "upgradeAvailable"
-           for i in _upgrade_rep.issues):
-    failures.append("upgradeAvailable must report as a response-only INFO, got %s"
-                    % [(i.level, i.code, i.where) for i in _upgrade_rep.issues])
-if error_codes(_upgrade) or warn_codes(_upgrade):
-    failures.append("upgradeAvailable must not error or warn, got %s / %s"
-                    % (error_codes(_upgrade), warn_codes(_upgrade)))
+# 27) `upgradeAvailable` and `hasOverrides` are retired: accepted and ignored on save, never returned. An
+# echoed old export is an INFO note, not a WARN, and never an unknown-field error. (There is no
+# `upgradeSummary` field — it does not exist.)
+for _retired in ("upgradeAvailable", "hasOverrides"):
+    _old = copy.deepcopy(BASE)
+    _old[_retired] = True
+    _old_rep = V.Report()
+    V.validate(_old, FIELDS, _old_rep)
+    if not any(i.level == "INFO" and i.code == "retired-field" and i.where == _retired
+               for i in _old_rep.issues):
+        failures.append("%s must report as a retired-field INFO, got %s"
+                        % (_retired, [(i.level, i.code, i.where) for i in _old_rep.issues]))
+    if error_codes(_old) or warn_codes(_old):
+        failures.append("%s must not error or warn, got %s / %s"
+                        % (_retired, error_codes(_old), warn_codes(_old)))
 if "upgradeSummary" in V.RESPONSE_ONLY_DIAGNOSTIC_KEYS:
     failures.append("upgradeSummary is a phantom field — it must not be in RESPONSE_ONLY_DIAGNOSTIC_KEYS")
 
@@ -1039,6 +1081,129 @@ if _parsed.get("direction") != "inbound":
 # A genuine trailing comma outside any string is still removed (behavior unchanged).
 if V.parse_config('{"a": 1, "b": [2, 3,],}') != {"a": 1, "b": [2, 3]}:
     failures.append("trailing-comma retry no longer strips real trailing commas")
+
+# 32) `provider` and `llm` are the agent's own writable fields: filled at creation, kept on every save,
+# never re-selected. `providerOverride` / `llmOverride` are retired request aliases that still win when
+# sent; `optimizedSettings` is response-only.
+def info_codes(cfg):
+    rep = V.Report()
+    V.validate(cfg, FIELDS, rep)
+    return [i.code for i in rep.issues if i.level == "INFO"]
+
+
+_registry_top = {f["path"] for f in FIELDS["topLevel"]}
+_registry_forbidden = {f["path"] for f in FIELDS["forbidden"]}
+for _path in ("provider", "llm"):
+    if _path not in _registry_top or _path in _registry_forbidden:
+        failures.append("fields.json: `%s` must be a writable topLevel field, not forbidden" % _path)
+for _path in ("providerOverride", "llmOverride", "hasOverrides", "upgradeAvailable"):
+    if _path in _registry_top or _path in _registry_forbidden:
+        failures.append("fields.json: retired `%s` must not be in the registry" % _path)
+for _path in ("minorVersion", "optimizedSettings"):
+    if _path not in _registry_forbidden:
+        failures.append("fields.json: `%s` must be forbidden" % _path)
+
+expect_clean("multilingual on ElevenLabs", lambda c: c.__setitem__("secondaryLanguages", ["de"]))
+expect_error("bogus provider", lambda c: c.__setitem__("provider", "openai"), "bad-enum")
+expect_error("bogus providerOverride alias", lambda c: c.__setitem__("providerOverride", "openai"), "bad-enum")
+expect_error("llm the provider does not offer",
+             lambda c: c.update({"provider": "deepgram", "llm": "openai - gpt-5"}), "llm-provider-mismatch")
+expect_clean("Deepgram with a model it offers",
+             lambda c: c.update({"language": "en-US", "provider": "deepgram"}))
+expect_warn("knowledge base on Deepgram",
+            lambda c: c.update({"provider": "deepgram", "knowledgeBaseIds": ["66aa11bb22cc33dd44ee55ff"]}),
+            "deepgram-knowledge-base")
+expect_no_warn("knowledge base on ElevenLabs", set_kbs(["66aa11bb22cc33dd44ee55ff"]), "deepgram-knowledge-base")
+expect_warn("retired providerOverride alias", lambda c: c.__setitem__("providerOverride", "elevenlabs"),
+            "retired-alias")
+expect_warn("retired llmOverride alias", lambda c: c.__setitem__("llmOverride", "openai - gpt-4o"),
+            "retired-alias")
+# The alias wins over the plain field, exactly as the API resolves it.
+expect_error("providerOverride wins over provider",
+             lambda c: c.update({"secondaryLanguages": ["de"], "providerOverride": "deepgram"}),
+             "deepgram-multilingual")
+expect_error("llmOverride wins over llm",
+             lambda c: c.update({"provider": "deepgram", "llmOverride": "openai - gpt-5"}),
+             "llm-provider-mismatch")
+_opt = copy.deepcopy(BASE)
+_opt["optimizedSettings"] = {"available": True,
+                             "changes": [{"path": "llm", "from": "anthropic - claude-haiku-4-5",
+                                          "to": "qwen - qwen36-35b-a3b"}],
+                             "effects": []}
+if error_codes(_opt) or warn_codes(_opt) or "response-only" not in info_codes(_opt):
+    failures.append("optimizedSettings must be a response-only INFO only, got %s / %s / %s"
+                    % (error_codes(_opt), warn_codes(_opt), info_codes(_opt)))
+# Every bundled example emits both, under their real names: they are the model for generated output.
+for _path in sorted(glob.glob(os.path.join(HERE, "..", "examples", "E*.jsonc"))):
+    _ex = V.parse_config(open(_path, encoding="utf-8").read())
+    _missing = [k for k in ("provider", "llm") if not _ex.get(k)]
+    _retired = [k for k in V.RETIRED_TOPLEVEL_KEYS if k in _ex]
+    if _missing or _retired:
+        failures.append("%s: must emit provider and llm (missing %s) and no retired key (found %s)"
+                        % (os.path.basename(_path), _missing, _retired))
+for _field in ("provider", "llm"):
+    _cfg = copy.deepcopy(BASE)
+    _cfg.pop(_field)
+    if "%s-unset" % _field not in info_codes(_cfg):
+        failures.append("an omitted %s must be reported, got %s" % (_field, info_codes(_cfg)))
+    if "%s-unset" % _field in info_codes(copy.deepcopy(BASE)):
+        failures.append("BASE emits %s, so it must not be reported unset" % _field)
+
+# 33) A knowledge base needs ElevenLabs, and an omitted provider keeps the stored one (maybe Deepgram):
+# a KB without an explicit ElevenLabs provider is a WARN. An empty list changes nothing.
+_KB = "66aa11bb22cc33dd44ee55ff"
+
+
+def kb_without_provider(language):
+    return lambda c: (c.pop("provider"), c.update({"language": language, "knowledgeBaseIds": [_KB]}))
+
+
+expect_warn("knowledge base without a provider", kb_without_provider("en"), "kb-needs-elevenlabs-pin")
+expect_warn("knowledge base on the retired alias deepgram",
+            lambda c: (c.pop("provider"), c.update({"providerOverride": "deepgram", "knowledgeBaseIds": [_KB]})),
+            "deepgram-knowledge-base")
+expect_no_warn("knowledge base on ElevenLabs needs no pin", set_kbs([_KB]), "kb-needs-elevenlabs-pin")
+for _name, _mutate in (("empty knowledgeBaseIds without a provider",
+                        lambda c: (c.pop("provider"), c.__setitem__("knowledgeBaseIds", []))),
+                       ("empty secondaryLanguages without a provider",
+                        lambda c: (c.pop("provider"), c.__setitem__("secondaryLanguages", [])))):
+    _cfg = copy.deepcopy(BASE)
+    _mutate(_cfg)
+    if error_codes(_cfg) or warn_codes(_cfg):
+        failures.append("%s: expected clean, got %s / %s" % (_name, error_codes(_cfg), warn_codes(_cfg)))
+# en-US + KB with no provider: only the pin warning — no language check against a guessed provider, and
+# no "Deepgram cannot serve" claim about a provider the config never sent.
+_cfg = copy.deepcopy(BASE)
+kb_without_provider("en-US")(_cfg)
+if warn_codes(_cfg) != ["kb-needs-elevenlabs-pin"]:
+    failures.append("en-US + KB without a provider: expected only the pin warning, got %s" % warn_codes(_cfg))
+
+# 34) llm: the accepted set mirrors the API's registry — canonical IDs, legacy aliases and Deepgram's
+# `open_ai - <model>` masks (only for models Deepgram offers). Anything else is a 422 LLM_OVERRIDE_INVALID.
+expect_error("unknown llm", lambda c: c.__setitem__("llm", "not-a-model"), "llm-invalid")
+expect_error("llm as a list", lambda c: c.__setitem__("llm", ["openai - gpt-4o"]), "bad-type")
+expect_error("llm as a number", lambda c: c.__setitem__("llm", 42), "bad-type")
+expect_error("llmOverride as a list", lambda c: c.__setitem__("llmOverride", ["openai - gpt-4o"]), "bad-type")
+expect_error("native mask of a model Deepgram does not offer",
+             lambda c: c.update({"provider": "deepgram", "language": "en-US", "llm": "open_ai - gpt-5"}),
+             "llm-invalid")
+for _provider, _language in (("deepgram", "en-US"), ("elevenlabs", "en")):
+    _cfg = copy.deepcopy(BASE)
+    _cfg.update({"provider": _provider, "language": _language, "llm": "open_ai - gpt-4o-mini"})
+    if error_codes(_cfg) or warn_codes(_cfg) or "llm-native-mask" not in info_codes(_cfg):
+        failures.append("open_ai - gpt-4o-mini on %s: expected an INFO llm-native-mask only, got %s / %s / %s"
+                        % (_provider, error_codes(_cfg), warn_codes(_cfg), info_codes(_cfg)))
+expect_clean("gemini-3.6-flash on ElevenLabs", lambda c: c.__setitem__("llm", "google - gemini-3.6-flash"))
+expect_error("gemini-3.6-flash on Deepgram",
+             lambda c: c.update({"provider": "deepgram", "language": "en-US", "llm": "google - gemini-3.6-flash"}),
+             "llm-provider-mismatch")
+_cfg = copy.deepcopy(BASE)
+_cfg["llm"] = "anthropic - claude-3-7-sonnet"
+if error_codes(_cfg) or "llm-legacy-alias" not in info_codes(_cfg):
+    failures.append("legacy alias: expected an INFO llm-legacy-alias only, got %s / %s"
+                    % (error_codes(_cfg), info_codes(_cfg)))
+if set(V.NATIVE_LLM_MASKS.values()) - V.DEEPGRAM_MODELS:
+    failures.append("every native mask must map to a model Deepgram offers")
 
 if failures:
     print("FAIL — %d check(s):" % len(failures))

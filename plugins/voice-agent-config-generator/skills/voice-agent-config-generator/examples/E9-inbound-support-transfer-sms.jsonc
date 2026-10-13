@@ -1,6 +1,6 @@
 // E9 — Inbound support line with a group transfer shipped as a DISABLED DRAFT plus a confirmation SMS.
-// Resolved provider: ElevenLabs (V3 auto — "en" is a plain language; schema §5). Complex (4 scenarios,
-// one of them switched off) → auto LLM Haiku 4.5, no llmOverride needed.
+// Provider: ElevenLabs ("en" is a plain language; schema §5). Complex (4 scenarios, one of them switched
+// off) → LLM Haiku 4.5, the platform's own pick too. Both are emitted, as in every example.
 //
 // Demonstrates the DEFAULT way the generator scaffolds a human handoff: `transferToHuman` switched OFF
 // (`enabled: false`) with a group rule whose intent is visible — `destination: "group"` — but whose
@@ -40,6 +40,8 @@
   "optimizeStreamingLatency": 2,
   "stability": 0.3,
   "similarity": 0.7,
+  "provider": "elevenlabs",
+  "llm": "anthropic - claude-haiku-4-5",
   "startSpeakingFirst": true,
   "greeting": "Thanks for calling Fibrelink support, this is Robin. What's going on with your connection?",
   // KNOWN FACTS — the goalPrompt below opens a dedicated `## Known facts` section holding the

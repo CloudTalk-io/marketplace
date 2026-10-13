@@ -1,8 +1,8 @@
 // E8 — Inbound hotel front desk, demonstrating the IDENTITY PRESETS and ElevenLabs conversation tuning.
-// Resolved provider: ElevenLabs (V3 auto — "en" is a plain language; schema §5). The goalPrompt is over
-// 1500 characters, so the agent classifies COMPLEX and the auto LLM lands on Haiku 4.5 without an
-// llmOverride (E2/E9/E10 reach complex on scenario count, E5 via secondaryLanguages, E1 on prompt length
-// like this one; E3 and E7 are the genuinely trivial-tier pair, which is why they pin Haiku).
+// Provider: ElevenLabs ("en" is a plain language; schema §5). The goalPrompt is over 1500 characters, so
+// the agent classifies COMPLEX and the platform's own LLM pick is Haiku 4.5 as well — the `llm` emitted
+// here (E2/E9/E10 reach complex on scenario count, E5 via secondaryLanguages, E1 on prompt length like
+// this one; E3 and E7 are the genuinely trivial-tier pair, where Haiku departs from the platform's pick).
 //
 // Demonstrates: `tone` + `verbosity` — the structured identity presets (schema §11), which are
 // provider-agnostic; E4 carries them on a Deepgram agent — and the elevenLabsSettings knobs only
@@ -33,6 +33,8 @@
   "optimizeStreamingLatency": 2,
   "stability": 0.3,
   "similarity": 0.7,
+  "provider": "elevenlabs",
+  "llm": "anthropic - claude-haiku-4-5",
   "startSpeakingFirst": true,
   "tone": ["professional", "calm"], // prefer one or two labels: only those combinations have been
                                    // validated, and a wider blend dilutes each one (schema §11)

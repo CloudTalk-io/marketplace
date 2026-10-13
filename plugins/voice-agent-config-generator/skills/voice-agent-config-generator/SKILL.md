@@ -55,13 +55,13 @@ say so and offer the nearest supported path, never fake it:
 | File | Read it for |
 |---|---|
 | `generator-contract.md` | **Start here.** Emit policy: per-tier rules, the reference decision tree (reuse / fetch / substitute / ask / omit), the connected-mode write contract, output shape. |
-| `schema.md` | Field shapes, enums, dependency rules (§3), provider/LLM auto-selection (§5), `elevenLabsSettings` (§10), `tone`/`verbosity` (§11). |
+| `schema.md` | Field shapes, enums, dependency rules (§3), choosing provider/LLM and `optimizedSettings` (§5), `elevenLabsSettings` (§10), `tone`/`verbosity` (§11). |
 | `fields.json` | Machine spine — every field's `authoring` tier. The validator keys off it. |
 | `behavioral-guidance.md` | What makes a config *perform*: prompt architecture (§2), hangup (§4), language (§5), numeric settings (§7a-bis), overriding platform choices (§9), the §8 self-check. |
 | `referenced-resources.md` | **Only when a referenced feature is requested** — what each resource is, how to wire its ID, connected and Dashboard paths. |
 | `mcp-tools.md` | Connected mode only — the tool surface, write-safety rules, and what has no tool yet (with workarounds). |
 | `variables.md` | Whenever a `{{variable}}` is in play — what resolves, when, and the silent empty-string trap. |
-| `examples/` (E1–E10) | Few-shots. **E1** (auto-ElevenLabs, switched-off transfer) and **E6** (auto-Deepgram) are the save-ready archetypes; **E3** is the explicit-Call-Flow exception; **E4** adds a `toolCall` scenario and an `extractData` webhook; **E7** adds `takeMessage`; **E8** shows `tone`/`verbosity` + ElevenLabs tuning; **E9** scaffolds a group transfer as a disabled draft (`destination: "group"`, id/extension omitted — completed in the dashboard) + `sendSms`; **E10** is appointment booking + a `booking_confirmed` SMS. Only **E2** exits `1`, deliberately (the both-directions failover gate). |
+| `examples/` (E1–E10) | Few-shots. **E1** (ElevenLabs, switched-off transfer) and **E6** (Deepgram via `en-US`) are the save-ready archetypes; **E3** is the explicit-Call-Flow exception; **E4** adds a `toolCall` scenario and an `extractData` webhook; **E7** adds `takeMessage`; **E8** shows `tone`/`verbosity` + ElevenLabs tuning; **E9** scaffolds a group transfer as a disabled draft (`destination: "group"`, id/extension omitted — completed in the dashboard) + `sendSms`; **E10** is appointment booking + a `booking_confirmed` SMS. Only **E2** exits `1`, deliberately (the both-directions failover gate). |
 
 ## Workflow — follow in order
 
@@ -96,13 +96,23 @@ say so and offer the nearest supported path, never fake it:
 > - [ ] real IDs for any **explicitly requested** referenced feature — fetched, supplied, or else a
 >       zero-touch substitute, a switched-off skill (transfers), or omit-and-instruct
 
-### 2 · Resolve provider & LLM in your head — `schema.md` §5
+### 2 · Choose provider & LLM, and emit both — `schema.md` §5
 
-- plain code (`en`, `de`, …) → **ElevenLabs** · Deepgram-exclusive (`en-US`, `pt-BR`, …) → **Deepgram** ·
-  `secondaryLanguages` → **ElevenLabs**, and **pin `providerOverride: "elevenlabs"`**.
-- trivial ElevenLabs agent auto-falls to a lightweight model → set `llmOverride: "anthropic - claude-haiku-4-5"`
-  if it does real work (transfers, careful data capture). Overriding deliberately? `behavioral-guidance.md` §9.
-- emit `elevenLabsSettings` **only** when the resolved provider is ElevenLabs.
+`provider` and `llm` are the agent's stored values: filled at creation, **never re-selected** on save. An
+omitted one keeps whatever the agent (often a blank shell) has, so always emit both.
+
+- `provider`: plain code (`en`, `de`, …) → **`elevenlabs`** · Deepgram-exclusive (`en-US`, `pt-BR`,
+  …) → **`deepgram`** · a non-empty `secondaryLanguages` or `knowledgeBaseIds` → **`elevenlabs`** (Deepgram
+  can serve neither; an empty list changes nothing). With `secondaryLanguages`, a regional primary becomes
+  its plain code (`en-US` → `en`) or you ask: a multilingual set takes exact ElevenLabs codes only.
+- `llm`: **`anthropic - claude-haiku-4-5`** for an agent doing real work (transfers, careful data
+  capture) — a trivial ElevenLabs agent would otherwise get the platform's lightweight pick. Any other
+  model must be offered by the provider (§4.2). Departing from the platform's picks deliberately?
+  `behavioral-guidance.md` §9.
+- never the retired `providerOverride` / `llmOverride` (aliases) or `hasOverrides` / `upgradeAvailable`.
+- emit `elevenLabsSettings` **only** when `provider` is ElevenLabs.
+- a fetched or pasted config's `optimizedSettings` is the platform's suggestion (response-only): mention a
+  listed change worth taking, never copy the key (`schema.md` §5).
 
 ### 3 · Stay self-contained by default — `generator-contract.md`
 
@@ -225,12 +235,15 @@ structured result replaces the paste-and-see smoke test.
 - **Explicit `enabled` on every scenario and every skill object you emit.** Nothing defaults it: a missing
   `enabled` fails the import, and in a stored config it silently disables that unit. (`enabled: false` is a
   legal, useful shape — a skill shipped switched-off for the user to finish in the dashboard.)
-- **Never emit `forbidden` fields** — computed/response-only or system-managed (full list in
-  `generator-contract.md`: `provider`, `llm`, `version`/`minorVersion`/`id`/timestamps, `companyId`,
-  `presetType`, `status`, `hasOverrides`, …).
+- **Never emit `forbidden` fields** — server-stamped/response-only or system-managed (full list in
+  `generator-contract.md`: `version`/`minorVersion`/`id`/timestamps, `optimizedSettings`, `companyId`,
+  `presetType`, `status`, …) — nor the retired `providerOverride`/`llmOverride`/`hasOverrides`/
+  `upgradeAvailable`.
+- **Always emit `provider` and `llm`** — nothing picks them for you after creation (`schema.md` §5).
 - **Connected writes are round-trips.** Never synthesize an update payload from the conversation:
   `cloudtalk_get_voice_agent` → modify → send the **whole document** back. Carry `knowledgeBaseIds`
-  (omitting it unlinks every KB) and `elevenLabsSettings` (present replaces wholesale) forward. Writes are
+  (omitting it unlinks every KB), `elevenLabsSettings` (present replaces wholesale) and `provider`/`llm`
+  (the agent's own values) forward. Writes are
   confirm-gated (one no-op exception: an assign/unassign that changes nothing): **present the preview and
   wait — never treat `confirmation_required` as an error, never confirm on the user's behalf.**
 - **Outbound number — complete it; the FE-faithful path is Automatic (`1`) + a real owned failover.**

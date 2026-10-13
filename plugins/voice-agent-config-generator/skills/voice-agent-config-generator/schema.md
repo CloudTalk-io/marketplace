@@ -33,14 +33,17 @@ agent's current config. There is also an export and a create path. All use the *
 The legacy v1 wizard fields (`voiceAgentPrompt`, `extractionPrompt`, `transferEnabled/transferTo`,
 `hangupEnabled/hangupPrompt`, `resultsEndpoint`) are **not** part of v2 and must not appear.
 
-> **Server-stamped / response-only (do not author):** `version` (always `2`) and
-> `minorVersion` (`= LatestMinorVersion`, currently `3` → **v2.3**) are stamped server-side;
-> `id` / `voiceAgentId` / `createdAt` / `updatedAt` are response-only. They appear on GET/export
-> but are ignored on import — do not author them. `minorVersion` and `upgradeAvailable` are accepted
-> on input and recomputed server-side, so a GET response round-trips safely into an update.
+> **Server-stamped / response-only (do not author):** `version` is always `2`. `minorVersion` is the
+> agent's **behaviour version**: a new agent gets the latest (currently `3` → **v2.3**), and every save
+> keeps it — an update accepts only the stored value or the latest, so a GET response round-trips safely
+> into an update. It moves when the optimized settings are applied (§5): `apply_optimized_settings: true` on
+> `cloudtalk_update_voice_agent`, or the dashboard's **Optimized settings** notice where it is enabled. The
+> API would also take the latest on a replace; never writing it yourself is this plugin's rule.
+> `id` / `voiceAgentId` / `createdAt` / `updatedAt` are response-only. They appear on GET/export but are
+> ignored on import — do not author them.
 >
-> The platform's **diagnostics are response-only too**: `warnings`, `errorCodes` and `upgradeAvailable`
-> ride along on a read or a write result — and a **successful** save can still carry `errorCodes`
+> The platform's **diagnostics are response-only too**: `warnings`, `errorCodes` and `optimizedSettings`
+> (§5) ride along on a read or a write result — and a **successful** save can still carry `errorCodes`
 > (a stored-but-degraded reference). Read them and report them; never author them. (There is **no**
 > `upgradeSummary` field — it does not exist.)
 
@@ -54,16 +57,16 @@ The legacy v1 wizard fields (`voiceAgentPrompt`, `extractionPrompt`, `transferEn
 | `direction` | generate | string | ✅ | `"inbound"` \| `"outbound"` | See dependency rules (§3). |
 | `defaultOutboundNumberId` | **environment** | int | ✅ | ≠ `0`. **`1` = Automatic**; **every other value, incl. `2`, is a literal company-owned number ID** (no "Random") | Required even for inbound. **Defaults to `1` (Automatic), exactly as the dashboard seeds it** — the save never auto-picks a number, so `1` needs a real owned `failoverOutboundNumberId` in both directions to complete it (§3, §8). Setting a real owned number id directly is the alternative — reuse the agent's value, fetch it (`cloudtalk_list_numbers`), or ask; never guess `2`. |
 | `failoverOutboundNumberId` | **environment** | int | ❌ | a real owned number ID — **omit the key only when `defaultOutboundNumberId` is a real non-`1` id; never `null`** | The number Automatic falls back to. **Required in BOTH directions whenever `defaultOutboundNumberId` is `1`** — the save `400`s without it and nothing self-heals (§3.2). |
-| `language` | generate | string | ✅ | a value from the **resolved provider's** set (§4.3) | Drives provider auto-selection (§5). |
-| `secondaryLanguages` | generate | string[] | ❌ | each provider-supported | Presence forces ElevenLabs + marks "complex"; **pin `providerOverride: "elevenlabs"`** when set (§5). |
+| `language` | generate | string | ✅ | a value from the **agent's provider's** set (§4.3) | Changing it never changes `provider` — set that with it (§5). |
+| `secondaryLanguages` | generate | string[] | ❌ | each provider-supported | Needs ElevenLabs + marks "complex"; **set `provider: "elevenlabs"`** when set (§5). |
 | `maxCallDuration` | generate | int | ✅ | minutes; **hard cap** — call is cut off when reached; no hard API cap, but keep it **≤ 120** (a value above that draws a recommendation warning, not a save refusal) | Required; the dashboard fills **30** if omitted (no 240 default). Set generous headroom, not a tight fit; ~20–30 min inbound, ~10–15 min outbound (behavioral §4.4). |
 | `temperature` | generate | float | ✅ | `0.0`–`1.0` | LLM sampling temperature. Baseline `0.5`; highly structured/deterministic flows may go lower (~`0.1`–`0.3`) (§7a-bis). |
 | `voice` | generate | string | ✅ | a voice ID in the library (§4.4) | Built-in premade set is global (self-contained). |
 | `optimizeStreamingLatency` | generate | int | ❌ | `0`–`4` | ElevenLabs latency tuning; **optional (not API-required), and the API applies no default**. Omitted on a write = **reset to `0`**, not preserved — so always emit it deliberately. Baseline `2`, never `4` (§7a-bis). Unlike `elevenLabsSettings` (omit-to-let-provider-default), this is not backfilled. |
 | `stability` | generate | float | ✅ | `0.0`–`1.0` | Voice stability. **Required and passed straight through to ElevenLabs — the API applies no default and does NOT backfill it**; omitting it fails the save. Baseline `0.3` (§7a-bis). |
 | `similarity` | generate | float | ✅ | `0.0`–`1.0` | Voice similarity boost. **Required and passed straight through to ElevenLabs — the API applies no default and does NOT backfill it**; omitting it fails the save. Baseline `0.7` (§7a-bis). |
-| `llmOverride` | generate | string | ❌ | a canonical model ID (§4.2) | Skips auto LLM selection; must be offered by the resolved provider. |
-| `providerOverride` | generate | string | ❌ | `"elevenlabs"` \| `"deepgram"` | Skips auto provider selection. |
+| `provider` | generate | string | ❌ (emit it) | `"elevenlabs"` \| `"deepgram"` | The agent's speech provider. Filled at creation, kept on every save; omitted = keep the stored one (§5). |
+| `llm` | generate | string | ❌ (emit it) | a canonical model ID (§4.2) offered by `provider` | The agent's LLM. Filled at creation, kept on every save; omitted = keep the stored one (§5). |
 | `dialTime` | generate | int | ❌ | `0` or `5`–`120` s; `0` = provider default; preserve-on-omit on PUT | Ring/no-answer timeout. Values above `90` fail when the call is dispatched — keep it ≤ `90` (§3.8). |
 | `elevenLabsSettings` | generate | object | ❌ | see §10 | ElevenLabs-only tuning; ignored on Deepgram. |
 | `verbosity` | generate | string | ❌ | `"concise"` \| `"standard"` \| `"thorough"`; `""`/omitted = unset | Response-length preset; platform default `standard` (§11). |
@@ -74,19 +77,20 @@ The legacy v1 wizard fields (`voiceAgentPrompt`, `extractionPrompt`, `transferEn
 | `skills` | (per-skill) | object | ❌ | see §6 | Structured capabilities; tags vary by skill. |
 | `scenarios` | generate¹ | array | ❌ | see §7 | ¹`action` sub-value changes the tag (§7). |
 | `guardrails` | generate | array | ❌ | see §7 | Condition → safe reply. |
-| `knowledgeBaseIds` | **reference** | string[] | ❌ | KB IDs owned by the company | Influences auto LLM (§5). **No preserve-on-omit:** omitting it on a full-document update unlinks every KB — carry the current value forward when editing. See [referenced-resources](./referenced-resources.md). |
+| `knowledgeBaseIds` | **reference** | string[] | ❌ | KB IDs owned by the company | Needs ElevenLabs (§5). **No preserve-on-omit:** omitting it on a full-document update unlinks every KB — carry the current value forward when editing. See [referenced-resources](./referenced-resources.md). |
 
-> **System-managed fields — do NOT author (`forbidden`): `presetType`, `status`, `lastConfigurationStep`,
-> `hasOverrides`.** These are real stored fields, but on the Expert-Mode editor save path the dashboard sources
-> `presetType`/`status`/`lastConfigurationStep` from the **loaded agent** (not your pasted JSON) and
-> force-sets `hasOverrides: true`; on create the platform defaults `status` to enabled and the others to
-> empty/0. `hasOverrides` shelters the agent from future auto provider/LLM upgrades (and has no effect at
-> creation, since new agents are stamped at the latest minorVersion). Net: the generator omits all four —
-> the editor and the platform own them.
+> **System-managed fields — do NOT author (`forbidden`): `presetType`, `status`, `lastConfigurationStep`.**
+> These are real stored fields, but on the Expert-Mode editor save path the dashboard sources them from the
+> **loaded agent** (not your pasted JSON); on create the platform defaults `status` to enabled and the others
+> to empty/0. Net: the generator omits all three — the editor and the platform own them.
 
-> **Do NOT include (computed / response-only):** `provider` / `llm` (computed server-side; influence via
-> `providerOverride`/`llmOverride`), the response-only fields and the platform's diagnostics —
-> `warnings`, `errorCodes`, `upgradeAvailable` (§1) — and the export tags `companyId` /
+> **Retired names — never emit:** `providerOverride` / `llmOverride` are deprecated request **aliases** of
+> `provider` / `llm` — still accepted, never returned, and an alias **wins** over the plain field when both
+> are sent. `hasOverrides` and `upgradeAvailable` no longer exist: accepted and ignored, never returned.
+> Fixing a pasted config that carries them: rename the aliases, drop the other two.
+
+> **Do NOT include (response-only):** `minorVersion`, the response-only fields and the platform's
+> diagnostics — `warnings`, `errorCodes`, `optimizedSettings` (§1, §5) — and the export tags `companyId` /
 > `environmentName` (§8). Legacy v1 fields are not part of v2 at all — the `/validate` endpoint refuses
 > them as unknown keys, and the save silently drops them (§9).
 
@@ -121,8 +125,8 @@ never rely on the runtime fallback.
 3. `direction == "inbound"` ⇒ `startSpeakingFirst` **must be `true`**.
 4. `temperature`, `stability`, `similarity` ∈ `[0, 1]`; `optimizeStreamingLatency` ∈ `[0, 4]`.
 5. `voice` must exist in the voice library.
-6. `llmOverride`, if set, must resolve to a model offered by the **resolved** provider (§4.2) — else `400`.
-7. **Deepgram + `secondaryLanguages`** is rejected (Deepgram has no multilingual mode) — so pin `providerOverride: "elevenlabs"` for any multilingual config (§5).
+6. `llm` must be a model offered by the agent's `provider` (§4.2) — else `422` (`LLM_OVERRIDE_NOT_AVAILABLE_FOR_PROVIDER`; an unknown model is `LLM_OVERRIDE_INVALID`).
+7. **Deepgram + `secondaryLanguages`** (or a knowledge base) is saved as sent only when Deepgram serves every language — a code it does not serve (e.g. `hr`) is refused with `422 LANGUAGE_NOT_SUPPORTED` — and even then Deepgram cannot serve it (it has no `secondaryLanguages` mode) — so set `provider: "elevenlabs"` for any multilingual or KB config (§5).
 8. `dialTime`, if non-zero, must be `5`–`120` s. Values above `90` pass validation but fail when the
    call is dispatched — recommend ≤ `90`. Omitted preserves the stored value.
 9. `elevenLabsSettings.turnEagerness` ∈ {`patient`,`normal`,`eager`}, `.turnModel` ∈ {`turn_v2`,`turn_v3`}, `.backgroundSound.preset` ∈ {`office`,`office2`,`restaurant`,`city`,`typing`,`elevator`,`elevator2`,`elevator3`,`elevator4`} (required when `backgroundSound` is present), `.backgroundSound.volume` ∈ `[0,1]`; `.interruptionIgnoreTerms` / `.interruptionIgnoreTermLanguages` are lists of non-empty strings.
@@ -139,20 +143,20 @@ never rely on the runtime fallback.
 ## 4. Enumerated valid values
 
 ### 4.1 Providers
-`elevenlabs`, `deepgram`. Chosen automatically (§5); override with `providerOverride`.
+`elevenlabs`, `deepgram`. The agent's `provider` field (§5).
 
-### 4.2 LLM models — canonical IDs (for `llmOverride`)
+### 4.2 LLM models — canonical IDs (for `llm`)
 
 The API keeps a fixed **registry of 25 canonical models**. The wire format is a canonical id
 `"<vendor> - <model>"`, vendor ∈ `openai` | `anthropic` | `google` | `qwen`. **ElevenLabs offers all 25;
-Deepgram offers only the 14 marked ✅ in its column below.** The model must match the **resolved**
-provider or the save returns `400`. Use the **canonical ID**; native/legacy masks are also accepted and
+Deepgram offers only the 14 marked ✅ in its column below.** The model must be one the agent's `provider`
+offers or the save is refused with a `422`. Use the **canonical ID**; native/legacy masks are also accepted and
 normalized server-side (responses return the canonical ID).
 
-> **The LLM is auto-selected server-side unless `llmOverride` is set** (§5). `llmOverride` skips that
-> selection and pins a specific model.
+> **`llm` is the agent's own stored model** (§5): the platform fills it once, at creation, and never
+> re-selects it — so emit the one the agent should run.
 
-| Canonical ID (`llmOverride`) | ElevenLabs | Deepgram |
+| Canonical ID (`llm`) | ElevenLabs | Deepgram |
 |---|:---:|:---:|
 | `openai - gpt-4o-mini` | ✅ | ✅ |
 | `openai - gpt-4o` | ✅ | ✅ |
@@ -181,40 +185,54 @@ normalized server-side (responses return the canonical ID).
 | `qwen - qwen35-397b-a17b` | ✅ | — |
 
 > **Default pick:** `anthropic - claude-haiku-4-5` (offered by both providers) is the safe default for an
-> agent doing real work. The two `qwen` models are valid **ElevenLabs-only** overrides — and
-> `qwen - qwen36-35b-a3b` is also the value a *trivial* ElevenLabs agent auto-defaults to (§5).
+> agent doing real work. The two `qwen` models are valid **ElevenLabs-only** choices — and
+> `qwen - qwen36-35b-a3b` is also the platform's own pick for a *trivial* ElevenLabs agent (§5).
 >
-> An `llmOverride` is valid only if the **resolved provider** offers it (e.g. `openai - gpt-5` on a
-> Deepgram-resolved agent → `400`). If you also set `providerOverride`, keep the two consistent.
+> An `llm` is valid only if the agent's `provider` offers it (e.g. `openai - gpt-5` on a Deepgram agent →
+> `422`). When you change `provider`, check the `llm` against the new column.
 >
 > **Legacy aliases** are accepted on input but **silently normalized to a current canonical ID** on
 > save (the export then shows the canonical one). Always author the canonical ID — the bundled validator
 > (§9) flags legacy aliases. Examples: `anthropic - claude-3-7-sonnet` → `anthropic - claude-sonnet-4-5`;
 > `anthropic - claude-3-haiku` → `anthropic - claude-haiku-4-5`; `google - gemini-1.5-pro` →
 > `google - gemini-2.5-flash`; `google - gemini-2.0-flash-lite` → `google - gemini-2.5-flash-lite`.
+>
+> **Native masks:** Deepgram's own spelling of an OpenAI model is `open_ai - <model>` (e.g.
+> `open_ai - gpt-4o-mini`). It is accepted and normalized to the canonical `openai - <model>`, but only
+> for models Deepgram offers — there is no `open_ai - gpt-5`. Prefer the canonical ID. Any other string
+> is an unknown model: the save is refused with `422` `LLM_OVERRIDE_INVALID`.
 
 ### 4.3 Languages (per provider)
 
-- **ElevenLabs**: a wide accepted list (~66 codes), including all the plain two-letter codes
-  (`en`, `de`, `es`, `fr`, `pt`, …) — when in doubt, the plain code is supported.
+- **ElevenLabs** (plain codes only): `af, ar, as, az, be, bg, bn, bs, ca, cs, cy, da, de, el, en, es, et,
+  fa, fi, fil, fr, gl, gu, ha, he, hi, hr, hu, hy, id, is, it, ja, jv, ka, kk, kn, ko, ky, lb, lt, lv, mk,
+  ml, mr, ms, ne, nl, no, pa, pl, pt, ro, ru, sk, sl, sr, sv, sw, ta, te, th, tr, uk, vi, zh`.
 - **Deepgram** (`multi` + regional variants): `multi, en, en-US, en-AU, en-GB, en-NZ, en-IN, bg, ca,
   zh, zh-CN, zh-Hans, zh-TW, zh-Hant, zh-HK, cs, da, da-DK, nl, et, fi, nl-BE, fr, fr-CA, de, de-CH,
   el, hi, hu, id, it, ja, ko, lv, lt, ms, no, pl, pt, pt-BR, pt-PT, ro, ru, sk, es, es-419, sv, th,
   tr, uk, vi`.
 
-> The server normalizes languages to the resolved provider's set. Pick a language the target provider
-> supports (§5 explains how the provider is chosen from the language).
+> **The save refuses a language the agent's provider does not serve**, primary or secondary, with
+> `422 LANGUAGE_NOT_SUPPORTED`; nothing is normalized or dropped. A provider serves a code its list holds,
+> or a regional code through its base code (`en-US` and `de-AT` on ElevenLabs are served as `en` / `de`) —
+> except `zh-TW`, `zh-Hant` and `zh-HK`, distinct languages that never fall back to `zh`. Pick a language
+> the provider serves (§5 shows which provider fits which language).
 >
 > **Multilingual combinations are validated server-side** — not every code can join a multilingual set:
 > an incompatible `language` + `secondaryLanguages` combination is rejected on save with per-code errors.
+> Every code in the set, **the primary `language` included**, must be one ElevenLabs lists exactly, so a
+> regional variant (`en-US`, `en-GB`, `pt-BR`, `es-419`, …) cannot join it: use its plain code (`en`,
+> `pt`, `es`). A single-language agent is not held to this — ElevenLabs serves `en-US` through `en`.
 >
 > **Two distinct multilingual mechanisms — do not conflate them:**
-> - **ElevenLabs multilingual** is driven by **`secondaryLanguages`**, which forces the ElevenLabs provider
+> - **ElevenLabs multilingual** is driven by **`secondaryLanguages`**, which needs `provider: "elevenlabs"`
 >   (§5). This is the default for any multilingual agent.
 > - **Deepgram multilingual** is the single language code **`multi`** — Deepgram-only, and it switches
->   Deepgram's listen model to `nova-3`. It is **never auto-selected for a multilingual request**: reach it
->   only by explicitly setting `language: "multi"` **together with** `providerOverride: "deepgram"`.
-> - **Deepgram + `secondaryLanguages` is rejected at save** (Deepgram has no `secondaryLanguages` mode).
+>   Deepgram's listen model to `nova-3`. It is **never the answer to a multilingual request by default**:
+>   reach it only by explicitly setting `language: "multi"` **together with** `provider: "deepgram"`.
+> - **Deepgram + `secondaryLanguages` is saved as sent only when Deepgram serves every code**, and even
+>   then it **cannot be served** (Deepgram has no `secondaryLanguages` mode) — `optimizedSettings` then
+>   lists the switch to ElevenLabs (§5).
 >
 > So: **default to ElevenLabs for multilingual; use Deepgram `multi` only on explicit request.**
 
@@ -222,7 +240,7 @@ normalized server-side (responses return the canonical ID).
 
 The platform serves a fixed set of built-in **premade voice IDs** (global, not company-scoped —
 `GET /api/v1/voice-agent/voices`). **Every one is an ElevenLabs voice ID, and CloudTalk uses ElevenLabs
-voices for every provider**, so all four below are usable on **both** ElevenLabs- and Deepgram-resolved
+voices for every provider**, so all four below are usable on **both** ElevenLabs and Deepgram
 agents. There is **no MCP/plugin tool that lists voices**, so this is the confirmed default set to pick
 from (or reuse a `voice` from an existing agent's config):
 
@@ -240,40 +258,47 @@ iP95p4xoKVk53GoZ742B  (Chris — Male, American English; also ar, fr, hi, pt, sv
   full, language-filtered catalog (synced from ElevenLabs); this short set is only the default.
 - The language captions are **free-text labels, not a guarantee of per-language coverage** — a voice speaks
   whatever the agent's `language` is (E2 runs a German agent on an American-English-labelled voice).
-- Whatever you pick, `voice` must exist in the **resolved provider's** library or import fails (§3.5).
+- Whatever you pick, `voice` must exist in the **agent's provider's** library or import fails (§3.5).
 
 ---
 
-## 5. How provider & LLM are auto-selected
+## 5. Provider & LLM — the agent's own values
 
-When `providerOverride`/`llmOverride` are absent, the server computes them at save time, routing on
-language and complexity:
+`provider` and `llm` are ordinary writable fields, and every read returns them. The platform fills them
+**once, at creation**, from the decision tree below, and **never changes them on its own** afterwards: no
+re-selection on save, none when the language changes or a knowledge base is linked, and no version move on
+save. **A field you omit keeps the stored value** — and since a pasted config usually lands on a UI-created
+shell whose provider and LLM were picked for an empty agent, **always emit both**, chosen with the tree
+below (and §4.2). When editing a real agent, carry its values unless the change needs a switch (secondary
+languages or a KB → ElevenLabs). (`providerOverride` / `llmOverride` are retired aliases — §2.)
 
-#### Provider
-1. `secondaryLanguages` present → **ElevenLabs** (generator pins `providerOverride: "elevenlabs"` — see note below).
-2. Language supported **exactly** by Deepgram but **not** ElevenLabs — the **non-plain** codes: `multi`
+#### Provider — what to set
+1. `secondaryLanguages` or `knowledgeBaseIds` **non-empty** → **ElevenLabs**. Deepgram can serve neither, and
+   a save keeps a Deepgram provider as sent, so set `provider: "elevenlabs"` yourself. An empty list (`[]`)
+   does not count — it changes nothing about the provider. With `secondaryLanguages`, a regional primary
+   (`en-US`, `pt-BR`, …) must also become its plain code (`en`, `pt`), or ask the user whether the variant
+   matters: a multilingual set takes exact ElevenLabs codes only and the save refuses it otherwise (§4.3).
+   A knowledge base alone does not need this.
+2. Language listed **exactly** by Deepgram but **not** ElevenLabs — the **non-plain** codes: `multi`
    and the regional variants (`en-US`, `en-GB`, `pt-BR`, `es-419`, `zh-Hans`, …) → **Deepgram**.
-3. Else ElevenLabs supports the language (**all plain codes** `en`, `de`, `es`, `fr`, …) → **ElevenLabs**.
-4. Else → **Deepgram**.
+3. Else ElevenLabs serves the language (a code in its §4.3 list, or a regional code through its base code,
+   `de-AT` → `de`) → **ElevenLabs**.
+4. Else → **Deepgram** (and a code neither provider serves is refused on save).
 
-> The **knowledge base does not affect the provider**, and plain languages resolve to
-> **ElevenLabs**. Deepgram is auto-picked only for a Deepgram-exclusive code (rule 2) or rule-4 fallback.
-> A plain two-letter code that the §4.3 Deepgram list *also* carries (`ca`, `et`, `lv`, `lt`, `th`, …) is
-> **not** exclusive — it still resolves to ElevenLabs, so ElevenLabs-only settings and models stay valid
-> on it.
->
-> **Generator rule:** when emitting `secondaryLanguages`, also set `providerOverride: "elevenlabs"` to
-> pin the provider. Auto-selection yields ElevenLabs anyway, but an edited agent with a stored Deepgram
-> provider would otherwise preserve it and reject the multilingual save (§3.7).
+> Languages ElevenLabs serves go to **ElevenLabs**; Deepgram fits a Deepgram-exclusive code (rule 2) or the rule-4
+> fallback. A plain two-letter code that the §4.3 Deepgram list *also* carries (`ca`, `et`, `lv`, `lt`,
+> `th`, …) is **not** exclusive — it still goes to ElevenLabs, so ElevenLabs-only settings and models stay
+> valid on it. Choosing Deepgram on a plain language (E4) is legitimate — lower latency for a
+> single-language agent with no KB — as long as `language` and `llm` are in Deepgram's sets.
 >
 > **Deepgram `multi` is explicit-only (§4.3).** A multilingual *request* defaults to ElevenLabs via
-> `secondaryLanguages`; never auto-route it to Deepgram. Rule 2 will resolve a bare `language: "multi"` to
-> Deepgram, but the generator emits `multi` **only when the user explicitly asks for Deepgram
-> multilingual**, and then pins it with `providerOverride: "deepgram"` so a later edit can't drift it off.
+> `secondaryLanguages`; never route it to Deepgram on your own. Emit `language: "multi"` **only when the
+> user explicitly asks for Deepgram multilingual**, and then with `provider: "deepgram"`.
 
-#### LLM
-The agent is classified **complex** if any of: has KB, has secondary languages, **≥1 custom tool**,
-**≥3 transfer rules**, **≥3 scenarios**, or **goalPrompt ≥ 1500 chars**; else **trivial**.
+#### LLM — what to set
+The platform's tree classifies an agent **complex** if any of: has KB, has secondary languages,
+**≥1 custom tool**, **≥3 transfer rules**, **≥3 scenarios**, or **goalPrompt ≥ 1500 chars**; else
+**trivial**.
 
 > **"≥1 custom tool" counts enabled `skills.custom` entries PLUS scenarios with `action == "toolCall"`** —
 > both feed the same tool tally, so either one on its own tips the agent to complex.
@@ -282,9 +307,27 @@ The agent is classified **complex** if any of: has KB, has secondary languages, 
 - ElevenLabs + complex → `anthropic - claude-haiku-4-5`
 - ElevenLabs + **trivial** → `qwen - qwen36-35b-a3b` (lightweight)
 
-> A *simple* ElevenLabs agent silently defaults to the lightweight **Qwen** model. To guarantee a
-> stronger model on a small but important agent, set `llmOverride: "anthropic - claude-haiku-4-5"`.
-> See behavioral §7b.
+> Emit `llm: "anthropic - claude-haiku-4-5"` for any agent doing real work (transfers, careful data
+> capture), trivial-tier or not — see behavioral §7b. The tree's Qwen pick is the cost-lean option, not a
+> correction.
+
+#### `optimizedSettings` — the platform's suggestion (response-only)
+Every single-agent read and write result carries `optimizedSettings`:
+`{ "available": bool, "changes": [ { "path": "llm", "from": "…", "to": "…" } ], "effects": [ "…" ] }`.
+It lists what the decision tree, at the newest `minorVersion`, would pick for the agent's **current**
+setup. `path` is a request field (`provider`, `llm`, `elevenLabsSettings.vad`,
+`elevenLabsSettings.turnModel`, `elevenLabsSettings.speculativeTurn`, `elevenLabsSettings.turnEagerness`,
+`minorVersion`); `effects` are display-only consequences of the version move (e.g. backup models added).
+Applying it = setting each `path` to its `to` and saving. Connected, `cloudtalk_update_voice_agent` with
+`apply_optimized_settings: true` applies the whole list in one save, `minorVersion` included — its own save
+when the call also changes `language`, `secondaryLanguages`, `knowledgeBaseIds`, `skills.custom`,
+`skills.transferToHuman`, `scenarios` or `goalPrompt` ([`mcp-tools.md`](./mcp-tools.md)). The dashboard's
+**Optimized settings** notice does the same where it is enabled. When a pasted or fetched config carries
+it: never copy it into the output; mention a listed change worth taking (e.g. a Deepgram agent that now has
+secondary languages) and, if the user wants it, set those paths yourself — `minorVersion` excepted, which
+moves only through one of the apply paths above (the user opts into a behaviour change). A config
+that deliberately differs (Haiku on a trivial ElevenLabs agent) will list the tree's pick there; that is
+expected.
 
 ---
 
@@ -615,8 +658,8 @@ company-scoped reference (`toolReferenceId`, `agentId`, `groupId`, `knowledgeBas
 
 ## 10. `elevenLabsSettings` — ElevenLabs advanced tuning  (ElevenLabs-only)
 
-Optional object exposing ElevenLabs `conversation_config` knobs. Meaningful only when the resolved
-provider is `elevenlabs` (ignored on Deepgram). Every knob is **omit-to-let-provider-default**: leave a
+Optional object exposing ElevenLabs `conversation_config` knobs. Meaningful only when the agent's
+`provider` is `elevenlabs` (ignored on Deepgram). Every knob is **omit-to-let-provider-default**: leave a
 field unset to accept ElevenLabs' own default, and set one **only to solve a specific problem** —
 turn-taking that cuts callers off or lags, background noise/voices, mis-heard brand names, backchannel
 that interrupts, or ambience. **When to reach for each, and what values to pick:** behavioral §7a-bis
@@ -664,7 +707,7 @@ that interrupts, or ambience. **When to reach for each, and what values to pick:
 ## 11. `tone` and `verbosity` — identity presets
 
 Two optional top-level fields that shape the agent's identity independently of `goalPrompt`. Both are
-provider-agnostic (they apply whatever the resolved provider is). What to pick: behavioral §2.1.
+provider-agnostic (they apply whatever the agent's provider is). What to pick: behavioral §2.1.
 
 ### `tone` — how the agent should sound
 

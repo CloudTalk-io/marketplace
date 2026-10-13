@@ -24,34 +24,38 @@ for a feature that requires a company resource.
 > holds for an update in **connected mode**, where creating an agent outright is available too
 > (*Connected mode* below).
 
-## Step 0 — resolve provider & LLM in your head first
+## Step 0 — choose provider & LLM first, and emit both
 
 **Decide `language` before you resolve anything from it.** When the user names the agent's language, or
 states a caller-language requirement, honour it. When they do neither, default `language` to the language
-the user is writing in during setup, resolved to a supported agent code (`schema.md` §4.3); provider
-auto-selection then follows from that code by the §5 rules below. Treat it as an overridable default: tell
-the user in half a sentence that you set it to that language and will switch on request, one word from
+the user is writing in during setup, resolved to a supported agent code (`schema.md` §4.3); the
+`provider` you set then follows from that code by the §5 rules below. Treat it as an overridable default:
+tell the user in half a sentence that you set it to that language and will switch on request, one word from
 them. If the setup conversation is in a language no supported agent code covers, fall back to a supported
 one and say which, so they can redirect. This is a default, not a new field or enum, and it never overrides
 an explicit language choice or a stated caller-language need.
 
-Provider and LLM are **computed server-side** from `language`/overrides (`schema.md` §5). Before
-writing anything else, determine the resolved provider from the language so your other choices are
-consistent:
+`provider` and `llm` are the agent's own stored values (`schema.md` §5): the platform fills them at
+creation and **never re-selects them** — not on save, not when the language changes or a KB is linked. An
+omitted field keeps what the agent (usually a blank shell) has, so **always emit both**, decided before
+anything else so your other choices are consistent:
 
-- plain language (`en`, `de`, …) → **ElevenLabs**; Deepgram-exclusive code (`en-US`, `pt-BR`, …) →
-  **Deepgram**; `secondaryLanguages` → **ElevenLabs** — and when you set `secondaryLanguages`, also pin
-  `providerOverride: "elevenlabs"` (multilingual must be ElevenLabs; guards against a stored Deepgram
-  provider rejecting the save).
+- `provider`: plain language (`en`, `de`, …) → **`elevenlabs`**; Deepgram-exclusive code (`en-US`,
+  `pt-BR`, …) → **`deepgram`**; a non-empty `secondaryLanguages` or `knowledgeBaseIds` → **`elevenlabs`**
+  (Deepgram cannot serve either, and a save keeps a stored Deepgram provider unless you send the switch;
+  an empty list changes nothing). With `secondaryLanguages`, make a regional primary its plain code
+  (`en-US` → `en`, `pt-BR` → `pt`) or ask: a multilingual set takes exact ElevenLabs codes only (schema §4.3).
 - **Multilingual has two mechanisms — don't conflate them.** Default to **ElevenLabs via
   `secondaryLanguages`**. **Deepgram `multi`** (Deepgram-only, switches its listen model to `nova-3`) is
-  **explicit-only**: emit `language: "multi"` with `providerOverride: "deepgram"` **only when the user
-  asks for Deepgram multilingual**, never auto-routed. Deepgram + `secondaryLanguages` is rejected at save
+  **explicit-only**: emit `language: "multi"` with `provider: "deepgram"` **only when the user asks for
+  Deepgram multilingual**, never on your own. Deepgram + `secondaryLanguages` saves but cannot be served
   (schema §4.3/§5).
-- A *trivial* ElevenLabs agent auto-falls to lightweight **Qwen**. If the agent does real work
-  (transfers, careful data capture) but is small, set `llmOverride: "anthropic - claude-haiku-4-5"`
-  (behavioral §7b).
-- Only emit `elevenLabsSettings` when the resolved provider is ElevenLabs.
+- `llm`: **`anthropic - claude-haiku-4-5`** (offered by both providers) for any agent doing real work
+  (transfers, careful data capture); the platform's own pick for a *trivial* ElevenLabs agent is the
+  lightweight Qwen model (behavioral §7b). Any other model must be in the provider's column (§4.2).
+- Never emit the retired aliases `providerOverride` / `llmOverride`, or `hasOverrides` /
+  `upgradeAvailable`; rename/drop them when fixing a pasted config.
+- Only emit `elevenLabsSettings` when `provider` is ElevenLabs.
 
 ## Step 0.5 — carry over the shell's wiring (only)
 
@@ -66,6 +70,9 @@ you set it in the dashboard) before it can save."* From whatever the user gives 
 
 - the outbound number pair (`defaultOutboundNumberId` + `failoverOutboundNumberId`) — **whenever the paste
   has them**, because an Expert-Mode save stores exactly what you send;
+- its `provider` / `llm` when they still fit the new use case (Step 0 decides) — and if the paste carries
+  `optimizedSettings` with `available: true`, read its `changes`: they are the platform's suggestion for
+  that agent's current setup (`schema.md` §5), worth mentioning, never copied into the output;
 - any already-wired IDs that fit the new use case — `knowledgeBaseIds`, transfer `agentId`/`agentExtension`
   or `groupId`/`groupExtension`, `appointmentBooking.integrationId`/`calendarId`, a scenario
   `toolReferenceId`, an SMS `senderNumber`.
@@ -91,7 +98,7 @@ config that will 400.**
 | `generate` | Author it. This is the bulk of every config. |
 | `environment` | **Complete the outbound number — the FE-faithful path is Automatic (`1`) + a real owned failover.** `defaultOutboundNumberId` **defaults to `1` (Automatic), exactly as the dashboard seeds it** and cannot be omitted. With `1`, `failoverOutboundNumberId` is **required in BOTH directions** and must be a real owned id — the save `400`s without it, nothing self-heals, and `null` is never valid; reuse the agent's failover when editing, fetch it (`cloudtalk_list_numbers`), or the user completes it in the dashboard. Setting a real owned `defaultOutboundNumberId` directly is the alternative (omit the failover key only then). Only `1` is magic — **every other value, including `2`, is a literal phone-number ID the company must own** (there is no "Random"), and an unowned one is a hard `400` by name at save. |
 | `reference` | **Off by default.** Emit only on explicit user intent, and then follow the **reference decision tree** below: substitute, ask for the real ID, or omit + instruct. **Never put a placeholder/sentinel ID in the body.** |
-| `forbidden` | Never emit. Two groups: (a) computed/response-only — `provider`, `llm`, `version`/`minorVersion`, `id`/`voiceAgentId`/timestamps, the server-emitted diagnostics `warnings`/`errorCodes`/`upgradeAvailable`, `companyId`/`environmentName`, the server-managed booking fields, `firstMessage`; (b) system-managed — `presetType`, `status`, `lastConfigurationStep`, `hasOverrides` (the Expert-Mode editor sets these from the loaded agent / forces `hasOverrides:true` on save; the platform defaults `status` to enabled on create). |
+| `forbidden` | Never emit. Two groups: (a) server-stamped/response-only — `version`/`minorVersion`, `id`/`voiceAgentId`/timestamps, the server-emitted diagnostics `warnings`/`errorCodes`/`optimizedSettings`, `companyId`/`environmentName`, the server-managed booking fields, `firstMessage`; (b) system-managed — `presetType`, `status`, `lastConfigurationStep` (the Expert-Mode editor sets these from the loaded agent; the platform defaults `status` to enabled on create). The retired `providerOverride`/`llmOverride`/`hasOverrides`/`upgradeAvailable` are not fields any more: never emit them. |
 
 **Always emit `enabled`** — on every scenario, every guardrail, and every skill object the body contains.
 It is a required plain bool with no default anywhere in the stack: omit it and the import fails
@@ -380,12 +387,12 @@ All bundled examples are **clean, schema-only, save-ready** configs — the mode
 non-E2 example carries `defaultOutboundNumberId: 1` (Automatic) **with a placeholder
 `failoverOutboundNumberId`** you replace with a real owned number ID (Automatic requires a real failover in
 both directions); E2 shows the failover gate by omitting it.
-[`examples/E1`](./examples/E1-inbound-receptionist.jsonc) (auto-ElevenLabs receptionist — knowledge
+[`examples/E1`](./examples/E1-inbound-receptionist.jsonc) (ElevenLabs receptionist — knowledge
 folded into the prompt, and the **switched-off transfer** pattern) and
-[`examples/E6`](./examples/E6-inbound-frontdesk-enus.jsonc) (auto-Deepgram via `en-US`, callback instead of
-a handoff) are the canonical archetypes;
+[`examples/E6`](./examples/E6-inbound-frontdesk-enus.jsonc) (Deepgram via the Deepgram-exclusive
+`en-US`, callback instead of a handoff) are the canonical archetypes;
 [`examples/E3`](./examples/E3-inbound-qualification-cfd.jsonc) is the **explicit-CFD exception** (the user
-runs the agent inside a Call Flow); E2 (German outbound), E4 (Deepgram-pinned support intake),
+runs the agent inside a Call Flow); E2 (German outbound), E4 (support intake on Deepgram by choice),
 E5 (multilingual ElevenLabs), E7 (`takeMessage`), E8 (the **identity presets** — `tone`/`verbosity` with
 ElevenLabs turn-taking and background-sound knobs), E9 (a **group transfer shipped as a disabled draft with
 the id/extension omitted** plus an SMS confirmation) and

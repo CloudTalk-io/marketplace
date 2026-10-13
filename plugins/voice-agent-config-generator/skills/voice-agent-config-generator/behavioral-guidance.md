@@ -273,7 +273,7 @@ truncates a legitimate call.
 
 - **Defaulting the `language` field.** When the user does not specify the agent's language and states no
   caller-language requirement, default `language` to the language the user is writing in during setup,
-  resolved to a supported code (`schema.md` §4.3); provider auto-selection then follows `schema.md` §5.
+  resolved to a supported code (`schema.md` §4.3); the `provider` you set then follows `schema.md` §5.
   Name it as an overridable default the user can change in one word. If the setup conversation's language
   is not a supported agent language, fall back to a supported one and say so. It sets the language the
   agent speaks and the `greeting` is written in; it is a default, not a new field.
@@ -377,18 +377,18 @@ tier — `referenced-resources.md`). What this **cannot** do:
   **knowledge base**; keep skills/goal focused on *behavior*. Threshold: > ~500 words → KB.
 - KBs are **referenced company resources** — a config only references existing `ACTIVE` KBs; the user
   creates them first ([referenced-resources](./referenced-resources.md)).
-- Under V3 a KB does **not** change the provider; it marks the agent "complex", upgrading the
-  ElevenLabs auto LLM from Qwen to Haiku 4.5 (`schema.md` §5).
-- **Provider mechanics differ:** ElevenLabs uses RAG (long docs; retrieved chunks appended each turn);
-  Deepgram puts whole docs in context (keep each doc small — well under 10 pages — many small files).
-  Text-only, simple layout.
+- A KB needs **ElevenLabs** (Deepgram cannot serve it) and marks the agent "complex", so the platform's
+  own LLM pick is Haiku 4.5. Linking one never changes the stored `provider`/`llm` — set
+  `provider: "elevenlabs"` in the same config (`schema.md` §5).
+- **ElevenLabs serves KBs through RAG** (long docs; retrieved chunks appended each turn). Text-only,
+  simple layout.
 - **Tiny KBs (~a screenful) are better as a custom skill** (lower latency).
 - ElevenLabs RAG: ~250 ms/turn added latency; ~20 chunks/turn; **URL KBs scrape one page only**.
 
 ### 7a-bis. ElevenLabs numeric settings — what values to pick
 
 Voice fields (`stability`/`similarity`/`optimizeStreamingLatency`) and `elevenLabsSettings` take
-effect **only when the resolved provider is ElevenLabs**. *When* to reach for each `elevenLabsSettings`
+effect **only when `provider` is ElevenLabs**. *When* to reach for each `elevenLabsSettings`
 knob at all — and its preserve/replace mechanics on an update — is §9.
 
 **The three voice numbers are authoring-set and pass straight through to ElevenLabs — the API applies no
@@ -414,29 +414,28 @@ where an omitted knob simply lets the provider's own default apply.
 
 ### 7b. Model, provider & latency
 
-How the platform picks provider and model, and what a "trivial" agent costs you. **When** to overrule
-those picks — and what each override costs — is §9.
+How the platform would pick provider and model, and what a "trivial" agent costs you. **When** to depart
+from those picks — and what each departure costs — is §9.
 
-- **Model floor — and the V3 trap** (`schema.md` §5): a **trivial** ElevenLabs agent auto-defaults to
-  lightweight `qwen - qwen36-35b-a3b` ("trivial" = no KB, no secondary langs, <1 tool, <3 transfer
-  rules, <3 scenarios, goalPrompt < 1500 chars). The **tool count sums enabled `skills.custom` entries and
-  scenarios with `action == "toolCall"`** — either kind on its own counts toward "≥1 custom tool". A small
-  agent doing real work (transfers, data
-  capture) can silently land on Qwen. To **guarantee** Haiku on a small but important agent, set
-  `llmOverride: "anthropic - claude-haiku-4-5"`. Small/nano-class models fail
-  at transfers/tools/name-capture. Don't downgrade for cost.
-- **Provider fit** (V3): language-based — plain langs → ElevenLabs; Deepgram-exclusive codes →
-  Deepgram; `secondaryLanguages` → ElevenLabs. KB no longer forces ElevenLabs. Generally omit
-  `providerOverride`; override only to force Deepgram on a plain language (redundant on a
-  Deepgram-exclusive code). **Multilingual exception:** whenever `secondaryLanguages` is set, **always
-  emit `providerOverride: "elevenlabs"`**. Multilingual requires ElevenLabs, and pinning it stops an
-  edited/re-saved agent whose stored provider is Deepgram from preserving it and failing the save with
-  *"deepgram does not support multilingual configurations"*. There are **two distinct multilingual
-  mechanisms**: ElevenLabs via `secondaryLanguages` (the default for any multilingual agent), and Deepgram
-  via the single language code `multi` (Deepgram-only, which switches its listen model to `nova-3`).
-  **Never auto-route a multilingual request to Deepgram** — emit `multi` only when the user explicitly asks
-  for Deepgram multilingual, and then pin `providerOverride: "deepgram"`. Deepgram + `secondaryLanguages`
-  is rejected at save (schema §4.3/§5).
+- **Model floor** (`schema.md` §5): `llm` is the agent's stored model — filled at creation, never
+  re-selected — so an omitted `llm` keeps whatever the agent (often a blank shell) got, and for a
+  **trivial** ElevenLabs agent the platform's pick is lightweight `qwen - qwen36-35b-a3b` ("trivial" = no
+  KB, no secondary langs, <1 tool, <3 transfer rules, <3 scenarios, goalPrompt < 1500 chars). The **tool
+  count sums enabled `skills.custom` entries and scenarios with `action == "toolCall"`** — either kind on
+  its own counts toward "≥1 custom tool". Always emit `llm`; on any agent doing real work (transfers, data
+  capture) set `"anthropic - claude-haiku-4-5"`. Small/nano-class models fail at
+  transfers/tools/name-capture. Don't downgrade for cost — `optimizedSettings` may list Qwen
+  afterwards; that is the cost-lean option, not a fix.
+- **Provider fit:** language-based — plain langs → `elevenlabs`; Deepgram-exclusive codes → `deepgram`;
+  a non-empty `secondaryLanguages` or a KB → `elevenlabs`. Always emit `provider`; choose `deepgram` on a plain
+  language only for a single-language, no-KB agent where latency matters (E4). **Multilingual:** whenever
+  `secondaryLanguages` is non-empty, `provider` **must** be `"elevenlabs"` — a save keeps the stored provider
+  when none is sent, and Deepgram cannot serve secondary languages (it saves, then fails the caller).
+  There are **two distinct multilingual mechanisms**: ElevenLabs via `secondaryLanguages` (the default for
+  any multilingual agent), and Deepgram via the single language code `multi` (Deepgram-only, which
+  switches its listen model to `nova-3`). **Never route a multilingual request to Deepgram on your own** —
+  emit `multi` only when the user explicitly asks for Deepgram multilingual, and then with
+  `provider: "deepgram"` (schema §4.3/§5).
 - **Latency levers** (by impact): shorten `goalPrompt`; instruct **short sentences, especially the
   first of each turn**; convert small KBs to skills; only then a smaller LLM. 1–2 s/turn normal,
   < 3 s acceptable — don't promise less.
@@ -496,38 +495,45 @@ Run a generated config against this before presenting it:
 
 ## 9. Overriding the platform's choices
 
-Provider, model, and most speech-side tuning are **chosen for you** from `language` and the shape of the
-agent (§7b). The fields below exist to overrule those choices. Emit one **only when you can name the
-reason** — an override outlives the condition that motivated it, survives every later edit, and never
-re-evaluates itself. Silence (an omitted key) is a real answer here, and usually the right one.
+The platform has its own picks for provider, model, and most speech-side tuning, derived from `language`
+and the shape of the agent (§7b). `provider` and `llm` are the agent's **own stored values** — always emit
+them, chosen with `schema.md` §5 — and every value you emit **stays as written**: nothing re-evaluates it
+on a later save, and a later edit keeps it unless that edit sends a new one. So depart from the platform's
+pick, or set an optional knob below, **only when you can name the reason**. When the setup moves away from
+what the platform would pick, its pick is listed in `optimizedSettings` (the MCP update preview's
+`optimized_settings`, and the dashboard's Optimized settings notice where it is enabled); that is a
+suggestion for the user, not an error. For the optional knobs, silence (an omitted key) is a real answer,
+and usually the right one.
 
-### `llmOverride` — pin a stronger model
+### `llm` — a stronger model than the platform's pick
 
-- **When:** the agent looks small to the automatic selector but does **real work** — live transfers,
-  careful data capture (names, phone numbers, spellings), custom tool calls, booking. Those are exactly
-  the steps a lightweight auto-pick fumbles (§7b), and nothing warns you at save time.
+- **When:** the agent looks small to the platform's decision tree but does **real work** — live
+  transfers, careful data capture (names, phone numbers, spellings), custom tool calls, booking. Those are
+  exactly the steps the lightweight pick fumbles (§7b), and nothing warns you at save time.
 - **Safe values:** canonical model IDs only (`schema.md` §4.2), and the model **must be offered by the
-  resolved provider** — a mismatch is refused at save, so decide the provider first (§7b).
-  `anthropic - claude-haiku-4-5` is the general-purpose pin for a small-but-important agent.
-- **Consequences:** more cost per minute and more latency per turn than the lightweight default, bought
-  in exchange for instruction-following that holds under pressure. The trade only runs one way — **don't
-  pin downward** to save money on an agent that transfers calls or captures data.
+  agent's `provider`** — a mismatch is refused at save (`422`), so decide the provider first (§7b).
+  `anthropic - claude-haiku-4-5` is the general-purpose choice for a small-but-important agent.
+- **Consequences:** more cost per minute and more latency per turn than the lightweight pick, bought in
+  exchange for instruction-following that holds under pressure. The trade only runs one way — **don't
+  choose downward** to save money on an agent that transfers calls or captures data.
 
-### `providerOverride` — required pins only
+### `provider` — dictated by language, not preference
 
-- **When:** two cases, both dictated by language, not preference.
-  - **`secondaryLanguages` set ⇒ always pin `elevenlabs`.** Multilingual exists only there, and the pin
-    also stops a re-saved agent whose stored provider is Deepgram from failing the save.
-  - **A Deepgram-exclusive locale code ⇒ `deepgram`.** Automatic selection already lands there, so the
-    pin is redundant unless you want the provider frozen against a later language edit.
-- **Never pin `deepgram` on an agent with `secondaryLanguages`** — the combination is rejected outright.
-- **Validate locally before saving:** an invalid `providerOverride` fails the save **without naming the
-  field** — the bundled validator is what points at it.
-- **Consequences:** the provider decides **which voices exist** and **which languages are available**. A
-  pin that contradicts the `voice` or the `language` you also emitted fails at save; a pin that quietly
-  disagrees with the use case (Deepgram on an agent that later needs a second language) fails at the
-  next edit.
-- Otherwise **omit it** and let the language decide.
+- **What to set:** language decides it (`schema.md` §5).
+  - **A non-empty `secondaryLanguages` or a KB ⇒ always `elevenlabs`** (an empty list changes nothing).
+    Multilingual and knowledge bases are served only there, and a re-saved agent whose stored provider is
+    Deepgram stays on Deepgram until you send the switch.
+  - **A Deepgram-exclusive locale code ⇒ `deepgram`** (the platform's own pick too).
+  - **A plain code ⇒ `elevenlabs`**, unless a single-language, no-KB agent wants Deepgram's latency (E4).
+- **Never set `deepgram` on an agent with `secondaryLanguages`** — it saves only when Deepgram serves
+  every code (any other is a `422 LANGUAGE_NOT_SUPPORTED`), and even then the agent cannot serve the extra
+  languages.
+- **Validate locally before saving:** the bundled validator checks the enum and the provider's language
+  and model sets, so a mismatch is caught before the save.
+- **Consequences:** the provider decides **which voices exist**, **which languages are available**, and
+  **which models are offered**. A provider that contradicts the `voice`, the `language` or the `llm` you
+  also emitted fails at save; one that quietly disagrees with the use case (Deepgram on an agent that
+  later needs a second language) needs switching at the next edit — nothing switches it for you.
 
 ### The outbound number pair — connected mode only
 
@@ -551,7 +557,7 @@ re-evaluates itself. Silence (an omitted key) is a real answer here, and usually
 
 ### `elevenLabsSettings` — speech-side tuning
 
-Meaningful **only when the resolved provider is ElevenLabs**. On Deepgram the object is stored and
+Meaningful **only when `provider` is ElevenLabs**. On Deepgram the object is stored and
 **silently inert** — it is never a substitute for fixing the prompt. Two mechanics to keep straight on an
 update: an **omitted** `elevenLabsSettings` **preserves** the stored object, while a **present** one
 **replaces it wholesale**. So to change one knob, send back the whole object with that one knob changed —
