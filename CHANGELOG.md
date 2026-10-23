@@ -5,6 +5,11 @@ dated entry below, made whenever the config schema or the generation guidance ma
 Claude Code installs a release when the manifest version changes; the Claude app picks it up from the
 marketplace (Check for updates, or Sync automatically).
 
+## 0.2.1 — 2026-10-23
+
+- **Directory listing:** a shorter plugin description for the listing and the marketplace entry, and
+  `keywords` for discovery. No change to the skills, the schema, or the validator.
+
 ## 0.2.0 — 2026-10-07
 
 - **`provider` and `llm` are the agent's own fields.** They are writable and returned on every read: the
