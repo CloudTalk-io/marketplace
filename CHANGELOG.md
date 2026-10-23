@@ -7,8 +7,7 @@ marketplace (Check for updates, or Sync automatically).
 
 ## 0.2.1 — 2026-10-23
 
-- **Directory listing:** a shorter plugin description for the listing and the marketplace entry, and
-  `keywords` for discovery. No change to the skills, the schema, or the validator.
+- **Directory listing:** `keywords` for discovery. No change to the skills, the schema, or the validator.
 
 ## 0.2.0 — 2026-10-07
 

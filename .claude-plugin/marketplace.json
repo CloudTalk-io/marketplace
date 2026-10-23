@@ -12,7 +12,7 @@
       "name": "voice-agent-config-generator",
       "source": "./plugins/voice-agent-config-generator",
       "displayName": "CloudTalk VoiceAgent Builder",
-      "description": "Build and test CloudTalk VoiceAgents from a plain-language brief."
+      "description": "Generate, fix, validate, and simulate CloudTalk VoiceAgent (Expert Mode) configurations."
     }
   ]
 }
