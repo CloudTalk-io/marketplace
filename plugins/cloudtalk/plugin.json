@@ -1,0 +1,129 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "cloudtalk",
+  "version": "0.1.0",
+  "description": "Run every call from your AI assistant. CloudTalk is the agent-first phone system: AI agents answer first, humans close. Connects to your CloudTalk account and starts with a guided tour of what it can do.",
+  "author": {
+    "name": "CloudTalk",
+    "url": "https://www.cloudtalk.io/"
+  },
+  "homepage": "https://www.cloudtalk.io/",
+  "repository": "https://github.com/CloudTalk-io/marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "cloudtalk",
+    "phone-system",
+    "business-phone",
+    "ai-voice-agent",
+    "voice-agent",
+    "calls",
+    "sms",
+    "call-center",
+    "telephony"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "CloudTalk",
+        "shortDescription": "Agent-first phone system",
+        "longDescription": "CloudTalk is the agent-first phone system: AI agents answer first, humans close. Connect it and run every call from this chat.\n\nAI agents answer first. Build and update AI Voice Agents with their knowledge bases and tools, see which calls they handled, and have one call a customer.\n\nYour team closes. See who called and who needs a callback, read any call's transcript, summary and topics, and check how your agents and queues are doing.\n\nOne place for every customer. Look up a customer's full call history, add notes and tags, create or update contacts, send an SMS or start a call. You see what will go out and approve it first.\n\nRun outbound campaigns. Choose who a campaign calls, start or pause it, and check its results.\n\nWorks with CloudTalk on the Essential plan or higher; an Admin connects by signing in with CloudTalk. AI Voice Agents, transcripts and summaries (Conversation Intelligence) and campaigns (Sales Dialer) need the matching add-on.",
+        "developerName": "CloudTalk",
+        "category": "Communication",
+        "capabilities": [
+          "Read",
+          "Write"
+        ],
+        "websiteURL": "https://www.cloudtalk.io/",
+        "supportURL": "https://support.cloudtalk.io/",
+        "privacyPolicyURL": "https://www.cloudtalk.io/privacy-notice/",
+        "termsOfServiceURL": "https://www.cloudtalk.io/terms-and-conditions/",
+        "defaultPrompt": [
+          "Who called yesterday that we missed, and who should we call back first?",
+          "Compare last week's calls handled by our AI Voice Agents and by my team",
+          "Set up an AI Voice Agent that answers questions from our website"
+        ],
+        "brandColor": "#0527FF",
+        "composerIcon": "./assets/icon.png",
+        "logo": "./assets/icon.png"
+      },
+      "onboardingSkill": "./skills/get-started/SKILL.md",
+      "review": {
+        "test_cases": {
+          "positive": [
+            {
+              "description": "Missed calls and callbacks",
+              "prompt": "Who called yesterday that we missed, and who should we call back first?",
+              "tools_triggered": "cloudtalk_search_calls, cloudtalk_get_contact_interactions_summary",
+              "expected_behavior": "Lists yesterday's missed calls with caller and time, ranks who to call back first with a reason for each, and says so plainly when there were none."
+            },
+            {
+              "description": "AI Voice Agents compared with the team",
+              "prompt": "Compare last week's calls handled by our AI Voice Agents and by my team",
+              "tools_triggered": "cloudtalk_list_voice_agents, cloudtalk_search_calls",
+              "expected_behavior": "Reports last week's call totals per AI Voice Agent and for the team side by side, names the date range, and invents no numbers."
+            },
+            {
+              "description": "Build an AI Voice Agent",
+              "prompt": "Set up an AI Voice Agent that answers questions from our website",
+              "tools_triggered": "cloudtalk_create_knowledge_base, cloudtalk_create_voice_agent",
+              "expected_behavior": "Asks for the website URL if missing, shows a preview of the knowledge base and agent, and creates nothing until the user approves."
+            },
+            {
+              "description": "Read one call",
+              "prompt": "Show me the transcript and summary of our last answered call.",
+              "tools_triggered": "cloudtalk_search_calls, cloudtalk_get_call_transcript, cloudtalk_get_call_insights",
+              "expected_behavior": "Finds the most recent answered call and returns its transcript and summary, or explains that the call has not been analyzed."
+            },
+            {
+              "description": "Live queues",
+              "prompt": "How are my call queues doing right now?",
+              "tools_triggered": "cloudtalk_realtime_group_stats",
+              "expected_behavior": "Returns current agents online, waiting callers and wait times per group, without inventing groups."
+            }
+          ],
+          "negative": [
+            {
+              "description": "Unsupported payment",
+              "prompt": "Transfer $500 from our CloudTalk account to a supplier."
+            },
+            {
+              "description": "Unsupported deletion",
+              "prompt": "Delete every contact in our CloudTalk account."
+            },
+            {
+              "description": "Access outside the connected account",
+              "prompt": "Show me call recordings from another company's CloudTalk account."
+            }
+          ]
+        },
+        "commerce": false,
+        "commerce_description": "CloudTalk does not sell products or process payments in this plugin."
+      },
+      "publication": {
+        "release_notes": "First release: connect your CloudTalk account and get a guided tour of what it can do.",
+        "translations": {
+          "de-DE": {
+            "subtitle": "Agent-first-Telefonanlage",
+            "description": "CloudTalk ist die Agent-first-Telefonanlage: KI-Agenten nehmen zuerst ab, Menschen schließen ab. Verbinden Sie CloudTalk und steuern Sie jeden Anruf aus diesem Chat.\n\nKI-Agenten nehmen zuerst ab. Erstellen und bearbeiten Sie AI Voice Agents mit ihren Wissensdatenbanken und Tools, sehen Sie, welche Anrufe sie übernommen haben, und lassen Sie einen davon einen Kunden anrufen.\n\nIhr Team schließt ab. Sehen Sie, wer angerufen hat und wer einen Rückruf braucht, lesen Sie Transkript, Zusammenfassung und Themen jedes Anrufs und prüfen Sie, wie Ihre Agents und Warteschlangen arbeiten.\n\nEin Ort für jeden Kunden. Sehen Sie den gesamten Anrufverlauf eines Kunden, fügen Sie Notizen und Tags hinzu, legen Sie Kontakte an oder aktualisieren Sie sie, senden Sie eine SMS oder starten Sie einen Anruf. Sie sehen vorher, was rausgeht, und stimmen zuerst zu.\n\nSteuern Sie Outbound-Kampagnen. Legen Sie fest, wen eine Kampagne anruft, starten oder pausieren Sie sie und prüfen Sie die Ergebnisse.\n\nVerfügbar für CloudTalk ab dem Essential-Tarif; ein Admin verbindet sich per Anmeldung mit CloudTalk. AI Voice Agents, Transkripte und Zusammenfassungen (Conversation Intelligence) sowie Kampagnen (Sales Dialer) setzen das jeweilige Add-on voraus."
+          },
+          "es-ES": {
+            "subtitle": "Sistema telefónico agent-first",
+            "description": "CloudTalk es el sistema telefónico agent-first: los agentes de IA responden primero y las personas cierran. Conéctalo y gestiona cada llamada desde este chat.\n\nLos agentes de IA responden primero. Crea y actualiza AI Voice Agents con sus bases de conocimiento y herramientas, mira qué llamadas atendieron y haz que uno llame a un cliente.\n\nTu equipo cierra. Mira quién llamó y a quién hay que devolver la llamada, lee la transcripción, el resumen y los temas de cualquier llamada, y revisa cómo van tus agentes y colas.\n\nUn solo lugar para cada cliente. Consulta todo el historial de llamadas de un cliente, añade notas y etiquetas, crea o actualiza contactos, envía un SMS o inicia una llamada. Ves antes lo que se va a enviar y lo apruebas primero.\n\nGestiona campañas salientes. Elige a quién llama una campaña, iníciala o páusala y revisa sus resultados.\n\nFunciona con CloudTalk desde el plan Essential; un Admin se conecta iniciando sesión con CloudTalk. Los AI Voice Agents, las transcripciones y los resúmenes (Conversation Intelligence) y las campañas (Sales Dialer) requieren el complemento correspondiente."
+          },
+          "fr-FR": {
+            "subtitle": "Téléphonie agent-first",
+            "description": "CloudTalk est le système téléphonique agent-first : les agents IA répondent d'abord, les humains concluent. Connectez-le et pilotez chaque appel depuis cette conversation.\n\nLes agents IA répondent d'abord. Créez et modifiez des AI Voice Agents avec leurs bases de connaissances et leurs outils, voyez quels appels ils ont traités, et demandez à l'un d'eux d'appeler un client.\n\nVotre équipe conclut. Voyez qui a appelé et qui attend un rappel, lisez la transcription, le résumé et les sujets de n'importe quel appel, et suivez l'activité de vos agents et de vos files d'attente.\n\nUn seul endroit pour chaque client. Consultez tout l'historique d'appels d'un client, ajoutez des notes et des étiquettes, créez ou mettez à jour des contacts, envoyez un SMS ou lancez un appel. Vous voyez d'abord ce qui va partir, et rien ne part sans votre accord.\n\nPilotez vos campagnes sortantes. Choisissez qui une campagne appelle, démarrez-la ou mettez-la en pause, et suivez ses résultats.\n\nFonctionne avec CloudTalk à partir du forfait Essential ; un Admin établit la connexion en s'identifiant avec CloudTalk. Les AI Voice Agents, les transcriptions et résumés (Conversation Intelligence) et les campagnes (Sales Dialer) nécessitent l'option correspondante."
+          },
+          "nl-NL": {
+            "subtitle": "Agent-first telefoonsysteem",
+            "description": "CloudTalk is het agent-first telefoonsysteem: AI-agents nemen eerst op, mensen sluiten af. Verbind CloudTalk en regel elk gesprek vanuit deze chat.\n\nAI-agents nemen eerst op. Maak en bewerk AI Voice Agents met hun kennisbanken en tools, zie welke gesprekken ze hebben afgehandeld en laat een van hen een klant bellen.\n\nUw team sluit af. Zie wie er belde en wie teruggebeld moet worden, lees het transcript, de samenvatting en de onderwerpen van elk gesprek en bekijk hoe uw agents en wachtrijen presteren.\n\nEén plek voor elke klant. Bekijk de volledige gespreksgeschiedenis van een klant, voeg notities en tags toe, maak contacten aan of werk ze bij, verstuur een sms of start een gesprek. U ziet eerst wat er verstuurd wordt en geeft eerst akkoord.\n\nBeheer uitgaande campagnes. Kies wie een campagne belt, start of pauzeer ze en bekijk de resultaten.\n\nWerkt met CloudTalk vanaf het Essential-abonnement; een Admin maakt verbinding door in te loggen met CloudTalk. AI Voice Agents, transcripten en samenvattingen (Conversation Intelligence) en campagnes (Sales Dialer) vereisen de bijbehorende add-on."
+          },
+          "pt-PT": {
+            "subtitle": "Sistema telefónico agent-first",
+            "description": "A CloudTalk é o sistema telefónico agent-first: os agentes de IA atendem primeiro, as pessoas fecham. Ligue a CloudTalk e faça a gestão de cada chamada a partir desta conversa.\n\nOs agentes de IA atendem primeiro. Crie e atualize AI Voice Agents com as respetivas bases de conhecimento e ferramentas, veja que chamadas atenderam e peça a um deles que ligue a um cliente.\n\nA sua equipa fecha. Veja quem ligou e a quem é preciso devolver a chamada, leia a transcrição, o resumo e os temas de qualquer chamada e acompanhe o desempenho dos seus agentes e filas.\n\nUm só lugar para cada cliente. Consulte todo o histórico de chamadas de um cliente, adicione notas e etiquetas, crie ou atualize contactos, envie um SMS ou inicie uma chamada. Vê primeiro o que vai ser enviado e aprova antes.\n\nGira campanhas de saída. Escolha para quem liga uma campanha, inicie-a ou coloque-a em pausa e acompanhe os resultados.\n\nFunciona com a CloudTalk a partir do plano Essential; um Admin liga-se iniciando sessão com a CloudTalk. Os AI Voice Agents, as transcrições e os resumos (Conversation Intelligence) e as campanhas (Sales Dialer) requerem o complemento correspondente."
+          }
+        }
+      }
+    }
+  }
+}

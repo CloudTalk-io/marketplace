@@ -1,7 +1,12 @@
 # CloudTalk Claude Plugins
 
-CloudTalk's Claude plugin marketplace — plugins for building and testing
-[CloudTalk](https://www.cloudtalk.io) **AI VoiceAgents** with Claude.
+CloudTalk's Claude plugin marketplace. [CloudTalk](https://www.cloudtalk.io) is the agent-first phone
+system: AI agents answer first, humans close.
+
+| Plugin | What it does |
+|---|---|
+| [**CloudTalk**](./plugins/cloudtalk) (`cloudtalk`) | Run every call from your AI assistant. Signs in to your CloudTalk account and starts with a guided tour. Also packaged for ChatGPT. |
+| **CloudTalk VoiceAgent Builder** (`voice-agent-config-generator`) | Build, fix, validate and test AI VoiceAgent configurations. Described below. |
 
 **CloudTalk VoiceAgent Builder** (`voice-agent-config-generator`) bundles two skills:
 
@@ -118,6 +123,7 @@ marketplace/
 ├── .claude-plugin/
 │   └── marketplace.json                 ← the catalog (lists every plugin)
 └── plugins/
+    ├── cloudtalk/                       ← CloudTalk plugin (Claude + ChatGPT manifests)
     └── voice-agent-config-generator/
         ├── .claude-plugin/
         │   └── plugin.json              ← plugin manifest (incl. the bundled MCP server)

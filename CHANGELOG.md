@@ -5,6 +5,13 @@ dated entry below, made whenever the config schema or the generation guidance ma
 Claude Code installs a release when the manifest version changes; the Claude app picks it up from the
 marketplace (Check for updates, or Sync automatically).
 
+## 0.3.0 — 2026-10-26
+
+- **New plugin: CloudTalk (`cloudtalk`) 0.1.0.** Connects to the CloudTalk MCP at `https://mcp.cloudtalk.io`
+  with sign-in (OAuth, no API key) and ships the `get-started` skill. The same folder carries the ChatGPT
+  plugin manifests (`plugin.json`, `mcp.json`), so it is also the package for OpenAI's plugin directory.
+  CloudTalk VoiceAgent Builder is unchanged (0.2.1).
+
 ## 0.2.1 — 2026-10-23
 
 - **Directory listing:** `keywords` for discovery. No change to the skills, the schema, or the validator.
