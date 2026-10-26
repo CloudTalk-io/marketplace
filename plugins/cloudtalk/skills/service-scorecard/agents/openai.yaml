@@ -1,0 +1,11 @@
+interface:
+  display_name: "Service scorecard"
+  short_description: "Score support calls and coach each agent"
+  default_prompt: "Use $service-scorecard to score last week's support calls and give each agent one coaching point."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "cloudtalk"
+      description: "CloudTalk phone system"
+      transport: "streamable_http"
+      url: "https://mcp.cloudtalk.io"

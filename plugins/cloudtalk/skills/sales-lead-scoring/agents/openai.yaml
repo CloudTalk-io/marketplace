@@ -1,0 +1,11 @@
+interface:
+  display_name: "Sales lead scoring"
+  short_description: "Rank leads from recent calls, with evidence"
+  default_prompt: "Use $sales-lead-scoring to score leads from the last 14 days of sales calls and tell me who to call first."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "cloudtalk"
+      description: "CloudTalk phone system"
+      transport: "streamable_http"
+      url: "https://mcp.cloudtalk.io"

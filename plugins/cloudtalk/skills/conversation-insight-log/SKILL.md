@@ -1,63 +1,68 @@
 ---
 name: conversation-insight-log
-description: Turn the last week of CloudTalk calls into a prioritized log of what matters, with customer requests, risks, opportunities, commitments the team made, and friction that keeps coming up. Use when the user asks what happened on their calls, what customers are asking for, what the team promised, or for a weekly call log or digest. Summaries and smart notes need Conversation Intelligence.
+description: Build a prioritized log of what matters in recent CloudTalk conversations, including answered calls, missed calls, and texts when asked. It covers customer requests, risks, opportunities, commitments the team made, and friction that keeps coming up, each tied to the call it came from. Use for a daily or weekly call log or digest, or when the user asks what customers want, what the team promised, or what needs attention. It reads only and is not an analytics report; summaries need Conversation Intelligence.
 ---
 
 # Conversation insight log
 
-Goal: one page a manager can act on in five minutes. Every item points to the call it came from. Explicit user instructions always win over this skill.
+Goal: one page a manager can act on in five minutes. Every item points to the conversation it came from. Explicit user instructions always win over this skill.
 
-## 1. Set the scope
+This skill only reads. It never sends, tags, or edits anything while building the log.
 
-Default: the last 7 days, answered calls, the whole company. Ask only when the request is unclear about the number, group, agent, or time window. Use the user's choice when they give one.
+## 1. Set the window
 
-## 2. Find the calls
+- Use the user's start and end when they give them.
+- Otherwise, cover the last 7 days: from midnight 7 days ago to now.
+- For "what changed since my last log", start where the previous log ended, and say so. If that end time isn't available, use the 7-day default and say that too.
+- Never widen the window silently, and don't go past 7 days unless the user asks.
+- At the top of the log, state the window in the user's timezone if you know it, plus the exact UTC boundaries you queried. The tools take UTC as `YYYY-MM-DD HH:MM:SS`.
 
-- Call `cloudtalk_search_calls` with `status: "answered"`, the window as `date_from` and `date_to` (UTC, `YYYY-MM-DD HH:MM:SS`), and any filter (`group_id`, `user_id`). Page with `page` until you have them all, up to 200 calls.
-- Skip calls under 30 seconds and voicemails. Count what you skipped.
-- Calls handled by an AI Voice Agent have no transcript or AI insights. If the user asks about them, list them with `voice_agent_id` and say they can't be read yet.
-- Pick up to 25 calls to read in depth: longest first, then calls with negative sentiment, then the rest.
+## 2. Gather, in this order
 
-## 3. Read them
+1. **Answered calls.** Call `cloudtalk_search_calls` with `status: "answered"` and the window, plus any filter the user gave (`group_id`, `user_id`). Page with `page`, up to 200 calls. Skip calls under 30 seconds. Pick up to 25 to read: longest first, then negative sentiment, then the rest. For each, call `cloudtalk_get_call_insights` with `include: ["summary", "sentiment", "smart_notes"]`. Open `cloudtalk_get_call_transcript` only to quote evidence for a P1 item.
+2. **Missed calls.** Call `cloudtalk_search_calls` with `status: "missed"`. Group by caller. For repeat callers or known contacts, call `cloudtalk_get_contact_interactions_summary`.
+3. **Texts, only when the user asks.** SMS is read per agent: call `cloudtalk_list_sms_conversations` for the agents the user names, then `cloudtalk_list_sms_messages` for the threads that matter.
+4. **AI Voice Agent calls.** These have no transcript or insights yet. Count them for the coverage note and don't try to read them.
 
-For each picked call, call `cloudtalk_get_call_insights` with `include: ["summary", "sentiment", "smart_notes"]`. Open `cloudtalk_get_call_transcript` only to quote evidence for a P1 item. If the insights come back empty, either the call hasn't been analyzed or Conversation Intelligence isn't on the plan. Say so once, not per call.
+Empty insights mean the call isn't analyzed yet, or Conversation Intelligence isn't on the plan. Say so once, not per call.
 
-## 4. Sort what you found
+## 3. Prioritize from evidence
 
-Give each item one type and one priority.
+Judge each item only from what the call or text shows, and use the strongest band that applies.
 
-| Type | What counts |
+| Band | Use it when |
 |---|---|
-| Request | The customer asked for something |
-| Risk | Churn signal, complaint, escalation, payment or legal issue |
-| Opportunity | Upsell, referral, a new need |
-| Commitment | Someone on the team promised something, with or without a date |
-| Friction | The same problem on 2 or more calls |
+| **P1**, act now | A deadline within 2 business days. An escalation, cancellation or churn signal, or a serious service failure. A deal or lead blocked waiting on us. A request that went unanswered more than once, or a promise whose time has passed. An urgent billing, legal, security or account-access issue. |
+| **P2**, follow up | An open question or request (quote, demo, document, callback). A buying signal, expansion or referral. A commitment with no near deadline. Friction that has a plausible owner. An objection that could affect the relationship. |
+| **P3**, keep in view | Praise or a customer story worth keeping. An early or unclear opportunity. A theme that isn't actionable yet. Context that will help the next conversation. |
 
-| Priority | When |
-|---|---|
-| **P1**, act today | Risk of losing the customer or revenue, a broken commitment, a deadline in the next 2 days |
-| **P2**, follow up this week | Open requests, opportunities, commitments due later |
-| **P3**, keep in view | Patterns and context with no action yet |
+**Leave out:** greetings and scheduling chatter, spam, wrong numbers and test calls, exchanges already resolved, guesses based on silence, and repeated fragments of the same exchange.
 
-Merge items that describe the same thing across calls, and keep the count.
+**Within a band, order by:** harm or deadline, then business impact, then how explicit the ask was, then recency.
 
-## 5. Write the log
+Merge items about the same customer and topic, keeping the newest state and any earlier promise still open. Tone alone never makes something P1.
 
-1. Start with three facts: calls in the window, calls read, calls skipped and why.
-2. One table per priority, P1 first: Item | Type | Customer | Agent | Call (date, id) | Evidence (at most 15 words, quoted from the transcript or summary).
-3. End with **Recurring friction**: up to 3 patterns, each with its number of calls.
+## 4. Write the log
 
-## 6. Offer next steps
+1. **Header:** the window, then the coverage: answered calls in the window and how many you read, missed calls, texts (reviewed or not), and AI Voice Agent calls (counted only).
+2. **P1, then P2:** one entry each.
+   - **When and channel:** date and time, answered call, missed call or text, and the agent.
+   - **Why it matters:** the deadline, consequence or blocker.
+   - **What happened:** one or two sentences from the evidence, with a quote of at most 15 words.
+   - **Next step:** a real commitment from the call, or a suggestion labeled "Recommended".
+   - **Source:** the call id.
+3. **P3:** one line per item.
+4. **Patterns:** only those backed by at least two separate conversations, each with its count.
+5. **Coverage limits:** what this log didn't see: calls not read, AI Voice Agent calls, voicemails, texts not requested. It is not a full call report, so don't state call volumes, answer rates or agent performance as findings.
 
-Offer these, and do them only when the user agrees. Each one is a write, so the app asks for approval.
+By default show about 10 items: every P1, then the strongest P2 and P3. Say how many more you found and offer a deeper log by group, agent or customer.
 
-- Save an item as a note on the customer's contact with `cloudtalk_add_contact_note`.
-- Draft a follow-up SMS for a P1 item. `cloudtalk_send_sms` returns a preview first; send only after approval.
+## 5. After the log
+
+Offer, and do only if the user agrees: save an item as a contact note (`cloudtalk_add_contact_note`), or draft a follow-up text (`cloudtalk_send_sms`, which returns a preview first). The app asks for approval on each.
 
 ## Rules
 
-- No item without the call it came from.
-- Don't guess intent. Mark an unclear item "unclear" instead of raising its priority.
-- Keep personal details to what the item needs. Never paste full transcripts into the log.
+- No item without the conversation it came from. Keep inference apart from evidence.
+- Mask phone numbers to their last 3 digits unless the user needs them in full. Never paste full transcripts.
 - Reply in the user's language.

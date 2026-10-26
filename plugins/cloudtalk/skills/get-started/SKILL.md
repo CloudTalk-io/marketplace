@@ -47,6 +47,12 @@ How to run the first three:
 - **AI agent calls a customer:** ask which customer if the user didn't say. Find them with `cloudtalk_list_contacts`, pick the outbound agent from `cloudtalk_list_voice_agents` whose name fits the task (check with `cloudtalk_get_voice_agent`, and ask if several fit), then call `cloudtalk_trigger_aiva_call` without `confirm` to get the preview. The call carries only the agent and the number, not details like the appointment time: tell the user what the agent will do from its own setup. See Approvals below.
 - **AI agents and team:** `cloudtalk_list_voice_agents`, then `cloudtalk_search_calls` for last week once per voice agent (`voice_agent_id`) and once for all answered calls. Report the totals side by side, and name the date range.
 
+After the first task, suggest the one skill that fits what the user did next:
+
+- `conversation-insight-log`: what needs attention from this week's calls.
+- `sales-lead-scoring`: which leads to call first.
+- `service-scorecard`: coaching from support calls.
+
 ## Approvals
 
 Reads run straight away. Anything that sends or changes something (an SMS, a call, a campaign start, a contact edit, a new voice agent) works in two steps:

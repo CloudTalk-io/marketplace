@@ -34,9 +34,10 @@ Tiers: **Hot** 70 and up, **Warm** 40 to 69, **Cold** under 40.
 
 ## 4. Present the ranking
 
-1. A table sorted by score: Lead | Company | Score | Tier | Strongest signal | Missing | Next step | Last call (date, id).
-2. Under it, the 3 leads to call today, each with one sentence on why and the question that fills its biggest unknown.
-3. Say once that scores rank leads from what was said on calls; they are not facts about the customer.
+1. One line of coverage: the window (exact dates), leads scored, and calls read and skipped.
+2. A table sorted by score: Lead | Company | Score | Tier | Strongest signal | Missing | Next step | Last call (date, id).
+3. Under it, the 3 leads to call today, each with one sentence on why and the question that fills its biggest unknown.
+4. Say once that scores rank leads from what was said on calls; they are not facts about the customer.
 
 ## 5. Offer next steps
 
@@ -50,5 +51,5 @@ Offer these, and do them only when the user agrees. Each one is a write, so the 
 
 - Show the evidence. The user must see why a lead scored high.
 - Leads who only reached voicemail or an AI Voice Agent have no transcript. List them as "not enough data" instead of scoring them.
-- Keep personal details to what the ranking needs.
+- Keep personal details to what the ranking needs. Mask phone numbers to their last 3 digits unless the user needs them in full.
 - Reply in the user's language.

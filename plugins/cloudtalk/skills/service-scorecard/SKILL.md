@@ -36,7 +36,7 @@ Call score = points earned / points possible, as a percentage. Agent score = the
 ## 4. Present the scorecard
 
 1. Per agent: Agent | Calls scored | Score | Strongest criterion | One coaching point | Example call (date, id) with a quote of at most 15 words.
-2. Team summary: average score, the criterion missed most often, calls skipped and why.
+2. Team summary: the window (exact dates), average score, the criterion missed most often, and calls skipped and why.
 3. Per-call detail only if the user asks.
 
 ## 5. Offer next steps
@@ -52,4 +52,5 @@ Offer these, and do them only when the user agrees.
 - One coaching point per agent, specific and kind, not a list of faults.
 - Present scores as coaching input, not as a performance rating.
 - Calls handled by an AI Voice Agent have no transcript yet; leave them out.
+- Mask phone numbers to their last 3 digits, and keep quotes short.
 - Reply in the user's language.
