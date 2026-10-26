@@ -35,14 +35,16 @@ Pick the three that fit what step 2 found, in this order of preference, and show
 | Show it when | Task |
 |---|---|
 | Always | Who called yesterday that we missed, and who should we call back first? |
-| The account has AI Voice Agents | Compare last week's calls handled by our AI Voice Agents and by my team |
+| The account has an outbound AI Voice Agent | Have our AI Voice Agent call a customer to confirm their appointment |
 | No AI Voice Agents yet | Set up an AI Voice Agent that answers questions from our website |
+| The account has AI Voice Agents | Compare last week's calls handled by our AI Voice Agents and by my team |
 | Recent calls carry AI insights | Find this week's calls with negative sentiment and tell me what went wrong |
 | The account has campaigns | How are my running campaigns doing, and which one should I pause? |
 
-How to run the first two:
+How to run the first three:
 
 - **Missed calls:** `cloudtalk_search_calls` with `status: "missed"` for yesterday, then `cloudtalk_get_contact_interactions_summary` for at most 10 callers. Rank callbacks by how often the caller tried and how recent their last contact was. Say why each caller is ranked where they are.
+- **AI agent calls a customer:** ask which customer if the user didn't say. Find them with `cloudtalk_list_contacts`, pick the outbound agent from `cloudtalk_list_voice_agents` whose name fits the task (check with `cloudtalk_get_voice_agent`, and ask if several fit), then call `cloudtalk_trigger_aiva_call` without `confirm` to get the preview. The call carries only the agent and the number, not details like the appointment time: tell the user what the agent will do from its own setup. See Approvals below.
 - **AI agents and team:** `cloudtalk_list_voice_agents`, then `cloudtalk_search_calls` for last week once per voice agent (`voice_agent_id`) and once for all answered calls. Report the totals side by side, and name the date range.
 
 ## Approvals

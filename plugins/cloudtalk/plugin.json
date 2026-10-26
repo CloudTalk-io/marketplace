@@ -39,7 +39,7 @@
         "termsOfServiceURL": "https://www.cloudtalk.io/terms-and-conditions/",
         "defaultPrompt": [
           "Who called yesterday that we missed, and who should we call back first?",
-          "Compare last week's calls handled by our AI Voice Agents and by my team",
+          "Have our AI Voice Agent call a customer to confirm their appointment",
           "Set up an AI Voice Agent that answers questions from our website"
         ],
         "brandColor": "#0527FF",
@@ -57,10 +57,10 @@
               "expected_behavior": "Lists yesterday's missed calls with caller and time, ranks who to call back first with a reason for each, and says so plainly when there were none."
             },
             {
-              "description": "AI Voice Agents compared with the team",
-              "prompt": "Compare last week's calls handled by our AI Voice Agents and by my team",
-              "tools_triggered": "cloudtalk_list_voice_agents, cloudtalk_search_calls",
-              "expected_behavior": "Reports last week's call totals per AI Voice Agent and for the team side by side, names the date range, and invents no numbers."
+              "description": "AI Voice Agent calls a customer",
+              "prompt": "Have our AI Voice Agent call a customer to confirm their appointment",
+              "tools_triggered": "cloudtalk_list_voice_agents, cloudtalk_list_contacts, cloudtalk_trigger_aiva_call",
+              "expected_behavior": "Finds an outbound AI Voice Agent and the customer, asks which customer if unclear, shows a preview of the call, and places it only after the user approves."
             },
             {
               "description": "Build an AI Voice Agent",
@@ -75,10 +75,10 @@
               "expected_behavior": "Finds the most recent answered call and returns its transcript and summary, or explains that the call has not been analyzed."
             },
             {
-              "description": "Live queues",
-              "prompt": "How are my call queues doing right now?",
-              "tools_triggered": "cloudtalk_realtime_group_stats",
-              "expected_behavior": "Returns current agents online, waiting callers and wait times per group, without inventing groups."
+              "description": "AI Voice Agents compared with the team",
+              "prompt": "Compare last week's calls handled by our AI Voice Agents and by my team",
+              "tools_triggered": "cloudtalk_list_voice_agents, cloudtalk_search_calls",
+              "expected_behavior": "Reports last week's call totals per AI Voice Agent and for the team side by side, names the date range, and invents no numbers."
             }
           ],
           "negative": [
