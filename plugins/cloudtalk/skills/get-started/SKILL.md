@@ -49,7 +49,7 @@ How to run the first three:
 
 After the first task, suggest the one skill that fits what the user did next:
 
-- `open-loops`: what's still open after this week's calls, and who should close it.
+- `conversation-insights`: what's still open after this week's calls, and who should close it.
 - `next-best-call`: who to call next, and what an AI Voice Agent can handle.
 - `call-coach`: coaching for the team and the AI Voice Agents.
 

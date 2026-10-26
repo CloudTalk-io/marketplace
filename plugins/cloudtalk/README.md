@@ -9,7 +9,7 @@ This plugin connects your AI assistant to your CloudTalk account through the Clo
 | Skill | What it does | Needs |
 |---|---|---|
 | [`get-started`](./skills/get-started/SKILL.md) | Checks the connection, finds what your account has (AI Voice Agents, call insights, campaigns), and offers three first tasks that work on it. | Essential plan |
-| [`open-loops`](./skills/open-loops/SKILL.md) | Finds what is still open after your calls (unanswered questions, broken promises, missed callers, risks) and who should close each loop: a person or an AI Voice Agent. | Conversation Intelligence |
+| [`conversation-insights`](./skills/conversation-insights/SKILL.md) | Turns recent conversations into open loops: what is still owed after your calls (unanswered questions, broken promises, missed callers, risks) and who should close each loop: a person or an AI Voice Agent. | Conversation Intelligence |
 | [`next-best-call`](./skills/next-best-call/SKILL.md) | Ranks leads by readiness from what was said on calls, and picks the next move and who makes it: you, an AI Voice Agent, or a text. | Conversation Intelligence |
 | [`call-coach`](./skills/call-coach/SKILL.md) | Coaches your team and your AI Voice Agents from real calls: one moment to keep, one to change, and a better line or setup change. | Conversation Intelligence |
 

@@ -1,11 +1,11 @@
 ---
-name: open-loops
-description: Find the open loops in recent CloudTalk conversations, meaning questions not answered, promises not kept, callers not called back and risks not handled, and say who should close each one, a person or an AI Voice Agent. Use when the user asks what needs attention, what's still open, what the team owes customers, who to follow up with, or for a daily or weekly call digest. It only reads, and it is not a call-volume report. Summaries need Conversation Intelligence.
+name: conversation-insights
+description: Turn recent CloudTalk conversations into insights you can act on. It finds the open loops, meaning questions not answered, promises not kept, callers not called back and risks not handled, and say who should close each one, a person or an AI Voice Agent. Use when the user asks what needs attention, what's still open, what the team owes customers, who to follow up with, or for a daily or weekly call digest. It only reads, and it is not a call-volume report. Summaries need Conversation Intelligence.
 ---
 
-# Open loops
+# Conversation insights
 
-CloudTalk is the agent-first phone system: AI agents answer first, humans close. This skill finds what is still open after the conversations, and who should close it.
+CloudTalk is the agent-first phone system: AI agents answer first, humans close. This skill reads recent conversations and turns them into open loops, meaning things still owed to a customer, each with who should close it.
 
 Goal: a short list a manager can clear in one sitting. Every loop points to the conversation it came from. Explicit user instructions always win over this skill.
 
