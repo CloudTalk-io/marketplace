@@ -1,0 +1,11 @@
+interface:
+  display_name: "Call coach"
+  short_description: "Coaching for your team and AI Voice Agents"
+  default_prompt: "Use $call-coach to review last week's support calls and give each person and AI agent one thing to keep and one to change."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "cloudtalk"
+      description: "CloudTalk phone system"
+      transport: "streamable_http"
+      url: "https://mcp.cloudtalk.io"

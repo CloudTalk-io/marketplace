@@ -1,0 +1,11 @@
+interface:
+  display_name: "Open loops"
+  short_description: "What's still open after your calls, and who closes it"
+  default_prompt: "Use $open-loops to find what's still open after this week's CloudTalk calls and who should close each loop."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "cloudtalk"
+      description: "CloudTalk phone system"
+      transport: "streamable_http"
+      url: "https://mcp.cloudtalk.io"

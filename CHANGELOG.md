@@ -8,8 +8,8 @@ marketplace (Check for updates, or Sync automatically).
 ## 0.3.0 — 2026-10-26
 
 - **New plugin: CloudTalk (`cloudtalk`) 0.1.0.** Connects to the CloudTalk MCP at `https://mcp.cloudtalk.io`
-  with sign-in (OAuth, no API key) and ships four skills: `get-started`, `conversation-insight-log`,
-  `sales-lead-scoring` and `service-scorecard`. The same folder carries the ChatGPT
+  with sign-in (OAuth, no API key) and ships four skills: `get-started`, `open-loops`,
+  `next-best-call` and `call-coach`. The same folder carries the ChatGPT
   plugin manifests (`plugin.json`, `mcp.json`), so it is also the package for OpenAI's plugin directory.
   CloudTalk VoiceAgent Builder is unchanged (0.2.1).
 

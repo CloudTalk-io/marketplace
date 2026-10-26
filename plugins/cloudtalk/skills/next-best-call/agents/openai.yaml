@@ -1,0 +1,11 @@
+interface:
+  display_name: "Next best call"
+  short_description: "Who to call next, and what your AI agent can take"
+  default_prompt: "Use $next-best-call to rank my leads from the last 14 days and tell me who to call in the next hour."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "cloudtalk"
+      description: "CloudTalk phone system"
+      transport: "streamable_http"
+      url: "https://mcp.cloudtalk.io"

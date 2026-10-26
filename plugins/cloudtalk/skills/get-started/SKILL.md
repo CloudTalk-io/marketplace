@@ -45,13 +45,13 @@ How to run the first three:
 
 - **Missed calls:** `cloudtalk_search_calls` with `status: "missed"` for yesterday, then `cloudtalk_get_contact_interactions_summary` for at most 10 callers. Rank callbacks by how often the caller tried and how recent their last contact was. Say why each caller is ranked where they are.
 - **AI agent calls a customer:** ask which customer if the user didn't say. Find them with `cloudtalk_list_contacts`, pick the outbound agent from `cloudtalk_list_voice_agents` whose name fits the task (check with `cloudtalk_get_voice_agent`, and ask if several fit), then call `cloudtalk_trigger_aiva_call` without `confirm` to get the preview. The call carries only the agent and the number, not details like the appointment time: tell the user what the agent will do from its own setup. See Approvals below.
-- **AI agents and team:** `cloudtalk_list_voice_agents`, then `cloudtalk_search_calls` for last week once per voice agent (`voice_agent_id`) and once for all answered calls. Report the totals side by side, and name the date range.
+- **AI agents and team:** `cloudtalk_list_voice_agents`, then `cloudtalk_get_voice_agent` for each to get its numeric id (`voice_agent.voice_agent_id`). Call `cloudtalk_search_calls` for last week once per voice agent with `voice_agent_id` set to that numeric id, and once for all answered calls. Report the totals side by side, and name the date range.
 
 After the first task, suggest the one skill that fits what the user did next:
 
-- `conversation-insight-log`: what needs attention from this week's calls.
-- `sales-lead-scoring`: which leads to call first.
-- `service-scorecard`: coaching from support calls.
+- `open-loops`: what's still open after this week's calls, and who should close it.
+- `next-best-call`: who to call next, and what an AI Voice Agent can handle.
+- `call-coach`: coaching for the team and the AI Voice Agents.
 
 ## Approvals
 
@@ -66,8 +66,8 @@ Explain this once, in one sentence, before the first write of the conversation. 
 
 - Reply in the user's language.
 - Never invent numbers, names, or call content. If a read returns nothing, say so.
-- Calls handled by an AI Voice Agent have no transcript. Say so instead of retrying.
-- Empty summary, sentiment, or transcript fields mean Conversation Intelligence isn't on the plan, or the call hasn't been analyzed yet.
+- Calls under 30 seconds have no transcript or insights, whether a person or an AI Voice Agent took them. Say so instead of retrying.
+- Empty summary, sentiment or transcript fields on a longer call mean Conversation Intelligence isn't on the plan, or the call hasn't been analyzed yet.
 - The account allows 60 requests per minute. Fetch details for at most 10 calls at a time, and on a rate-limit error wait a minute before retrying.
 - Include phone numbers and customer details only when the task needs them.
 

@@ -9,16 +9,16 @@ This plugin connects your AI assistant to your CloudTalk account through the Clo
 | Skill | What it does | Needs |
 |---|---|---|
 | [`get-started`](./skills/get-started/SKILL.md) | Checks the connection, finds what your account has (AI Voice Agents, call insights, campaigns), and offers three first tasks that work on it. | Essential plan |
-| [`conversation-insight-log`](./skills/conversation-insight-log/SKILL.md) | A prioritized weekly log of requests, risks, opportunities, commitments and recurring friction, each tied to the call it came from. | Conversation Intelligence |
-| [`sales-lead-scoring`](./skills/sales-lead-scoring/SKILL.md) | Scores leads from recent sales calls from 0 to 100 and ranks who to call back first, with the evidence. | Conversation Intelligence |
-| [`service-scorecard`](./skills/service-scorecard/SKILL.md) | Scores support calls against a six-point service checklist and gives each agent a strength and one coaching point. | Conversation Intelligence |
+| [`open-loops`](./skills/open-loops/SKILL.md) | Finds what is still open after your calls (unanswered questions, broken promises, missed callers, risks) and who should close each loop: a person or an AI Voice Agent. | Conversation Intelligence |
+| [`next-best-call`](./skills/next-best-call/SKILL.md) | Ranks leads by readiness from what was said on calls, and picks the next move and who makes it: you, an AI Voice Agent, or a text. | Conversation Intelligence |
+| [`call-coach`](./skills/call-coach/SKILL.md) | Coaches your team and your AI Voice Agents from real calls: one moment to keep, one to change, and a better line or setup change. | Conversation Intelligence |
 
 ## Example prompts
 
 - Who called yesterday that we missed, and who should we call back first?
 - Have our AI Voice Agent call a customer to confirm their appointment
 - Set up an AI Voice Agent that answers questions from our website
-- Give me this week's conversation insight log
+- What's still open after this week's calls?
 
 ## Install
 
