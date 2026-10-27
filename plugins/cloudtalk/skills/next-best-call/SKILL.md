@@ -59,7 +59,7 @@ Don't turn the signals into a numeric score. The point is the next move, not pre
 
 ## 6. Act only when asked
 
-Calls, AI agent calls, texts, tags ("Ready" with `cloudtalk_bulk_tag_contacts` in `mode: "append"`) and notes (`cloudtalk_add_contact_note`) each show a preview first. The app asks the user to approve them.
+Calls, AI agent calls, texts, tags ("Ready" with `cloudtalk_bulk_tag_contacts` in `mode: "append"`) and notes (`cloudtalk_add_contact_note`) each run on one call, and the app asks the user to approve it. Say who gets what before each one.
 
 ## Rules
 

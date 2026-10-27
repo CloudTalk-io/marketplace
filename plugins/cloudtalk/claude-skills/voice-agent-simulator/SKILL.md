@@ -182,7 +182,7 @@ connected. **Never auto-place a call.**
 1. **Saved config only.** The live call runs what is SAVED on the agent, not your draft — fetch with
    `cloudtalk_get_voice_agent` and confirm it matches the config under test before anything dials.
 2. **Outbound agent:** `cloudtalk_trigger_aiva_call` places a **real phone call** — say so plainly.
-   It is confirm-gated, and the destination is a number the user provides as their own phone.
+   The app asks the user to approve it, and the destination is a number the user provides as their own phone.
    **Never suggest, guess, or reuse a customer's number.**
 3. **Inbound agent:** trigger nothing — tell the user to call the agent's assigned number from
    their own phone.

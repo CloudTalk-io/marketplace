@@ -20,6 +20,10 @@ marketplace (Check for updates, or Sync automatically).
 - **The API key stays optional.** The `cloudtalk-voice-agents` connection
   (`https://mcp.cloudtalk.io/voice-agents`, HTTP Basic) still carries the voice agent tools for anyone who
   prefers a key.
+- **One approval per send or change.** The skills make each write in a single call, and Claude or ChatGPT
+  asks you once to allow it; they no longer ask the CloudTalk MCP for a preview first. Pairs with the
+  CloudTalk MCP release that makes every write act on its first call (cloudtalk-mcp
+  `feat/TRIVIAL-one-allow-writes`). Against an older server the skills still handle the preview step.
 - **Upgrade once.** The marketplace's `renames` entry moves your settings to `cloudtalk@cloudtalk`. Then
   install it (`/plugin install cloudtalk@cloudtalk`) and sign in, or paste your API key again: a saved key
   doesn't carry over to the new name. Tool permission rules now start with `mcp__plugin_cloudtalk_`.

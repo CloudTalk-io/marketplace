@@ -53,7 +53,7 @@ Offer, and do only when the user agrees:
 
 - draft the 1:1 notes
 - tag the reviewed calls with `cloudtalk_add_call_tags`, using a tag that exists in `cloudtalk_list_call_tags`
-- for an AI Voice Agent, prepare the setup change with `cloudtalk_update_voice_agent`, which shows a preview and asks for approval
+- for an AI Voice Agent, describe the setup change, then save it with `cloudtalk_update_voice_agent`; the app asks the user to approve it
 
 ## Rules
 

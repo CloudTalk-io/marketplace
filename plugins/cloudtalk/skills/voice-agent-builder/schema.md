@@ -640,7 +640,7 @@ company-scoped reference (`toolReferenceId`, `agentId`, `groupId`, `knowledgeBas
   schema-only and run as-is. Or check by hand against this doc + `fields.json` + the dependency rules
   (§3, §6, §7).
 - **The platform check is the save itself.** In connected mode there is no separate validate tool: the
-  confirm-gated write (`cloudtalk_update_voice_agent` / `cloudtalk_create_voice_agent`) validates the
+  write (`cloudtalk_update_voice_agent` / `cloudtalk_create_voice_agent`) validates the
   document and returns the platform's verdict — so the local validator runs first, and the write is the
   authority ([mcp-tools](./mcp-tools.md)). Offline, the dashboard's Expert-Mode save plays the same role:
   a violation comes back as a `400`/`422` with a descriptive message.

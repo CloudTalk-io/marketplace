@@ -78,7 +78,7 @@ Offer, and act only when the user agrees. The app asks for approval each time:
 - send a follow-up text (`cloudtalk_send_sms`)
 - have an AI Voice Agent make the routine callback (`cloudtalk_trigger_aiva_call`)
 
-Each of these shows a preview first.
+Say who gets what before each one.
 
 ## Rules
 

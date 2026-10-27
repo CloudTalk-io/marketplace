@@ -25,14 +25,14 @@ the dashboard's Expert Mode and copy IDs from the Dashboard
 |---|---|---|
 | `cloudtalk_list_voice_agents` | List the company's VoiceAgents (id, name, direction) | **Pages** (see *Reading lists*) and cached a few minutes — a just-created agent can be missing; see *Write safety* |
 | `cloudtalk_get_voice_agent` | Fetch one agent's **complete config document** | The mandatory first step of every update — and the way to read a real, working `voice` ID. It does **not** pre-validate the 24-hex shape, so a numeric id fails upstream rather than at dispatch (`trigger_aiva_call` does check) |
-| `cloudtalk_create_voice_agent` | Create an agent from a config | Write — confirm-gated; the result carries the new `id`, a `dashboard_url`, and possibly `error_codes` (*Write safety*) |
+| `cloudtalk_create_voice_agent` | Create an agent from a config | Write; the result carries the new `id`, a `dashboard_url`, and possibly `error_codes` (*Write safety*) |
 | `cloudtalk_update_voice_agent` | Save a config to an existing agent (`voice_agent_id`) | Write — **merges** the fields you pass onto a fresh read (collections replaced wholesale); `apply_optimized_settings: true` applies the platform's optimized list; see Write safety |
 | `cloudtalk_list_knowledge_bases` | List KBs: id, name, `description`, type (`CUSTOM`/`URL`/`FILE`), status, attached agents | Link only `ACTIVE` KBs. **Pages**, and cached ~5 min — so a `SYNCHRONIZING` → `ACTIVE` flip can show up a cache TTL late |
 | `cloudtalk_create_knowledge_base` | Create a KB: `custom` (you supply the text, `ACTIVE` at once) or `url` (ingested asynchronously, starts `SYNCHRONIZING`) | Write — name ≤ 50 chars; **text is frozen after creation**; **`description` is unsettable on create** — there is no input field for it, though the create response and the list read both carry it; file KBs are Dashboard-only |
 | `cloudtalk_list_voice_agent_tools` | List custom tools, optionally filtered to one agent | **Never returns header/param values** — secrets go in, never come back out. **Pages** |
 | `cloudtalk_create_voice_agent_tool` | Create a custom HTTP tool, optionally **attached** to agents in the same call | Write — name ≤ 64 (alnum + `-_`); method `GET/POST/PUT/DELETE/PATCH`; the URL may embed `{{param}}`; `awaiting_response_message` ≤ 4096; headers `CONST`\|`SECRET`; query/body params `CONST`\|`PARAM`\|`LLM`, each with a data type; **`voice_agent_config_ids`** attaches the new tool to those agents on create |
 | `cloudtalk_update_voice_agent_tool` | Edit a custom tool | Write — **partial via read-modify-write**: the MCP fetches the tool, merges your fields, and sends a full replace upstream. **Omit** a key to preserve it; an explicit `[]` **clears** that list; **never send `null`** — the MCP rejects a null argument before the handler ever runs, so it preserves nothing. No version precondition upstream, so a concurrent Dashboard edit in that window is lost — re-read before editing a tool someone else is touching |
-| `cloudtalk_assign_tool_to_voice_agent` | Attach a tool that **already exists** to an agent | Write — idempotent; an assign that changes nothing is a no-op and needs no confirmation (with the matching unassign no-op, the single exception to *Every write is confirm-gated* under Write safety). For a brand-new tool, prefer `voice_agent_config_ids` on create |
+| `cloudtalk_assign_tool_to_voice_agent` | Attach a tool that **already exists** to an agent | Write — idempotent; an assign that changes nothing is a no-op and writes nothing (so does the matching unassign). For a brand-new tool, prefer `voice_agent_config_ids` on create |
 | `cloudtalk_unassign_tool_from_voice_agent` | Detach a tool from an agent | Write — idempotent; an unassign that changes nothing is the same no-op exception as assign. Other agents keep the tool |
 | `cloudtalk_trigger_aiva_call` | Have an agent call a number: `voice_agent_id` (the **24-hex config id**) + `call_number` | Write — **places a real outbound phone call**. `call_number` is strict E.164: a leading `+` then digits only, no spaces or separators. The result carries a `session_id` — the correlation key for that attempt. See Test calls |
 
@@ -89,11 +89,13 @@ called. Only the get and write responses carry the numeric one, and there it is 
 
 ## Write safety
 
-- **Every write is confirm-gated** (one no-op exception below). Called without confirmation, a write
-  returns `status: "confirmation_required"` **plus a preview of what would change — as a successful
-  result**, not an error. Present that preview to the user and wait for their decision; **never
-  self-approve** or re-invoke with confirmation on your own. *The one no-op exception:* an `assign` or an
-  `unassign` that changes nothing is idempotent and needs no confirmation.
+- **Every write acts on its first call, and the app asks the user to approve it.** Claude or ChatGPT
+  shows its own approval prompt before each write; that prompt is the user's one approval. So say in plain
+  words what will change on which agent before you call, write only what the user asked for, and never
+  report a write as saved until its result says so. An `assign` or `unassign` that changes nothing is a
+  no-op. *Older servers:* a write that answers `status: "confirmation_required"` with a preview did
+  nothing yet. That is a success state, not an error: show the preview, and call again with
+  `"confirm": true` only once the user agrees.
 - **Never send `null` for any argument.** The MCP rejects a null argument before the handler sees it, on
   every tool — omit the argument instead of passing null.
 - **Updates merge onto the stored agent.** `cloudtalk_update_voice_agent` reads the agent and merges the
@@ -102,9 +104,8 @@ called. Only the get and write responses carry the numeric one, and there it is 
   `guardrails`, `secondaryLanguages`, `knowledgeBaseIds`): to change one entry, pass the whole list.
   Still **get → modify → update** — the read gives you the current lists and the real IDs; never compose an
   update from memory or a stale copy.
-- **Applying optimized settings is its own opt-in.** The update preview reports
-  `optimized_settings_available` and `optimized_settings` — the platform's `optimizedSettings` for the
-  agent's current setup (`provider`, `llm`, the ElevenLabs turn settings, the latest `minorVersion`;
+- **Applying optimized settings is its own opt-in.** The agent's read (`cloudtalk_get_voice_agent`)
+  carries `optimizedSettings`: the platform's picks for the agent's current setup (`provider`, `llm`, the ElevenLabs turn settings, the latest `minorVersion`;
   `schema.md` §5). Nothing in it is applied on its own. `apply_optimized_settings: true` copies every
   change's `to` into this save, `minorVersion` included, and is refused when nothing is available, when
   you also send a value for a listed path that is neither its `from` nor its `to`, or when you send a
@@ -138,7 +139,8 @@ called. Only the get and write responses carry the numeric one, and there it is 
   (only `/validate` and the bundled validator flag it) — so run the validator to catch a typo the save
   would swallow.
 - **The save is the platform's verdict.** There is no separate validate tool: run the bundled validator
-  first (below), then let the confirmed write return the server's answer.
+  first (below), then let the write return the server's answer. `cloudtalk_update_voice_agent` also
+  reports `changed_fields` and `applied_optimized_settings`.
 - **Read what a successful write returns.** Three writes carry a **`dashboard_url`** — create and update
   VoiceAgent, and create knowledge base: hand that link to the user instead of describing where to
   click. The tool and assignment writes and `cloudtalk_trigger_aiva_call` return none, so don't promise a
@@ -172,7 +174,7 @@ called. Only the get and write responses carry the numeric one, and there it is 
 ## Test calls
 
 `cloudtalk_trigger_aiva_call` places a **real outbound phone call** from the agent to the number you pass
-— it is confirm-gated like every write, and the destination must be a number the **user names**
+— the app asks the user to approve it like every write, and the destination must be a number the **user names**
 (typically their own phone), never one picked from a list. For an **inbound** agent, the test is the
 other way around: the user calls the agent's assigned number.
 

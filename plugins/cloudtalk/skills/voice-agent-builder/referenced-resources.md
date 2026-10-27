@@ -104,7 +104,7 @@ find the resource kind below.
   cannot be defined inline.
 - **Connected:** `cloudtalk_list_voice_agent_tools` to find an existing tool (optionally filtered by
   agent); `cloudtalk_create_voice_agent_tool` to author one — pass `voice_agent_config_ids` and the
-  create **attaches the tool to those agents in the same confirm-gated write**, so a new tool is one
+  create **attaches the tool to those agents in the same write**, so a new tool is one
   write, not create-then-assign; `cloudtalk_update_voice_agent_tool` to edit one.
   `cloudtalk_assign_tool_to_voice_agent` / `cloudtalk_unassign_tool_from_voice_agent` are for a tool that
   **already exists** — wiring it to another agent, or re-attaching after a clone (tool assignments don't

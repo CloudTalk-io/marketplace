@@ -105,8 +105,8 @@ tab). The other skills need a connection.
   through the MCP is still evolving.
 - **Some operations stay in the dashboard** for now: inbound number routing, calendar connections,
   file-based knowledge bases, and looking up a ring group's extension.
-- **Every account write is confirm-gated** (one no-op exception: an assign/unassign that changes nothing).
-  Claude shows what it's about to change and waits for you; nothing is saved to your account silently.
+- **You approve every account write.** Claude says what it's about to change, then asks you once to
+  allow it; nothing is saved to your account silently.
 
 ## Updates & changelog
 

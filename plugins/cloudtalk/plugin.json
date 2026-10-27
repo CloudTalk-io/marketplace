@@ -64,13 +64,13 @@
               "description": "AI Voice Agent calls a customer",
               "prompt": "Have our AI Voice Agent call a customer to confirm their appointment",
               "tools_triggered": "cloudtalk_list_voice_agents, cloudtalk_list_contacts, cloudtalk_trigger_aiva_call",
-              "expected_behavior": "Finds an outbound AI Voice Agent and the customer, asks which customer if unclear, shows a preview of the call, and places it only after the user approves."
+              "expected_behavior": "Finds an outbound AI Voice Agent and the customer, asks which customer if unclear, says who it will call and why, and places the call only after the user approves it."
             },
             {
               "description": "Build an AI Voice Agent",
               "prompt": "Set up an AI Voice Agent that answers questions from our website",
               "tools_triggered": "cloudtalk_create_knowledge_base, cloudtalk_create_voice_agent",
-              "expected_behavior": "Asks for the website URL if missing, shows a preview of the knowledge base and agent, and creates nothing until the user approves."
+              "expected_behavior": "Asks for the website URL if missing, describes the knowledge base and agent, and creates nothing until the user approves."
             },
             {
               "description": "Read one call",

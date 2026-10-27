@@ -500,8 +500,7 @@ and the shape of the agent (§7b). `provider` and `llm` are the agent's **own st
 them, chosen with `schema.md` §5 — and every value you emit **stays as written**: nothing re-evaluates it
 on a later save, and a later edit keeps it unless that edit sends a new one. So depart from the platform's
 pick, or set an optional knob below, **only when you can name the reason**. When the setup moves away from
-what the platform would pick, its pick is listed in `optimizedSettings` (the MCP update preview's
-`optimized_settings`, and the dashboard's Optimized settings notice where it is enabled); that is a
+what the platform would pick, its pick is listed in `optimizedSettings` (on the agent's MCP read, and in the dashboard's Optimized settings notice where it is enabled); that is a
 suggestion for the user, not an error. For the optional knobs, silence (an omitted key) is a real answer,
 and usually the right one.
 

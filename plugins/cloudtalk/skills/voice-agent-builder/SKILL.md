@@ -20,7 +20,7 @@ config.
 
 **Two modes, one contract.** If the CloudTalk MCP tools (`cloudtalk_*`) are available, you are
 **connected**: read the agent with `cloudtalk_get_voice_agent` instead of asking for a paste, resolve
-account IDs with the `list_*` reads, and save through the confirm-gated write tools
+account IDs with the `list_*` reads, and save through the write tools, each of which the app asks the user to approve
 (`mcp-tools.md`, `generator-contract.md` *Connected mode*). Otherwise you are **offline**: the user pastes
 their config, you return JSON for the dashboard's Advanced/code tab, and the save is an edit (`PUT`).
 Either way the agent the user made in the UI is usually a **blank shell to unlock Expert Mode**: generate
@@ -194,9 +194,9 @@ Then run the `behavioral-guidance.md` §8 self-check once more.
 
 **No way to run Python here** (some apps run skills without a shell): check the draft by hand against
 every gate above, the guardrails below and the `behavioral-guidance.md` §8 self-check, and say in the
-status line that the script didn't run. Connected, the confirmed save is still the platform's verdict
-(`mcp-tools.md` *Write safety*): a refused save stores nothing and says why, so fix it, show the new
-preview and ask again.
+status line that the script didn't run. Connected, the save is still the platform's verdict
+(`mcp-tools.md` *Write safety*): a refused save stores nothing and says why, so fix it, say what changed,
+and save again once the user agrees.
 
 ### 9 · Critique pass — non-trivial configs only
 
@@ -210,9 +210,10 @@ any finding you deliberately override.
 
 ### 10 · Return — `generator-contract.md` output shape
 
-**Connected:** validate (step 8), then write via `cloudtalk_update_voice_agent` (or `create`) — present the
-confirmation preview, wait for the user, and after the confirmed save report the agent's **name + id**,
-what changed, what remains, and how to verify (a test call + `cloudtalk_get_call_transcript`). The write's
+**Connected:** validate (step 8), say what will change on which agent, then write via
+`cloudtalk_update_voice_agent` (or `create`) once the user wants it (the app asks them to approve the
+call). After the save, report the agent's **name + id**, what changed (`changed_fields`), what remains,
+and how to verify (a test call + `cloudtalk_get_call_transcript`). The write's
 structured result replaces the paste-and-see smoke test.
 
 **Offline:**
@@ -249,9 +250,10 @@ structured result replaces the paste-and-see smoke test.
 - **Connected writes are round-trips.** Never synthesize an update payload from the conversation:
   `cloudtalk_get_voice_agent` → modify → send the **whole document** back. Carry `knowledgeBaseIds`
   (omitting it unlinks every KB), `elevenLabsSettings` (present replaces wholesale) and `provider`/`llm`
-  (the agent's own values) forward. Writes are
-  confirm-gated (one no-op exception: an assign/unassign that changes nothing): **present the preview and
-  wait — never treat `confirmation_required` as an error, never confirm on the user's behalf.**
+  (the agent's own values) forward. Each write acts on its first call and the app asks the user to
+  approve it: **say what will change before you call, and write only what the user asked for.** (An older
+  server answers a write with `confirmation_required` and a preview instead: show it, and call again with
+  `"confirm": true` only once the user agrees.)
 - **Outbound number — complete it; the FE-faithful path is Automatic (`1`) + a real owned failover.**
   `defaultOutboundNumberId` **defaults to `1` (Automatic), exactly as the dashboard seeds it.** With `1`,
   `failoverOutboundNumberId` is **required in BOTH directions** and must be a real owned ID — the save `400`s

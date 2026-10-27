@@ -2,8 +2,8 @@
 
 The reference set for generating and hand-authoring **VoiceAgent v2 (Expert Mode)** JSON configs — used
 **offline** (paste the JSON into the dashboard's Advanced/code tab to edit an agent) or **connected**
-(the CloudTalk MCP reads and writes the agent directly against your account; every write asks for your
-confirmation first).
+(the CloudTalk MCP reads and writes the agent directly against your account; the app asks you to approve
+every write).
 
 > **Spine:** one tier-tagged schema is the single source of truth. Every field is tagged with an
 > `authoring` class (see below). Each doc here is a *thin lens* that points at that schema rather

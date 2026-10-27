@@ -272,13 +272,13 @@ you just deleted. No `get`, no write.
 `optimizeStreamingLatency` behaves the opposite way to `dialTime`: omitted on a write it **resets
 to `0`** rather than preserving — one more reason the update body is always the fetched document.
 
-**3. The write is the user's decision, not yours.** Every write tool is confirm-gated (one no-op
-exception: an assign/unassign that changes nothing). Called without
-confirmation it returns `status: "confirmation_required"` **plus a preview of the change, as a successful
-result** — that is a **success state, not an error and not a rejection**. Present the preview, say plainly
-what will change on which agent, and **wait**. Never self-approve, never re-invoke with confirmation on
-your own initiative, and never report the preview as a completed save. `cloudtalk_trigger_aiva_call` places
-a **real outbound phone call** — same rule, and only to a number the user names.
+**3. The write is the user's decision, not yours.** Every write acts on its first call, and the app
+(Claude or ChatGPT) asks the user to approve it: that prompt is the user's one approval. So say plainly what
+will change on which agent **before** you call, write only what the user asked for, and never report a
+write as saved until its result says so. `cloudtalk_trigger_aiva_call` places a **real outbound phone
+call**: same rule, and only to a number the user names. (An older server answers a write with
+`status: "confirmation_required"` and a preview instead: a **success state, not an error**. Show the
+preview, and call again with `"confirm": true` only once the user agrees.)
 
 **4. Validate locally first.** There is no validate tool, so
 [`scripts/validate_config.py`](./scripts/validate_config.py) **is** the pre-save gate: run it on the
@@ -302,7 +302,7 @@ step in second place, because most IDs the user would otherwise look up by hand 
 | Outbound number / SMS sender | `cloudtalk_list_numbers` — ids, E.164, and **per-channel flags**; confirm the SMS flag before wiring a `sendSms` `senderNumber` |
 | Transfer target | `cloudtalk_list_groups` (preferred) returns the **id and name only — the group's extension is not readable here**, so the default is to **scaffold the group as a disabled draft (`destination: "group"`, id/extension omitted)** (§ Transfers) for the user to finish in the dashboard. Wire the group live only if the user supplies the extension (paste, current config, or ask — Dashboard → Settings → Groups). `cloudtalk_list_agents` returns id **and** extension. Don't downgrade to an `agent` target just because its pair is complete — with a group more targets can answer before an attended transfer falls back, and a lone unavailable agent is a cold drop where advanced transfer is not enabled |
 | Knowledge base | `cloudtalk_list_knowledge_bases`, linking only `ACTIVE` ones; `cloudtalk_create_knowledge_base` (`custom` or `url`) when the content is new — its **content cannot be edited after creation**, so get the text right before the write |
-| Custom tool | `cloudtalk_list_voice_agent_tools` → `create` / `update`. **Create attaches**: `cloudtalk_create_voice_agent_tool` takes `voice_agent_config_ids`, so creating a tool for an agent is **one** confirm-gated write, not create-then-assign. `assign`/`unassign` are for wiring a tool that **already exists** — including after a clone, where tool assignments don't copy. The list **never returns header or parameter values**, so a stored secret can't be read back |
+| Custom tool | `cloudtalk_list_voice_agent_tools` → `create` / `update`. **Create attaches**: `cloudtalk_create_voice_agent_tool` takes `voice_agent_config_ids`, so creating a tool for an agent is **one** write, not create-then-assign. `assign`/`unassign` are for wiring a tool that **already exists** — including after a clone, where tool assignments don't copy. The list **never returns header or parameter values**, so a stored secret can't be read back |
 | Voice | **No MCP/plugin voice-list tool exists** — reuse the `voice` from a `cloudtalk_get_voice_agent` document (this agent's or another agent's), or pick from the four documented default voices (`schema.md` §4.4 — default `cgSgspJ2msm6clMCkdW9` Jessica; all four work on both providers). Always advise the user to pick their preferred voice in the dashboard voice picker (the full catalog lives there) |
 | Calendar integration | **No read exists** — `appointmentBooking` stays ask-or-omit with the **disabled-draft** shape (behavioral §9) until the user supplies real IDs from the Dashboard |
 | Inbound number routing | Not settable here — Dashboard only; say so instead of implying the save covers it |
@@ -311,8 +311,8 @@ Fetching is not deciding. A list with three ring groups on it is a **question fo
 for you — fetch to remove the lookup burden, then confirm which one. Where a resource genuinely doesn't
 exist and can't be created, fall back to the offline endings: **ask**, or **omit-and-instruct**.
 
-**7. Output shape, connected.** *Before* the write, the confirmation preview is your output: what changes,
-on which agent, and what is still unwired. *After a confirmed save*, report
+**7. Output shape, connected.** *Before* the write, your output is a short summary: what changes, on
+which agent, and what is still unwired. *After the save*, report
 
 - **what was written and where** — the agent's **name and id**, plus the fields that changed, and the
   **`dashboard_url`** *when the write returned one*: the VoiceAgent create/update and a KB create do,
@@ -334,7 +334,7 @@ out is another live-agent write.
 ## Output shape
 
 The offline shape — you are handing over JSON for the user to paste. In connected mode items 1–2 are
-replaced by the confirmation preview and the post-save report (*Connected mode*, item 7); items 3–4 stand
+replaced by the pre-write summary and the post-save report (*Connected mode*, item 7); items 3–4 stand
 unchanged. Return:
 
 1. **The importable JSON** — pure, valid, **schema-only** v2 JSON that saves cleanly *and* runs as-is,
