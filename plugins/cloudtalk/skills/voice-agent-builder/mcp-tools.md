@@ -1,6 +1,6 @@
 # VoiceAgent v2 — connected mode (CloudTalk MCP tools)
 
-> Semantics last verified against the MCP server source and live gateway: **2026-09-02**.
+> Semantics last verified against the MCP server source: **2026-10-27**, for production and for the release in which every write acts on its first call.
 
 The connected-mode reference: the 20 voice agent tools the CloudTalk MCP exposes for reading real IDs, saving configs, and placing test calls — plus the write-safety rules and what still needs the Dashboard.
 
@@ -52,7 +52,7 @@ Read-only — useful for verifying behavior after a test call.
 
 | Tool | Purpose | Key caveat |
 |---|---|---|
-| `cloudtalk_health_check` | Confirm the MCP is reachable and see which company/user the sign-in or key resolved to | Run it first when a tool fails — it separates an auth/tenant problem from a data problem. Makes **no** API call of its own, so it proves the credential was accepted, not that an upstream is healthy. **Check the echoed company id is the account you meant** (silently: never show a company id, user id or tool name to the user) — and the **`role_id`**: a non-admin key can still `cloudtalk_list_voice_agents`, but fails the other config reads (`get_voice_agent`, `list_knowledge_bases`, `list_voice_agent_tools`) **and every write** with an authorization error, which is the first thing to check when one list works and nothing else does. The response also carries **`rollout_enabled`**, which tells a *tenant not enabled for MCP* 403 apart from an auth/role problem |
+| `cloudtalk_health_check` | Confirm the MCP is reachable and see which company/user the sign-in or key resolved to | Run it first when a tool fails: it separates an auth/tenant problem from a data problem. Makes **no** API call of its own, so it proves the credential was accepted, not that an upstream is healthy. **Check the echoed company id is the account you meant** (silently: never show a company id, user id or tool name to the user) — and the **`role_id`**: a non-admin key can still `cloudtalk_list_voice_agents`, but fails the other config reads (`get_voice_agent`, `list_knowledge_bases`, `list_voice_agent_tools`) **and every write** with an authorization error, which is the first thing to check when one list works and nothing else does. |
 | `cloudtalk_list_agents` | Human agents: id, name, email, **extension**, availability | Both halves of an `agent` transfer pair come from here. Still prefer groups as targets (behavioral §3.4) |
 | `cloudtalk_list_groups` | Ring groups — the preferred transfer targets | Returns **id + name only**. The `groupExtension` half is **not** in this response — take it from the Dashboard, the user, or the agent's current config |
 | `cloudtalk_list_numbers` | Company numbers: id, country/area code, name, E.164, per-channel support flags | Resolves outbound-number IDs **and** SMS senders (`sms_supported: true`). `country_code` here is the **numeric calling code** (`421`), not the ISO-2 code `cloudtalk_search_calls` wants |

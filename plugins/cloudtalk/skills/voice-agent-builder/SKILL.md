@@ -3,7 +3,7 @@ name: voice-agent-builder
 description: >-
   Build, fix, or check a CloudTalk AI Voice Agent: its VoiceAgent v2 "Expert Mode" configuration. Connected
   to CloudTalk, it creates, reads and saves the agent directly against your real account (numbers,
-  knowledge bases, tools, transfer targets; every save needs your approval and can be undone); offline, it
+  knowledge bases, tools, transfer targets; every save needs your approval, and a change to an existing agent can be undone); offline, it
   returns the JSON you paste into the
   dashboard's Advanced/code tab. Use whenever the user wants to create or edit ANY inbound
   or outbound AI voice/phone agent for CloudTalk, for any use case or industry (reception, qualification,
@@ -28,6 +28,16 @@ Offline, the agent the user made in the UI is usually a **blank shell to unlock 
 the config **fresh** for the use case and carry over **only** its environment/wiring (the outbound number
 + any real IDs) — never its prompt, skills, or behavior. The same holds connected when you rebuild an
 agent that exists. The output must be **behaviorally sound, not just schema-valid**.
+
+**Goal:** an AI Voice Agent that does the job the user described, saved after their approval or ready to
+paste, with nothing invented. **Done** means the configuration passes the validator (or the by-hand
+check), every save was approved, and the user knows the one next step. Explicit user instructions always
+win over these defaults. **Needs:** AI Voice Agents on the account and a CloudTalk Admin sign-in when
+connected; nothing offline.
+
+**Budget:** a build or fix is a handful of reads and one save, far under the account's 60 requests a
+minute, shared with colleagues. On a rate-limit error, wait a minute if the app can, then continue where
+you stopped; if it can't, stop and ask the user to say "continue". Never retry in a loop.
 
 **Connected, and no agent exists for this job yet** (the list has none that fits, or the user asks for a
 new one): **create it for them** with `cloudtalk_create_voice_agent`, after one plain-words summary of

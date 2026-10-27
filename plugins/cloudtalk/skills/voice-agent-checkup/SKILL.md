@@ -7,7 +7,7 @@ description: >-
   platform itself flags. Returns a verdict (Ready, Needs work or Don't go live), each finding with one
   concrete fix, the tests to run and a go-live checklist. Use when the user asks "is my AI agent ready",
   "can we go live", "check, review or audit my voice agent", "pre-launch check", "what's wrong with my
-  agent's setup", or right after building or changing an agent. Read-only: fixes go to the
+  agent's setup", or right after building or changing an agent. Changes nothing (a test call goes only to your own phone, when you ask): fixes go to the
   voice-agent-builder skill. Needs AI Voice Agents on the plan and a CloudTalk Admin sign-in.
 ---
 

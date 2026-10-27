@@ -9,12 +9,12 @@ This plugin connects your AI assistant to your CloudTalk account through the Clo
 
 | Skill | What it does | Needs |
 |---|---|---|
-| [`get-started`](./skills/get-started/SKILL.md) | Checks the connection, finds what your account has (AI Voice Agents, call insights, campaigns), and offers three first tasks that work on it. | Essential plan |
+| [`get-started`](./skills/get-started/SKILL.md) | Checks the connection, finds what your account has (AI Voice Agents, call insights, campaigns), and offers up to three first tasks that work on it. | Essential plan |
 | [`conversation-insights`](./skills/conversation-insights/SKILL.md) | Turns recent conversations into open loops: what is still owed after your calls (unanswered questions, broken promises, missed callers, risks) and who should close each loop: a person or an AI Voice Agent. | Conversation Intelligence |
-| [`missed-call-follow-up`](./skills/missed-call-follow-up/SKILL.md) | Finds today's missed callers nobody has reached yet, drafts a short text back to each from their history, and sends only what you approve. Can hand routine callbacks to an AI Voice Agent. | Every plan; a number with SMS for texts |
+| [`missed-call-follow-up`](./skills/missed-call-follow-up/SKILL.md) | Finds today's missed callers nobody has reached yet, drafts a short text back to each from their history, and sends only what you approve. Can hand routine callbacks to an AI Voice Agent. | No add-on; a number with SMS for texts |
 | [`call-coach`](./skills/call-coach/SKILL.md) | Coaches your team and your AI Voice Agents from real calls: one moment to keep, one to change, and a better line or setup change. | Conversation Intelligence |
 | [`voice-agent-builder`](./skills/voice-agent-builder/README.md) | Builds, fixes and validates an AI Voice Agent from a plain-language description, reusing your real numbers, knowledge bases and tools, and saves it after your approval. | AI Voice Agents; works offline too |
-| [`voice-agent-checkup`](./skills/voice-agent-checkup/SKILL.md) | Checks whether an AI Voice Agent is ready to go live: a verdict, the fix to make first, the tests to run and a go-live checklist. Read-only. | AI Voice Agents |
+| [`voice-agent-checkup`](./skills/voice-agent-checkup/SKILL.md) | Checks whether an AI Voice Agent is ready to go live: a verdict, the fix to make first, the tests to run and a go-live checklist. Changes nothing, except a test call to your own phone when you ask. | AI Voice Agents |
 | [`voice-agent-replay`](./skills/voice-agent-replay/SKILL.md) | Improves a live AI Voice Agent from its real calls: failures grouped by cause, two calls of proof each, and the setup change that fixes each one. | AI Voice Agents, Conversation Intelligence |
 | [`voice-agent-simulator`](./claude-skills/voice-agent-simulator/README.md) | Plays a difficult caller against an agent's setup and scores the call, before real customers reach it. Claude only. | Nothing; a real test call needs AI Voice Agents |
 

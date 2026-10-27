@@ -11,12 +11,12 @@ your CloudTalk account and ships eight skills. It used to be **CloudTalk VoiceAg
 
 | Skill | What it does |
 |---|---|
-| [`get-started`](./plugins/cloudtalk/skills/get-started/SKILL.md) | Checks the connection, finds what your account has, and offers three first tasks that work on it. |
+| [`get-started`](./plugins/cloudtalk/skills/get-started/SKILL.md) | Checks the connection, finds what your account has, and offers up to three first tasks that work on it. |
 | [`conversation-insights`](./plugins/cloudtalk/skills/conversation-insights/SKILL.md) | Turns recent conversations into open loops, and says who should close each one: a person or an AI Voice Agent. |
 | [`missed-call-follow-up`](./plugins/cloudtalk/skills/missed-call-follow-up/SKILL.md) | Finds today's missed callers nobody has reached yet, drafts a short text back to each from their history, and sends only what you approve. |
 | [`call-coach`](./plugins/cloudtalk/skills/call-coach/SKILL.md) | Coaches your team and your AI Voice Agents from real calls. |
 | [`voice-agent-builder`](./plugins/cloudtalk/skills/voice-agent-builder) | Generates, fixes and validates **VoiceAgent v2 (Expert Mode)** configurations for any inbound or outbound use case, and runs a structural and behavioral validator before every hand-back. Works offline too. |
-| [`voice-agent-checkup`](./plugins/cloudtalk/skills/voice-agent-checkup/SKILL.md) | Checks whether an AI Voice Agent is ready to go live: a verdict, the fix to make first, the tests to run and a go-live checklist. Read-only. |
+| [`voice-agent-checkup`](./plugins/cloudtalk/skills/voice-agent-checkup/SKILL.md) | Checks whether an AI Voice Agent is ready to go live: a verdict, the fix to make first, the tests to run and a go-live checklist. Changes nothing, except a test call to your own phone when you ask. |
 | [`voice-agent-replay`](./plugins/cloudtalk/skills/voice-agent-replay/SKILL.md) | Improves a live AI Voice Agent from its real calls: failures grouped by cause, two calls of proof each, and the setup change that fixes each one. |
 | [`voice-agent-simulator`](./plugins/cloudtalk/claude-skills/voice-agent-simulator/README.md) | Roleplays a caller persona against a configuration and scores the transcript with an automated judge, so you can test an agent before it takes real calls. Claude only. |
 
@@ -87,7 +87,8 @@ same CloudTalk account for both.
 
 **No connection at all?** `voice-agent-builder` still works offline: describe the agent, and Claude hands
 back a validated, save-ready configuration to paste into the dashboard's **Expert Mode** (Advanced/code
-tab). The other skills need a connection.
+tab). `voice-agent-checkup` also works on a pasted setup, and `voice-agent-simulator` needs no connection. The
+other skills need one.
 
 ## Limitations
 
@@ -96,7 +97,7 @@ tab). The other skills need a connection.
 - **A non-admin API key is more limited than it looks.** It can list your VoiceAgents, but the other
   config reads (fetching one agent, listing knowledge bases or custom tools) and **every** write fail with
   an authorization error. If one list works and nothing else does, check the key's role:
-  `cloudtalk_health_check` echoes the company, user and role the connection resolved to. An account that
+  the connection check (ask Claude to "check my CloudTalk connection") echoes the company, user and role the connection resolved to. An account that
   isn't eligible is refused before any tool runs, with a message that says why: the account isn't active,
   the plan is below Essential, or the account couldn't be verified.
 - **Authorization** is account-wide today. Finer role-based restriction of what a connection can do

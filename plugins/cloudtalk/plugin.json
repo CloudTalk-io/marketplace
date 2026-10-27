@@ -81,7 +81,7 @@
             {
               "description": "AI Voice Agents compared with the team",
               "prompt": "Compare last week's calls handled by our AI Voice Agents and by my team",
-              "tools_triggered": "cloudtalk_list_voice_agents, cloudtalk_search_calls",
+              "tools_triggered": "cloudtalk_list_voice_agents, cloudtalk_get_voice_agent, cloudtalk_search_calls",
               "expected_behavior": "Reports last week's call totals per AI Voice Agent and for the team side by side, names the date range, and invents no numbers."
             }
           ],
@@ -104,7 +104,7 @@
         "commerce_description": "CloudTalk does not sell products or process payments in this plugin."
       },
       "publication": {
-        "release_notes": "First release: connect your CloudTalk account and get a guided tour of what it can do.",
+        "release_notes": "First release: connect your CloudTalk account, get a guided tour, and use skills for missed calls, call insights, coaching and AI Voice Agents.",
         "translations": {
           "de-DE": {
             "subtitle": "Telefonie für KI und Menschen",

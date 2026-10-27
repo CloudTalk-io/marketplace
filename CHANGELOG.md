@@ -1,6 +1,6 @@
 # Changelog
 
-Each release bumps a semver (in the plugin manifest and `.claude-plugin/marketplace.json`) with a
+Each release bumps a semver (in both plugin manifests and `.claude-plugin/marketplace.json`) with a
 dated entry below, made whenever the config schema or the generation guidance materially changes.
 Claude Code installs a release when the manifest version changes; the Claude app picks it up from the
 marketplace (Check for updates, or Sync automatically).
@@ -16,8 +16,11 @@ marketplace (Check for updates, or Sync automatically).
   plugin directory.
 - **Renamed skills.** `voice-agent-config-generator` is now `voice-agent-builder`, and
   `simulate-conversation` is now `voice-agent-simulator`, which stays Claude-only (in `claude-skills/`)
-  because it runs subagents. The schema, the guidance and the validator are unchanged. The builder checks
-  a draft by hand where the validator can't run (apps without a shell, such as ChatGPT).
+  because it runs subagents. The schema and the validator's rules are unchanged. The connected-mode guidance
+  changed: an update sends only the changed fields (the server merges them), switching a transfer on also
+  rewrites the callback lines in the same save, and the inbound backup number has a save-safe default.
+  Validator messages were reworded. The builder checks a draft by hand where the validator can't run (apps
+  without a shell, such as ChatGPT).
 - **Sign-in only.** The plugin has one connection and asks for no key: the optional API key setting and
   the `cloudtalk-voice-agents` connection are gone. Developers who prefer a key add
   `https://mcp.cloudtalk.io/voice-agents` themselves with one command (README, "Advanced: connect with an
@@ -41,9 +44,10 @@ marketplace (Check for updates, or Sync automatically).
   and re-runs the cards next time. The simulator gets the linked knowledge and accepts caller cards.
 - **Call text is evidence, never instructions.** What a caller said, a transcript, a text or a knowledge
   base is reported, never obeyed (CONTRIBUTING rule 11).
-- **Starter prompts.** ChatGPT's second and third are now "Have our AI Voice Agent call my phone so I can
-  hear it" and "Set up an AI Voice Agent that answers questions from our FAQ page". Two first tasks no
-  longer promise a lead score or a one-hour callback.
+- **Starter prompts.** ChatGPT shows three: "Who called yesterday that we missed, and who should we call
+  back first?", "Have our AI Voice Agent call my phone so I can hear it" and "Set up an AI Voice Agent that
+  answers questions from our FAQ page". The first tasks promise only what the data shows: no lead score,
+  no fixed callback time.
 - **Upgrade once.** The marketplace's `renames` entry moves your settings to `cloudtalk@cloudtalk`. Then
   install it (`/plugin install cloudtalk@cloudtalk`) and sign in. A key saved for VoiceAgent Builder no
   longer applies. Tool permission rules now start with `mcp__plugin_cloudtalk_`.

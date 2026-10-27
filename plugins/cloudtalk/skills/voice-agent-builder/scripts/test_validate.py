@@ -387,6 +387,14 @@ if not any(i.code == "unfinished-transfer" for i in _scaffold_rep.issues):
     failures.append("a switched-off group draft with omitted target must report unfinished-transfer INFO")
 if not any(r[3] for r in _scaffold_rep.references):
     failures.append("an omitted-target group draft must be reported as pending wiring")
+# A switched-off rule whose destination is still "" (the team isn't decided yet) is legal, and must say
+# what is left to do: name the team, then switch the skill on and fix the callback lines in one save.
+_unset = copy.deepcopy(BASE)
+transfer_rule(destination="", _enabled=False)(_unset)
+_unset_rep = V.Report()
+V.validate(_unset, FIELDS, _unset_rep)
+if not any(i.code == "unfinished-transfer" for i in _unset_rep.issues):
+    failures.append("a switched-off rule with an unset destination must report unfinished-transfer INFO")
 # groupId/agentId are INTEGERS: blanking one to "" is an INVALID_TYPE the save rejects even on a disabled
 # skill — a draft OMITS the key, never blanks it. So "" is an error whether the skill is on or off.
 expect_error("switched-off group rule with groupId blanked to \"\"",

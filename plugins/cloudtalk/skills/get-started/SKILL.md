@@ -1,6 +1,6 @@
 ---
 name: get-started
-description: Set up CloudTalk in this chat and show what it can do. Use right after CloudTalk is installed or connected, when the user asks what CloudTalk can do or how to start, or when a CloudTalk tool fails or returns nothing and the user doesn't know why. Checks the connection, finds what the account has (AI Voice Agents, call insights, texting, campaigns), and offers three first tasks that work on this account.
+description: Set up CloudTalk in this chat and show what it can do. Use right after CloudTalk is installed or connected, when the user asks what CloudTalk can do or how to start, or when a CloudTalk tool fails or returns nothing and the user doesn't know why. Checks the connection, finds what the account has (AI Voice Agents, call insights, texting, campaigns), and offers up to three first tasks that work on this account.
 ---
 
 # Get started with CloudTalk
@@ -61,7 +61,7 @@ Don't show raw results. After the snapshot, give one short line per area: what e
 
 > **✓ Gate:** you know, for this account: AI Voice Agents (not on the plan / none / inbound / outbound) · call insights (on / off / no recent calls) · texting (yes / no) · campaigns (yes / no) · every number in the snapshot was read, none estimated.
 
-## 3. Offer three first tasks
+## 3. Offer up to three first tasks
 
 Offer one task from each of these three areas when the account supports it, using the first row that fits in each. If an area has nothing that fits, take the next fitting row from another area. Show the three as a numbered list with one recommended task first, marked "Recommended": the missed-calls task when yesterday had missed calls, otherwise the AI Voice Agent task, otherwise the calls task. Ask which to run, and run it when the user picks.
 
@@ -101,7 +101,7 @@ Write `<agent name>` as the agent's real name, the one from the snapshot when it
 - **Missed calls:** the same rules as the `missed-call-follow-up` skill, as a list only: draft no texts, and ask nothing about the business until the user wants to text someone.
   1. Period: yesterday, midnight to midnight in the user's timezone (see Dates and answers).
   2. `cloudtalk_search_calls` with `status: "missed"`, `direction: "incoming"`, the period and `limit: 200`. Incoming only: an outgoing call nobody answered is not a missed caller. Group the rows by `external_number`, compared digit for digit (ignore spaces, brackets and a leading +). For each caller keep the number of tries, the latest missed time and the contact name, if any. A row with no number is a hidden number: count it, don't list it. If `pagination.next_page` is set, say the list covers the latest 200 missed calls.
-  3. Drop callers already reached. `cloudtalk_search_calls` with `status: "answered"`, no direction, from the earliest missed call to now, `limit: 200`. A caller with an answered call in either direction after their latest miss has been reached: drop them and count them. If page 1's `pagination.items_count` is over 200, check instead each caller you look up in step 5, before the lookup: `cloudtalk_search_calls` with `public_external` set to their number, `status: "answered"`, `date_from` their latest miss and `limit: 1`; any row means reached. Then one search with `status: "missed"`, `direction: "outgoing"` over the same window: a caller someone tried to call back stays on the list, with the time of that try.
+  3. Drop callers already reached. `cloudtalk_search_calls` with `status: "answered"`, no direction, from the earliest missed call to now, `limit: 200`. A caller is reached only when an answered call in either direction after their latest miss has a person on it (an `agent` on the row): drop them and count them. Keep two kinds on the list: a caller whose later call shows no person (an AI Voice Agent or the call flow took it; mark them "answered by an AI Voice Agent, may still be waiting"), and a caller whose callback from us lasted under 30 seconds (mark "we tried to call back"). If page 1's `pagination.items_count` is over 200, check instead each caller you look up in step 5, before the lookup: `cloudtalk_search_calls` with `public_external` set to their number, `status: "answered"`, `date_from` their latest miss and `limit: 5`; a row with a person on it means reached. Then one search with `status: "missed"`, `direction: "outgoing"` over the same window: a caller someone tried to call back stays on the list, with the time of that try. For the callers an AI Voice Agent answered, offer the `missed-call-follow-up` skill, which reads what the agent promised them.
   4. Rank: tried 2 or more times first, then known contacts, then new numbers. Inside each group, the longest wait comes first.
   5. Look up at most 10 callers from the top with `cloudtalk_get_contact_interactions_summary`: `phone` set to their number in E.164 as the call log has it (never a 00 prefix), `max_calls: 20`, `sample_size: 2`. Move a caller up when their last call left something open: a complaint, a cancellation, a billing or access problem. The rest are counted, and the user can ask for the next 10.
   6. Answer: the period, then the missed calls and callers found, how many were reached already and how many hidden numbers. Then the ranked list, one line each: the name or "New caller", the number masked to its last 3 digits, the tries, the latest time, and why they're ranked there. End with the coverage line, which also says voicemails can't be read here. Then offer texts back: if the user wants them, hand over to `missed-call-follow-up` for these callers.
@@ -127,7 +127,7 @@ Write `<agent name>` as the agent's real name, the one from the snapshot when it
   3. They have 5 or more: hand over to `call-coach` for that person and yesterday. Fewer than 5: say in one line that yesterday had too few calls to coach anyone fairly, and hand over for that person and the last 7 days. No answered calls at all: say so, and offer the last 7 days for the group.
 
   One person takes about a minute; offer the rest of the team afterwards. If the user has their own checklist, call-coach uses it instead of its default moments.
-- **Note from my last call:** the signed-in user's latest answered call (`cloudtalk_search_calls` with their `user_id` and `limit: 1`). Read its summary and smart notes, find the contact, draft the note in one or two lines, and save it with `cloudtalk_add_contact_note` (a write; see Approvals).
+- **Note from my last call:** the signed-in user's latest answered call (`cloudtalk_search_calls` with their `user_id`, `status: "answered"` and `limit: 1`). Read its summary and smart notes, find the contact, draft the note in one or two lines, and save it with `cloudtalk_add_contact_note` (a write; see Approvals).
 - **Campaigns:** `cloudtalk_list_campaigns`, then `cloudtalk_get_campaign_statistics` for the running ones. Recommend a pause only with a reason from the numbers.
 
 After the first task, suggest the one skill that fits what the user did next:
@@ -139,7 +139,7 @@ After the first task, suggest the one skill that fits what the user did next:
 - `voice-agent-checkup`: is an AI Voice Agent ready to go live?
 - `voice-agent-replay`: improve a live AI Voice Agent from its real calls.
 
-> **✓ Gate:** three tasks, each one this account can actually run · no task needs a plan or add-on the account doesn't have.
+> **✓ Gate:** up to three tasks, each one this account can actually run · no task needs a plan or add-on the account doesn't have.
 
 ## Dates and answers
 

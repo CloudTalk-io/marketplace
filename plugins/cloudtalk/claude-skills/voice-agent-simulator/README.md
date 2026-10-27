@@ -1,4 +1,4 @@
-# voice-agent-simulator — dry-run a VoiceAgent before it takes calls
+# voice-agent-simulator: dry-run a VoiceAgent before it takes calls
 
 Give this skill a **VoiceAgent v2 config** and it plays a phone call against it: one subagent acts
 as the agent (strictly per the config) and as a caller persona, and a second, **blind** subagent
@@ -94,5 +94,4 @@ fallbacks are under-exercised) and elapsed time is not modeled (so a too-tight `
 simulates fine). The optional live test call (SKILL.md §6, connected mode, explicit opt-in only) is
 what covers the rest.
 
-The `guardrails` list is simulated as inert, matching the builder's documentation. That runtime
-behaviour is still to be confirmed.
+The `guardrails` list is simulated as inert, matching the builder's documentation.
