@@ -94,6 +94,5 @@ fallbacks are under-exercised) and elapsed time is not modeled (so a too-tight `
 simulates fine). The optional live test call (SKILL.md §6, connected mode, explicit opt-in only) is
 what covers the rest.
 
-The `guardrails` list is simulated as inert, matching the builder's documentation; the voice team
-still needs to confirm that runtime behaviour, because the `va-evaluation` harness defaults guardrails to
-enabled.
+The `guardrails` list is simulated as inert, matching the builder's documentation. That runtime
+behaviour is still to be confirmed.

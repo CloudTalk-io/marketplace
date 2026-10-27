@@ -24,8 +24,8 @@ marketplace (Check for updates, or Sync automatically).
   API key").
 - **One approval per send or change.** The skills make each write in a single call, and Claude or ChatGPT
   asks you once to allow it; they no longer ask the CloudTalk MCP for a preview first. Pairs with the
-  CloudTalk MCP release that makes every write act on its first call (cloudtalk-mcp
-  `feat/TRIVIAL-one-allow-writes`). Against an older server the skills still handle the preview step.
+  CloudTalk MCP release that makes every write act on its first call. Against an older server the skills
+  still handle the preview step.
 - **A first run that starts with your account.** `get-started` opens with a one-line snapshot of the
   week, recommends one task, and gives AI Voice Agents their own slot: check one before it goes live,
   improve one from its calls, or have one call your phone.
