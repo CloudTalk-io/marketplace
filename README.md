@@ -42,8 +42,9 @@ name on their own. Two steps are yours, once:
 1. **Install the new name.** In Claude Code, run `/plugin install cloudtalk@cloudtalk`; it replaces
    VoiceAgent Builder. In the Claude app, open Customize → **Plugins** and add **CloudTalk** if it isn't
    there.
-2. **Connect again.** Sign in with CloudTalk (below). If you prefer your API key, paste it once more: a
-   saved key doesn't carry over to the new name.
+2. **Sign in.** Sign in with CloudTalk as an **Admin** (below). The plugin now connects by sign-in only,
+   so an API key you saved for VoiceAgent Builder no longer applies. To keep using a key, add the server
+   yourself (see [Advanced: connect with an API key](#advanced-connect-with-an-api-key)).
 
 Your skills are still there under new names: `voice-agent-config-generator` is now `voice-agent-builder`,
 and `simulate-conversation` is now `voice-agent-simulator`. If you allowed CloudTalk tools in your
@@ -51,9 +52,8 @@ permission settings, their names now start with `mcp__plugin_cloudtalk_`.
 
 ## Connect your CloudTalk account
 
-**Sign in (recommended).** The plugin's `cloudtalk` connection is the CloudTalk MCP at
-`https://mcp.cloudtalk.io`. Sign in with CloudTalk as an **Admin** and approve the access; there is no key
-to create or paste.
+The plugin's one connection, `cloudtalk`, is the CloudTalk MCP at `https://mcp.cloudtalk.io`. Sign in
+with CloudTalk as an **Admin** and approve the access; there is no key to create or paste.
 
 - **Claude Code:** run `/mcp`, pick `plugin:cloudtalk:cloudtalk`, and choose **Authenticate**.
 - **Claude app:** open the plugin (Customize → Plugins), its **Connectors** tab, and **Connect** the
@@ -62,9 +62,12 @@ to create or paste.
 CloudTalk's AI connection needs the Essential plan or higher. AI Voice Agents, Conversation Intelligence
 and Sales Dialer unlock the matching tools.
 
-**Or use an API key (voice agent tools only).** The optional `cloudtalk-voice-agents` connection is the
-voice-agents profile at `https://mcp.cloudtalk.io/voice-agents`, with a company API key over HTTP Basic.
-It carries the tools `voice-agent-builder` and `voice-agent-simulator` use, and nothing else.
+### Advanced: connect with an API key
+
+For developers in Claude Code who prefer a company API key to signing in. This adds CloudTalk's
+voice-agents server, `https://mcp.cloudtalk.io/voice-agents`, yourself, outside the plugin. It carries the
+tools `voice-agent-builder` and `voice-agent-simulator` use, and nothing else. If you also sign in, use the
+same CloudTalk account for both.
 
 1. Create an API key in the CloudTalk dashboard: **Account → Settings → API keys**. You get a key ID and
    a key secret.
@@ -74,21 +77,13 @@ It carries the tools `voice-agent-builder` and `voice-agent-simulator` use, and 
    echo -n "API_KEY_ID:API_KEY_SECRET" | base64
    ```
 
-3. **Claude Code** asks for it when the plugin is enabled, or later with
-   `/plugin configure cloudtalk@cloudtalk`. Paste the base64 from step 2; the input is masked and stored
-   in your OS keychain (or `~/.claude/.credentials.json`), not a dotfile. In the **Claude app**, Connect the `cloudtalk-voice-agents` connector and paste it into the popup (a "Bearer"
-   label there is cosmetic; the plugin sends it as **Basic**).
+3. Add the server with the base64 from step 2:
 
-Leave the key empty if you signed in. The `cloudtalk-voice-agents` connection then shows as failed in
-`/mcp`, which is expected and harmless.
-
-To add the server yourself instead, outside the plugin:
-
-```bash
-claude mcp add --scope user --transport http cloudtalk-voice-agents \
-  https://mcp.cloudtalk.io/voice-agents \
-  -H "Authorization: Basic <base64 of API_KEY_ID:API_KEY_SECRET>"
-```
+   ```bash
+   claude mcp add --scope user --transport http cloudtalk-voice-agents \
+     https://mcp.cloudtalk.io/voice-agents \
+     -H "Authorization: Basic <base64 of API_KEY_ID:API_KEY_SECRET>"
+   ```
 
 **No connection at all?** `voice-agent-builder` still works offline: describe the agent, and Claude hands
 back a validated, save-ready configuration to paste into the dashboard's **Expert Mode** (Advanced/code
@@ -96,8 +91,8 @@ tab). The other skills need a connection.
 
 ## Limitations
 
-- **Sign-in** needs a CloudTalk **Admin**. The API key connection reaches the voice agent tools only, and
-  its base64 step is yours to run once: the plugin stores the result, it does not compute it.
+- **Sign-in** needs a CloudTalk **Admin**. The advanced API key connection reaches the voice agent tools
+  only, and you add it yourself.
 - **A non-admin API key is more limited than it looks.** It can list your VoiceAgents, but the other
   config reads (fetching one agent, listing knowledge bases or custom tools) and **every** write fail with
   an authorization error. If one list works and nothing else does, check the key's role:
@@ -130,7 +125,7 @@ marketplace/
 └── plugins/
     └── cloudtalk/
         ├── .claude-plugin/
-        │   └── plugin.json     ← Claude manifest: both MCP connections, the optional API key
+        │   └── plugin.json     ← Claude manifest: the CloudTalk connection (sign-in)
         ├── plugin.json         ← ChatGPT manifest (listing, starter prompts, review cases)
         ├── mcp.json            ← ChatGPT MCP connection
         ├── assets/icon.png

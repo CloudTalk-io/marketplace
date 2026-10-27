@@ -54,7 +54,9 @@ find the resource kind below.
   it (below); setting a real owned `defaultOutboundNumberId` directly — reused from the agent's current
   config, fetched (`cloudtalk_list_numbers`), or asked for — is the alternative. A bare `1` with no failover
   is not save-ready. For an **inbound** agent the outbound number is irrelevant to how it runs, but the field
-  is still required, so it still needs either Automatic + a real failover or a real owned id.
+  is still required, so it still needs either Automatic + a real failover or a real owned id. Don't ask an
+  inbound agent's owner about it: keep the agent's values, or, connected, use Automatic with the first
+  voice-capable owned number as the failover, and explain it once (`SKILL.md` step 1).
 - **If you use Automatic (`1`), `failoverOutboundNumberId` is required in BOTH directions** and must be a
   real owned id — the save `400`s without it, nothing self-heals, and `null` is never valid. Omit the
   failover key only when `defaultOutboundNumberId` is a real non-`1` id.
@@ -90,7 +92,10 @@ find the resource kind below.
 - **Wire:** copy the KB's ID into `knowledgeBaseIds`.
 - **Gotchas:**
   - **Only `ACTIVE` KBs are usable.** A `url` KB starts `SYNCHRONIZING` and stays there until its page
-    is ingested — wait for `ACTIVE` before linking it to an agent. A `custom` KB is `ACTIVE` at once.
+    is ingested — wait for `ACTIVE` before linking an existing one. A web page KB you just created is
+    linked in the same save (`SKILL.md` *From a web page*); if that save refuses it while it syncs, link
+    it in one more save once it's ready. Check its status once, never in a loop. A `custom` KB is `ACTIVE`
+    at once.
   - URL-type KBs scrape a **single page** (no link-following, no re-scraping) — one KB entry per page
     that matters.
   - Tiny KBs (≈ a screenful) are better folded into a custom skill (lower latency); content > ~500

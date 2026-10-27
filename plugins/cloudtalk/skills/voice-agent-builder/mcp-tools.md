@@ -5,17 +5,19 @@
 The connected-mode reference: the 20 voice agent tools the CloudTalk MCP exposes for reading real IDs, saving configs, and placing test calls — plus the write-safety rules and what still needs the Dashboard.
 
 **Connected mode** is this skill working against your CloudTalk account directly, through the CloudTalk
-MCP. Two ways in, same tools: CloudTalk sign-in (OAuth) at `https://mcp.cloudtalk.io`, which carries every
-CloudTalk tool, or the voice-agents profile at `https://mcp.cloudtalk.io/voice-agents` with a company API
-key over HTTP Basic (Dashboard → Account → Settings → API keys), which carries only the tools below.
-Connection setup is documented in the **repo README**, not here. **Offline mode always works:** without the MCP, you paste the generated JSON into
+MCP. The plugin connects by CloudTalk sign-in (OAuth) at `https://mcp.cloudtalk.io`, which carries every
+CloudTalk tool: the user signs in with CloudTalk in the app's connector settings. Anyone who wants an API
+key connection instead adds the voice-agents profile server themselves, as the repo README shows:
+`https://mcp.cloudtalk.io/voice-agents` with a company API key over HTTP Basic (Dashboard → Account →
+Settings → API keys), which carries only the 20 tools below. Connection setup is documented in the **repo
+README**, not here. **Offline mode always works:** without the MCP, you paste the generated JSON into
 the dashboard's Expert Mode and copy IDs from the Dashboard
 ([`referenced-resources.md`](./referenced-resources.md)).
 
 > **Never ask the user to paste an API key, password or sign-in code into the chat.** Sign-in happens in
-> the app's connector settings; an API key reaches the MCP through the plugin's `userConfig` prompt
-> (masked) and lives in the OS keychain. If the MCP isn't connected, point the user there rather than
-> collecting credentials here.
+> the app's connector settings; someone who wants an API key adds the voice-agents server to their app
+> themselves (repo README), never through the chat. If the MCP isn't connected, point the user to the
+> connector settings rather than collecting credentials here.
 
 ## The tool surface
 
@@ -27,7 +29,7 @@ the dashboard's Expert Mode and copy IDs from the Dashboard
 | `cloudtalk_get_voice_agent` | Fetch one agent's **complete config document** | The mandatory first step of every update — and the way to read a real, working `voice` ID. It does **not** pre-validate the 24-hex shape, so a numeric id fails upstream rather than at dispatch (`trigger_aiva_call` does check) |
 | `cloudtalk_create_voice_agent` | Create an agent from a config | Write; the result carries the new `id`, a `dashboard_url`, and possibly `error_codes` (*Write safety*) |
 | `cloudtalk_update_voice_agent` | Save a config to an existing agent (`voice_agent_id`) | Write — **merges** the fields you pass onto a fresh read (collections replaced wholesale); `apply_optimized_settings: true` applies the platform's optimized list; see Write safety |
-| `cloudtalk_list_knowledge_bases` | List KBs: id, name, `description`, type (`CUSTOM`/`URL`/`FILE`), status, attached agents | Link only `ACTIVE` KBs. **Pages**, and cached ~5 min — so a `SYNCHRONIZING` → `ACTIVE` flip can show up a cache TTL late |
+| `cloudtalk_list_knowledge_bases` | List KBs: id, name, `description`, type (`CUSTOM`/`URL`/`FILE`), status, attached agents | Link only `ACTIVE` KBs, except a web page KB you just created, which `SKILL.md` *From a web page* links in the same save and checks once. **Pages**, and cached ~5 min — so a `SYNCHRONIZING` → `ACTIVE` flip can show up a cache TTL late: never poll |
 | `cloudtalk_create_knowledge_base` | Create a KB: `custom` (you supply the text, `ACTIVE` at once) or `url` (ingested asynchronously, starts `SYNCHRONIZING`) | Write — name ≤ 50 chars; **text is frozen after creation**; **`description` is unsettable on create** — there is no input field for it, though the create response and the list read both carry it; file KBs are Dashboard-only |
 | `cloudtalk_list_voice_agent_tools` | List custom tools, optionally filtered to one agent | **Never returns header/param values** — secrets go in, never come back out. **Pages** |
 | `cloudtalk_create_voice_agent_tool` | Create a custom HTTP tool, optionally **attached** to agents in the same call | Write — name ≤ 64 (alnum + `-_`); method `GET/POST/PUT/DELETE/PATCH`; the URL may embed `{{param}}`; `awaiting_response_message` ≤ 4096; headers `CONST`\|`SECRET`; query/body params `CONST`\|`PARAM`\|`LLM`, each with a data type; **`voice_agent_config_ids`** attaches the new tool to those agents on create |

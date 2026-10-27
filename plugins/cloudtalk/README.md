@@ -21,8 +21,8 @@ This plugin connects your AI assistant to your CloudTalk account through the Clo
 ## Example prompts
 
 - Who called yesterday that we missed, and who should we call back first?
-- Have our AI Voice Agent call a customer to confirm their appointment
-- Set up an AI Voice Agent that answers questions from our website
+- Have our AI Voice Agent call my phone so I can hear it
+- Set up an AI Voice Agent that answers questions from our FAQ page
 - What's still open after this week's calls?
 - Test this agent against an impatient caller who keeps interrupting
 
@@ -39,9 +39,11 @@ This plugin connects your AI assistant to your CloudTalk account through the Clo
 `CloudTalk-io/marketplace`, then add **CloudTalk**.
 
 On first use, sign in with CloudTalk as an **Admin** and approve the access. There is no API key to
-create or paste. Claude Code also offers an optional API key connection to the voice agent tools only; see
-the [repo README](../../README.md#connect-your-cloudtalk-account). CloudTalk's AI connection needs the Essential plan or higher; AI Voice Agents,
+create or paste. CloudTalk's AI connection needs the Essential plan or higher; AI Voice Agents,
 Conversation Intelligence and Sales Dialer unlock the matching tools.
+
+Developers in Claude Code who prefer a company API key can add the voice agent server themselves; see
+[Advanced: connect with an API key](../../README.md#advanced-connect-with-an-api-key) in the repo README.
 
 ## ChatGPT
 
@@ -49,7 +51,7 @@ The same folder is the ChatGPT plugin package. Each assistant reads its own mani
 
 | File | Read by |
 |---|---|
-| `.claude-plugin/plugin.json` | Claude: plugin identity, the MCP server, and the optional API key connection |
+| `.claude-plugin/plugin.json` | Claude: plugin identity and the MCP server (sign-in) |
 | `plugin.json` | ChatGPT: identity, listing, starter prompts, review test cases, translations (`extensions.com.openai`) |
 | `mcp.json` | ChatGPT: the MCP server. Sign-in is discovered from the server (Client ID Metadata Document) |
 | `skills/`, `assets/` | Both |

@@ -26,25 +26,10 @@
   "icon": "./assets/icon.png",
   "privacyPolicyUrl": "https://www.cloudtalk.io/privacy-notice/",
   "skills": ["./claude-skills/"],
-  "userConfig": {
-    "api_key": {
-      "type": "string",
-      "title": "CloudTalk API key (optional)",
-      "description": "Leave empty and sign in with CloudTalk instead. Only for an API key connection to the AI Voice Agent tools: paste the base64 of API_KEY_ID:API_KEY_SECRET from Dashboard > Account > Settings > API keys. Build it with: echo -n \"API_KEY_ID:API_KEY_SECRET\" | base64",
-      "sensitive": true
-    }
-  },
   "mcpServers": {
     "cloudtalk": {
       "type": "http",
       "url": "https://mcp.cloudtalk.io"
-    },
-    "cloudtalk-voice-agents": {
-      "type": "http",
-      "url": "https://mcp.cloudtalk.io/voice-agents",
-      "headers": {
-        "Authorization": "Basic ${user_config.api_key}"
-      }
     }
   }
 }

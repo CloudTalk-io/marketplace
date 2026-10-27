@@ -38,6 +38,7 @@ config and judges the transcript.
 | [`referenced-resources.md`](./referenced-resources.md) | For each `reference`/`environment` field: what it is, how to create it, how to wire the ID — connected and Dashboard paths. |
 | [`mcp-tools.md`](./mcp-tools.md) | Connected mode: the CloudTalk MCP tool surface, write-safety rules, and the not-yet-available workaround table. |
 | [`variables.md`](./variables.md) | Every `{{variable}}` the platform resolves — when it resolves, what it contains, and the silent empty-string behavior when unset. |
+| [`practice-call.md`](./practice-call.md) | A practice call in chat that any app can run (the user plays the caller), its plain-words score, and the replay's caller cards. Used by the builder, checkup and replay. |
 | [`examples/`](./examples/) | E1–E10 worked configs — clean, schema-only, save-ready: no placeholder IDs inside a *live* reference, but every non-E2 file carries a placeholder `failoverOutboundNumberId` to replace, and E4/E9/E10 carry further marked illustrative values (each named in the file's header). Executable documentation + few-shots. |
 
 ## The `authoring` tiers (full field partition)
@@ -54,8 +55,9 @@ the partition so "never emit" is an explicit signal, not folklore.
 
 ## "Nothing else to wire" — what's actually true
 
-You first create an agent in the UI — usually just a **blank shell to unlock Expert Mode** — then edit it
-(connected write, or paste). So the skill **generates the config fresh** for your use case, carrying over
+Offline, you first create an agent in the UI (usually just a **blank shell to unlock Expert Mode**), then
+paste the edit; connected, the skill creates the agent for you when none exists yet, or edits the one you
+have. Either way it **generates the config fresh** for your use case, carrying over
 only the shell's real IDs, not its behavior. **The common inbound assistant — greet, answer, capture, hang
 up — needs no company resource of its own**, so its skills and scenarios are zero-touch; the one thing it
 still needs is the **outbound number completed**: `defaultOutboundNumberId` defaults to `1` (Automatic, as

@@ -2,9 +2,13 @@
 
 Give this skill a **VoiceAgent v2 config** and it plays a phone call against it: one subagent acts
 as the agent (strictly per the config) and as a caller persona, and a second, **blind** subagent
-scores the resulting transcript. Output is a short chat block — verdict, six scores, failed gates,
-gaps, awkward moments, and at most five **config-level** edits. Nothing is dialed and nothing is
-saved, unless the user explicitly opts into the live lap.
+scores the resulting transcript. Output is a short chat block in plain words: the result, what the
+agent missed, six scores, awkward moments, and at most five changes to its setup, ending with one next
+step. Nothing is dialed and nothing is saved, unless the user explicitly opts into the live lap.
+Linked knowledge bases travel with the config as a knowledge block, so knowledge answers are judged
+against what the agent was given, and a replay's caller card can stand in for a persona. Without a
+subagent tool it never fakes a simulation: it offers the practice call in chat
+([`practice-call.md`](../../skills/voice-agent-builder/practice-call.md)) or a real test call.
 
 Its sibling skill,
 [`voice-agent-builder`](../../skills/voice-agent-builder/README.md), authors and validates

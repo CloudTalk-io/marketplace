@@ -23,6 +23,10 @@ for a feature that requires a company resource.
 > shell, think "fresh config + carry over the wiring," not "preserve what's there." The same reasoning
 > holds for an update in **connected mode**, where creating an agent outright is available too
 > (*Connected mode* below).
+>
+> **Connected, with no agent for the job yet, create it for the user** (`SKILL.md` *Two modes*): one
+> plain-words summary, the app's approval, then `cloudtalk_create_voice_agent`. Never send them to the
+> dashboard to make a blank agent first; that path is for offline use only.
 
 ## Step 0 — choose provider & LLM first, and emit both
 
@@ -90,6 +94,12 @@ you ask, e.g. *"what outbound number should this agent use? — a real one your 
 Automatic and I'll need a real failover number ID."* Setting a real owned `defaultOutboundNumberId` directly
 is the alternative. **Never guess `2`, never send `failoverOutboundNumberId: null`, and never hand over a
 config that will 400.**
+
+**Inbound: don't ask the user about this number.** Callers never hear it, but the save needs it. Keep the
+agent's own values; else, connected, use Automatic (`1`) with the first number in `cloudtalk_list_numbers`
+that has `voice_supported: true` as the failover, and explain it once in plain words (`SKILL.md` step 1).
+Offline with no paste, it is a setup step in the status line, not a question. Ask only for an outbound
+agent, which really calls from it.
 
 ## Per-tier emit policy
 
@@ -315,22 +325,25 @@ step in second place, because most IDs the user would otherwise look up by hand 
 |---|---|
 | Outbound number / SMS sender | `cloudtalk_list_numbers` — ids, E.164, and **per-channel flags**; confirm the SMS flag before wiring a `sendSms` `senderNumber` |
 | Transfer target | `cloudtalk_list_groups` (preferred) returns the **id and name only — the group's extension is not readable here**, so the default is to **scaffold the group as a disabled draft (`destination: "group"`, id/extension omitted)** (§ Transfers) for the user to finish in the dashboard. Wire the group live only if the user supplies the extension (paste, current config, or ask — Dashboard → Settings → Groups). `cloudtalk_list_agents` returns id **and** extension. Don't downgrade to an `agent` target just because its pair is complete — with a group more targets can answer before an attended transfer falls back, and a lone unavailable agent is a cold drop where advanced transfer is not enabled |
-| Knowledge base | `cloudtalk_list_knowledge_bases`, linking only `ACTIVE` ones; `cloudtalk_create_knowledge_base` (`custom` or `url`) when the content is new — its **content cannot be edited after creation**, so get the text right before the write |
+| Knowledge base | `cloudtalk_list_knowledge_bases`, linking only `ACTIVE` ones; `cloudtalk_create_knowledge_base` (`custom` or `url`) when the content is new — its **content cannot be edited after creation**, so get the text right before the write. A new web page one follows `SKILL.md` *From a web page*: linked in the same save, status checked once, never polled |
 | Custom tool | `cloudtalk_list_voice_agent_tools` → `create` / `update`. **Create attaches**: `cloudtalk_create_voice_agent_tool` takes `voice_agent_config_ids`, so creating a tool for an agent is **one** write, not create-then-assign. `assign`/`unassign` are for wiring a tool that **already exists** — including after a clone, where tool assignments don't copy. The list **never returns header or parameter values**, so a stored secret can't be read back |
 | Voice | **No MCP/plugin voice-list tool exists** — reuse the `voice` from a `cloudtalk_get_voice_agent` document (this agent's or another agent's), or pick from the four documented default voices (`schema.md` §4.4 — default `cgSgspJ2msm6clMCkdW9` Jessica; all four work on both providers). Always advise the user to pick their preferred voice in the dashboard voice picker (the full catalog lives there) |
 | Calendar integration | **No read exists** — `appointmentBooking` stays ask-or-omit with the **disabled-draft** shape (behavioral §9) until the user supplies real IDs from the Dashboard |
 | Inbound number routing | Not settable here — Dashboard only; say so instead of implying the save covers it |
 
-Fetching is not deciding. A list with three ring groups on it is a **question for the user**, not a pick
+Fetching is not deciding (the one exception: an inbound agent's backup outbound number, defaulted and
+explained once, above). A list with three ring groups on it is a **question for the user**, not a pick
 for you — fetch to remove the lookup burden, then confirm which one. Where a resource genuinely doesn't
 exist and can't be created, fall back to the offline endings: **ask**, or **omit-and-instruct**.
 
-**7. Output shape, connected.** *Before* the write, your output is a short summary: what changes, on
-which agent, and what is still unwired. *After the save*, report
+**7. Output shape, connected.** Everything the user reads is plain words: the dashboard's names for
+things, never ids, field names or tool names (`SKILL.md` step 10 has the full save sequence). *Before*
+the write: the save's plain name, a before/after line per change, and what is still unwired; keep the
+fresh read for the undo. *After the save*, report
 
-- **what was written and where** — the agent's **name and id**, plus the fields that changed (the result's
-  `changed_fields` *when it carries them*; an older server's result doesn't, so then list the changes you
-  described before the save), and the
+- **what was written and where** — the agent's name and the save's name, plus what changed in the
+  dashboard's words (from the result's `changed_fields` *when it carries them*; an older server's result
+  doesn't, so then your before/after list), and the
   **`dashboard_url`** *when the write returned one*: the VoiceAgent create/update and a KB create do,
   the tool and assignment writes and `cloudtalk_trigger_aiva_call` do not — hand over the link where
   there is one rather than describing the navigation, and don't promise it where there isn't;
@@ -343,7 +356,12 @@ which agent, and what is still unwired. *After the save*, report
   agent's **numeric** `voice_agent_id` to find the call, then `cloudtalk_get_call_transcript` /
   `cloudtalk_get_call_insights` to see what actually happened. Ask the user to stay on the call for **at
   least 30 seconds**: a shorter call has no transcript or insights (`reason: "no_transcript"`), which is an
-  answer, not a reason to retry. Say so once and ask what they heard.
+  answer, not a reason to retry. Say so once and ask what they heard;
+- **"Undo this change"**, offered after every save: one approved save that writes back the earlier values
+  of exactly the changed fields from the kept read, after a fresh read shows they haven't changed since
+  (`SKILL.md` step 10);
+- **one next step:** *"Want me to check it's ready to go live? That includes a practice call you can do
+  right here."*
 
 The offline **save smoke-test** reminder (*Output shape*, item 5) does not apply in connected mode: the
 write returns its own structured result, which already tells you whether the save stuck. Re-saving to find
@@ -359,8 +377,8 @@ unchanged. Return:
    reusing the agent's existing setup. No comments, no `_requiredResources`, no placeholder IDs, no
    forbidden fields — nothing the user has to remove or fix before pasting.
 2. **A one-line status headline** — either
-   `✅ Ready to save — nothing else to wire`, or
-   `⚠️ Saves as-is, but <feature> needs <N> setup step(s) before it works`.
+   *Ready to save. Nothing else to set up.*, or
+   *Saves as it is, but <the part, as the dashboard names it> needs <N> setup step(s) before it works.*
    An ID the user gave you is wiring already done, so it keeps the clean headline — say you carried it
    over and that it's worth confirming, but don't count it as a step. Only a resource nobody has picked
    yet earns the warning. A config on Automatic (`1`) with no real `failoverOutboundNumberId` is **not**

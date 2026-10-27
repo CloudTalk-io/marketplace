@@ -1,7 +1,7 @@
 interface:
   display_name: "AI Voice Agent builder"
   short_description: "Build or fix an AI Voice Agent in plain words"
-  default_prompt: "Use $voice-agent-builder to set up an AI Voice Agent that answers questions from our website."
+  default_prompt: "Use $voice-agent-builder to set up an AI Voice Agent that answers questions from our FAQ page."
 dependencies:
   tools:
     - type: "mcp"

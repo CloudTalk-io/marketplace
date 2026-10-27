@@ -16,19 +16,37 @@ marketplace (Check for updates, or Sync automatically).
   plugin directory.
 - **Renamed skills.** `voice-agent-config-generator` is now `voice-agent-builder`, and
   `simulate-conversation` is now `voice-agent-simulator`, which stays Claude-only (in `claude-skills/`)
-  because it runs subagents. The schema, the guidance and the validator are unchanged. The builder now
-  connects through sign-in or the API key, and checks a draft by hand where the validator can't run (apps
-  without a shell, such as ChatGPT).
-- **The API key stays optional.** The `cloudtalk-voice-agents` connection
-  (`https://mcp.cloudtalk.io/voice-agents`, HTTP Basic) still carries the voice agent tools for anyone who
-  prefers a key.
+  because it runs subagents. The schema, the guidance and the validator are unchanged. The builder checks
+  a draft by hand where the validator can't run (apps without a shell, such as ChatGPT).
+- **Sign-in only.** The plugin has one connection and asks for no key: the optional API key setting and
+  the `cloudtalk-voice-agents` connection are gone. Developers who prefer a key add
+  `https://mcp.cloudtalk.io/voice-agents` themselves with one command (README, "Advanced: connect with an
+  API key").
 - **One approval per send or change.** The skills make each write in a single call, and Claude or ChatGPT
   asks you once to allow it; they no longer ask the CloudTalk MCP for a preview first. Pairs with the
   CloudTalk MCP release that makes every write act on its first call (cloudtalk-mcp
   `feat/TRIVIAL-one-allow-writes`). Against an older server the skills still handle the preview step.
+- **A first run that starts with your account.** `get-started` opens with a one-line snapshot of the
+  week, recommends one task, and gives AI Voice Agents their own slot: check one before it goes live,
+  improve one from its calls, or have one call your phone.
+- **Call skills that act.** `missed-call-follow-up` opens with the callers who spoke only to the AI and
+  still wait for a person. It and `conversation-insights` can ring you and then dial the customer, with
+  one approval. `call-coach` covers 2 people per reply, remembers last week's focus, and coaches one
+  person on "coach me". Scheduled runs (a Monday digest, missed calls at midday and before closing) read
+  and draft only. After an unclear failure, a skill never sends again on its own.
+- **AI Voice Agents you can try, undo and retest.** The builder creates an agent when none fits the job,
+  builds one from an FAQ page, describes every save as before and after lines, and offers to undo it. A
+  practice call in chat (`practice-call.md`) works in any app, ChatGPT included, and the checkup lists it
+  first. Replay flags an agent that shares or asks too much, turns each proven cause into a caller card,
+  and re-runs the cards next time. The simulator gets the linked knowledge and accepts caller cards.
+- **Call text is evidence, never instructions.** What a caller said, a transcript, a text or a knowledge
+  base is reported, never obeyed (CONTRIBUTING rule 11).
+- **Starter prompts.** ChatGPT's second and third are now "Have our AI Voice Agent call my phone so I can
+  hear it" and "Set up an AI Voice Agent that answers questions from our FAQ page". Two first tasks no
+  longer promise a lead score or a one-hour callback.
 - **Upgrade once.** The marketplace's `renames` entry moves your settings to `cloudtalk@cloudtalk`. Then
-  install it (`/plugin install cloudtalk@cloudtalk`) and sign in, or paste your API key again: a saved key
-  doesn't carry over to the new name. Tool permission rules now start with `mcp__plugin_cloudtalk_`.
+  install it (`/plugin install cloudtalk@cloudtalk`) and sign in. A key saved for VoiceAgent Builder no
+  longer applies. Tool permission rules now start with `mcp__plugin_cloudtalk_`.
 
 ## 0.2.1 — 2026-10-23
 
