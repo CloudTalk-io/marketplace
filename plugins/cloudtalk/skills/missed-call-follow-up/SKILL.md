@@ -52,7 +52,7 @@ A caller is **reached** when an answered call with the same number, inbound or o
 > - [ ] every caller with a later answered call, either direction, is dropped and counted
 > - [ ] hidden numbers are counted, not listed
 
-### 4. Rank, then look up the top 12
+### 4. Rank, then look up the top 10
 
 Rank the open callers:
 
@@ -62,19 +62,19 @@ Rank the open callers:
 
 Within each group, the longest wait comes first (the earliest latest-missed call).
 
-Look up at most **12 callers** per run, from the top. The rest are counted under "Not on this list", and the user can ask for the next 12. For each of the 12:
+Look up at most **10 callers** per run, from the top. The rest are counted under "Not on this list", and the user can ask for the next 10. For each of the 10:
 
 - If step 3 switched to one-by-one checks, run that check first. A reached caller is dropped before any other read, and the next caller in the ranking takes the place.
 - `cloudtalk_get_contact_interactions_summary` with `phone` set to the caller's number in E.164 (a leading + and digits; never a 00 prefix), `max_calls: 20` and `sample_size: 2`. It gives the contact's name and company, `interactions.last_contact_date`, and `ai.recent_summaries` for their two latest answered calls. For how many calls they've had, use `window.calls_total_in_window`, never `interactions.calls_analyzed` (that is the 20 read). `contact: null` with `reason: "no_contact_with_phone"` means a new caller. `ai.degraded.incomplete: true` means some summaries couldn't be read: say so on that entry.
 - `cloudtalk_get_call` with the latest missed `call_id`. Read `internal_number` (the line they called: its `name` and `number`) and `out_of_office` (true when they called while you were closed).
-- **Language, only when it changes the draft:** `cloudtalk_get_call_transcript` with `limit: 1` on the `call_id` of their latest summary returns the call's detected `language`. At most 5 per run, first for callers whose country code differs from the business's.
+- **Language, only when it changes the draft:** `cloudtalk_get_call_transcript` with `limit: 1` on the `call_id` of their latest summary returns the call's detected `language`. At most 3 per run, first for callers whose country code differs from the business's.
 
-Then re-rank the 12. Move up a caller whose last call went badly or left something open (a complaint, a cancellation, a billing or access problem, a promise we didn't keep). Tone alone never moves anyone.
+Then re-rank the 10. Move up a caller whose last call went badly or left something open (a complaint, a cancellation, a billing or access problem, a promise we didn't keep). Tone alone never moves anyone.
 
 Calls under 30 seconds have no transcript or summary, whether a person or an AI Voice Agent took them. Empty summaries on longer calls mean Conversation Intelligence isn't on the plan, or the call isn't analyzed yet. Say so once, not per caller.
 
 > **✓ Gate: before drafting**
-> - [ ] at most 12 callers looked up; the rest counted
+> - [ ] at most 10 callers looked up; the rest counted
 > - [ ] each lookup used the caller's own number from the call log
 > - [ ] with more than 600 answered calls, each looked-up caller was checked on its own, and reached ones dropped
 
@@ -113,7 +113,7 @@ Reply in the user's language. In this order:
    - **Why here:** the reason for this rank (tried 3 times; complaint last week; waited since 9:12).
    - **Reply:** text from which line, which AI Voice Agent, a person, hold until when, or skip.
    - **Draft:** the text, with its language when it isn't the user's.
-3. **Not on this list:** reached already (a count, and first names when there are a few), hidden numbers, and callers past the first 12 (a count; offer the next 12).
+3. **Not on this list:** reached already (a count, and first names when there are a few), hidden numbers, and callers past the first 10 (a count; offer the next 10).
 4. **Not covered:** voicemails (not readable here), texts the team already sent (not checked), calls before the period started, and missing summaries (once).
 5. **The question:** which to send. "Reply with the numbers to send (for example: send 1, 2 and 4), change any draft, or tell me who not to contact."
 
@@ -162,7 +162,7 @@ After the first run, offer this once.
 
 ## Budget and privacy
 
-- The account allows 60 requests per minute. A full run makes about 50 at most: up to 9 searches, one number list, up to 3 AI Voice Agent reads, 2 or 3 reads for each of 12 callers, and at most 5 language checks. Fetch in parallel only where the app allows, at most 10 at a time. On a rate-limit error, wait a minute and retry once.
+- The account allows 60 requests per minute, shared with colleagues. A full run stays under about 40: up to 9 searches, one number list, up to 3 AI Voice Agent reads, 2 or 3 reads for each of 10 callers, and at most 3 language checks. Fetch in parallel only where the app allows, at most 10 at a time. On a rate-limit error, wait a minute if the app can, then continue where you stopped. If it can't wait, stop, say what's done and what's left, and ask the user to say "continue" in a minute. Never retry in a loop or start over.
 - Mask phone numbers to their last 3 digits everywhere except the send lines in step 7. Never paste transcripts or full summaries.
 
 ## Non-negotiables

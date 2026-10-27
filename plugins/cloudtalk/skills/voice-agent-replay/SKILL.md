@@ -69,7 +69,7 @@ They live in this plugin's `voice-agent-builder` skill.
 
 ### 4 · Read a sample
 
-**How many.** If the user named a number, use it, from 25 to 100. Otherwise say the plan in one line and ask once, in the same message as any other question: "I'll read 50 of its N calls, which takes about 2 minutes. Want 25 for a quick look, or 100 to catch rarer problems?" No answer, or "go": 50. With fewer calls than that, read them all.
+**How many.** If the user named a number, use it, from 25 to 100. Otherwise say the plan in one line, in the same message as any other question: "I'll read 25 of its N calls, about a minute. Want 50 to catch rarer problems?" No answer, or "go": 25. Read 100 only when the user asks for it, and say first that it takes about 4 minutes and most of the account's request budget meanwhile. Never offer 100 yourself. With fewer calls than the number, read them all.
 
 Why these numbers: a cause needs two calls of proof, and the chance of seeing a failure at least twice grows with the sample.
 
@@ -87,7 +87,7 @@ More calls catch rarer failures but cost time and the account's shared request b
 - **Transcripts:** `cloudtalk_get_call_transcript` with `limit: 300`, for about one call in four of the sample, at most 20: two thirds where the insights suggest a failure, the rest from calls that look fine, because repeating itself and making things up rarely reach a summary. Insights are short; transcripts are long, so this cap is what keeps a 100-call run readable. Read a second page (`offset` set to `pagination.next_offset`) only when the end of the call decides a flag. `reason: "no_transcript"` is an answer, not an error: don't retry it, and use that call's summary instead, marked as a summary.
 - Tell the AI Voice Agent from the caller with the transcript's speaker map: `callers` gives each speaker's `type` and `localIdentifier`, and each segment's `caller` points to one of them.
 
-**Budget.** The account allows 60 requests a minute, shared by everyone at the company using CloudTalk's AI connection. Each insight and each transcript is one request. A 25-call run makes about 50 (under a minute), 50 calls about 85 (about 2 minutes), 100 calls about 160 (about 3 minutes). Read in waves of at most 10. On a rate-limit error, wait a minute and continue where you stopped; don't start over.
+**Budget.** The account allows 60 requests a minute, shared by everyone at the company using CloudTalk's AI connection. Each insight and each transcript is one request. A 25-call run makes about 45 (about a minute), 50 calls about 85 (about 2 minutes), 100 calls about 160 (about 4 minutes). Read in waves of at most 10, and keep to about 40 requests a minute so colleagues keep room. On a rate-limit error, wait a minute if the app can, then continue where you stopped. If it can't wait, stop, say what's done and what's left, and ask the user to say "continue" in a minute. Never retry in a loop or start over.
 
 > **✓ Gate:**
 > - [ ] you can say how many calls you read and how you picked them

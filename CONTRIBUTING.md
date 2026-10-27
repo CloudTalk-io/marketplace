@@ -95,9 +95,14 @@ reviewer can check it against this list.
 7. **Writes are the user's decision.** Reads run straight away. A write runs on one call after saying
    what will happen, and the app asks the user to approve it; never write what the user did not ask for.
    A write's result, not the attempt, is what you report.
-8. **Budget and privacy.** The account allows 60 requests per minute: cap detail reads, fetch in parallel
-   only where the app allows, and back off a minute on a rate-limit error. Show phone numbers and
-   customer details only when the task needs them, masked otherwise.
+8. **Budget and privacy.** The account allows 60 requests per minute, shared by everyone at the company
+   using CloudTalk's AI connection. A default run stays under about 40 requests, so colleagues keep a
+   third of the minute. A bigger run happens only when the user asks, after saying how many requests and
+   minutes it takes, and runs over several people or agents go one at a time, about one a minute. Read in
+   waves of at most 10, in parallel only where the app allows. On a rate-limit error, wait a minute if the
+   app can and continue where you stopped; if it can't, stop and ask the user to say "continue". Never
+   retry in a loop or start over. Show phone numbers and customer details only when the task needs them,
+   masked otherwise.
 9. **Non-negotiables last.** A short list of rules that hold whatever else happens, each one a rule the
    skill has actually broken or could plausibly break.
 10. **Runs in Claude and ChatGPT.** No Python, subagents or host-specific features in `skills/`; anything

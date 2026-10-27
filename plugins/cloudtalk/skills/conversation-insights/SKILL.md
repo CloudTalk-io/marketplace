@@ -31,7 +31,7 @@ A loop you infer is labelled as inferred. A next step nobody promised is labelle
 ## 2. Look in three places
 
 1. **Missed calls.** Call `cloudtalk_search_calls` with `status: "missed"` and group by caller. A caller who tried more than once, or a known customer, is a loop. Call `cloudtalk_get_contact_interactions_summary` for those.
-2. **Answered calls, by people and by AI Voice Agents.** Call `cloudtalk_search_calls` with `status: "answered"` and page up to 200 calls. Read up to 25: longest first, then negative sentiment. For each, call `cloudtalk_get_call_insights` with `include: ["summary", "sentiment", "smart_notes"]`. Action items, risks and unanswered questions in the smart notes are the main source of loops. Open `cloudtalk_get_call_transcript` only to quote proof for an urgent loop.
+2. **Answered calls, by people and by AI Voice Agents.** Call `cloudtalk_search_calls` with `status: "answered"` and page up to 200 calls. Read up to 20 (40 when the user asks for a fuller list, after saying it takes about 2 minutes): longest first, then negative sentiment. For each, call `cloudtalk_get_call_insights` with `include: ["summary", "sentiment", "smart_notes"]`. Action items, risks and unanswered questions in the smart notes are the main source of loops. Open `cloudtalk_get_call_transcript` only to quote proof for an urgent loop.
 3. **Texts, when the user asks.** SMS is read per agent: call `cloudtalk_list_sms_conversations` for the agents named, then `cloudtalk_list_sms_messages` for the threads that matter.
 
 Calls under 30 seconds have no transcript or insights, whoever answered them. Empty insights on a longer call mean it isn't analyzed yet, or Conversation Intelligence isn't on the plan. Say so once, not per call.
@@ -100,6 +100,6 @@ Say who gets what before each one.
 - Nothing is sent, tagged or saved unless the user asks for that one action.
 - Never show a company id, user id or tool name to the user; name people, agents and numbers.
 - Mask phone numbers to their last 3 digits. Quote at most 15 words. Never paste full transcripts.
-- The account allows 60 requests per minute. On a rate-limit error, wait a minute and say what was left unread.
+- The account allows 60 requests per minute, shared with colleagues: a default run stays under about 40. On a rate-limit error, wait a minute if the app can, then continue where you stopped. If it can't wait, stop, say what's done and what's left, and ask the user to say "continue" in a minute. Never retry in a loop or start over.
 - Never present counts as call volumes, answer rates or performance.
 - Reply in the user's language.

@@ -73,7 +73,7 @@ the numeric id: only the call search in step 6 takes it. Then, in parallel where
 
 Follow `pagination.next_page` on every list. Agent list works but the agent read fails with an
 authorization error: the user isn't signed in as a CloudTalk Admin; say so and stop. Rate-limit error: wait
-a minute, retry once. Several agents: read the account lists once and reuse them.
+a minute if the app can, then continue; if it can't, stop and ask the user to say "continue". Never retry in a loop. Several agents: read the account lists once and reuse them.
 
 > **✓ Gate:** config document in hand · both ids noted · every list read to its last page, or the gap
 > noted for the coverage line.

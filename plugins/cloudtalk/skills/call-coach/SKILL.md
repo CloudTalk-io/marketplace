@@ -38,15 +38,15 @@ Reads run straight away, without asking. Nothing is written until step 8, and on
   - **A team or group given:** find its id with `cloudtalk_list_groups`, then make one `cloudtalk_search_calls` with `group_id`, the period, `status: "answered"` and `limit: 100`. The team is the `agent` on those rows, most calls first. If `next_page` is set, say the list comes from the group's latest 100 calls and ask whether anyone is missing.
   - **Neither:** if exactly one group name fits the request, use it and say so. Otherwise ask once which team, listing the group names.
 - **AI Voice Agents**, when the user asks about them or about "everyone": `cloudtalk_list_voice_agents`, then `cloudtalk_get_voice_agent` with each one's `voice_agent_id` (the 24-character id). The read's `voice_agent.voiceAgentId` is the **numeric** id that call searches need; the 24-character id matches no calls. If this read fails with a permissions error, say once that the AI Voice Agent check needs a CloudTalk Admin sign-in, and carry on with people.
-- **How many calls.** Two numbers per person: calls **screened** (each call's summary and notes, which show how often something goes wrong) and calls **read in full** (word for word, where the quotes come from). If the user named a number, use it. Otherwise say the plan in one line and ask once, in the same message as any other question: "I'll screen 25 calls per person and read 8 of them word for word, about N minutes. Want more, up to 50 per person?" No answer, or "go": the defaults below.
+- **How many calls.** Two numbers per person: calls **screened** (each call's summary and notes, which show how often something goes wrong) and calls **read in full** (word for word, where the quotes come from). If the user named a number, use it. Otherwise say the plan in one line, in the same message as any other question: "I'll screen 25 calls per person and read 6 of them word for word, one person a minute, about N minutes in all. Want 50 per person to catch rarer habits?" No answer, or "go": the defaults below.
 
   | People in scope | Screened per person | Read in full per person | People per batch |
   |---|---|---|---|
-  | 1 | 50 (up to 100) | 10 | 1 |
-  | 2 to 4 | 25 (up to 50) | 8 | all |
-  | 5 or more | 25 (up to 50) | 8 | 4; offer the next 4 |
+  | 1 | 25 (50 on request) | 8 | 1 |
+  | 2 to 4 | 25 (50 on request) | 6 | all |
+  | 5 or more | 25 (50 on request) | 6 | 4; offer the next 4 |
 
-  At 50 screened per person, a batch takes 2 people. Fewer analyzed calls than the screening number: screen them all.
+  Work one person at a time, about one a minute: at the defaults a person is about 35 requests, inside the account's budget with room left for colleagues. At 50 screened, a person takes about 2 minutes. Fewer analyzed calls than the screening number: screen them all.
 
   Each AI Voice Agent counts as one person. At most 2 per batch: the ones the user named, else the 2 with the most calls (a `cloudtalk_search_calls` with its numeric id and `limit: 1` gives each total in `pagination.items_count`). Offer the rest afterwards.
 
@@ -179,7 +179,7 @@ When a quote or better line is in another language than the user's, add a short 
 
 Example person card:
 
-- **Ada Bennett** · 25 calls screened, 8 read in full, of 41 analyzed
+- **Ada Bennett** · 25 calls screened, 6 read in full, of 41 analyzed
 - **Keep doing:** owns the next step. "I'll call you back by 3 today with the refund number." (call 51234, Tue 21 Oct 10:02, at 3:40)
 - **Change one thing:** ends the call before checking the customer is sorted, seen in 9 of 25 screened calls and confirmed in 3 read in full. "Okay, that's it then, bye." (call 51240, Wed 22 Oct 14:15, at 5:02)
 - **Try instead:** "Before I let you go, is there anything else I can sort out for you today?" Once the main issue is solved.
@@ -201,10 +201,10 @@ Every write acts on its first call, and the app asks the user to approve it. Say
 
 ## Budget
 
-The account allows 60 requests a minute, shared by everyone at the company who uses CloudTalk's AI connection. Every tool call is one request: per person, 3 searches, one per screened call and one per call read in full. At the defaults that is about 36 per person, so a batch of 4 people is about 150 requests, roughly 3 minutes; one person at 50 screened is about 65. Screening is cheap on context (a few lines per call); calls read in full are long, which is why that number stays at 8 to 10. Say the expected time before a large run. So:
+The account allows 60 requests a minute, shared by everyone at the company who uses CloudTalk's AI connection. Every tool call is one request: per person, 3 searches, one per screened call and one per call read in full. At the defaults that is about 35 per person, and about 60 at 50 screened. Going one person at a time, about one a minute, keeps a run under about 40 requests a minute; a team of 4 takes about 4 minutes. Screening is cheap on context (a few lines per call); calls read in full are long, which is why that number stays at 6 to 8. Say the expected time before the run. So:
 
 - Read in waves of at most 10.
-- On a rate-limit error, or an insight whose `reason` is `rate_limited`, wait a minute and continue where you stopped. Don't start over, and don't re-read what you already have.
+- A rate-limit error, or an insight whose `reason` is `rate_limited`: On a rate-limit error, wait a minute if the app can, then continue where you stopped. If it can't wait, stop, say what's done and what's left, and ask the user to say "continue" in a minute. Never retry in a loop or start over. Don't re-read what you already have.
 - If it happens twice in a row, finish with what you have and say what's missing.
 
 ## Non-negotiables
