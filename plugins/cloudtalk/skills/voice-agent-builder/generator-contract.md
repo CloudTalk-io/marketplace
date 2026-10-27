@@ -124,7 +124,7 @@ scenario has no `enabled` (the absent key reads as *disabled*) and the save then
 
 - Any URL **anywhere** (a `sendSms` message, `goalPrompt`, `greeting`) must be **supplied by the user and
   copied verbatim** — never invent, guess, shorten, or restructure one.
-- AIVA **cannot generate a per-call or per-appointment link** (booking link, calendar link, tracking link):
+- An AI Voice Agent **cannot generate a per-call or per-appointment link** (booking link, calendar link, tracking link):
   no such variable exists. If the user asks to "text the booking link," **say it's unsupported** and offer
   the two real paths — a `booking_confirmed` `sendSms` carrying `{{appointment.*}}` details (behavioral §6),
   or a **static user-provided URL** (e.g. the company's public booking page), pasted verbatim.

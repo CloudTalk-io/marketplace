@@ -60,7 +60,7 @@ Read-only — useful for verifying behavior after a test call.
 
 ## Reading lists
 
-- **The AIVA list reads page.** The three voice-agent-domain lists — VoiceAgents, knowledge bases,
+- **The AI Voice Agent list reads page.** The three voice-agent-domain lists — VoiceAgents, knowledge bases,
   custom tools — take a `limit` (**default 50**, ceiling **200**) and return `pagination.next_page`
   when more rows exist. Check any list result for that field before treating it as complete.
 - **The account reads page on different numbers.** Agents, groups, numbers and contact tags default to

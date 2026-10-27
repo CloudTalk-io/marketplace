@@ -68,7 +68,7 @@ handoff as a **disabled group draft** the user finishes in the dashboard:
   in the caller's language (§4.2).
 - **E2** — outbound confirmation; it confirms verbally. To text a confirmation, add a `sendSms` scenario
   with a company-owned sender (**E9** shows the caller-gated shape, **E10** the booking-triggered one).
-  Any URL in the message must be a **static user-supplied link, copied verbatim** — AIVA can't generate a
+  Any URL in the message must be a **static user-supplied link, copied verbatim** — an AI Voice Agent can't generate a
   booking/calendar link (behavioral §6).
 - **E8** — a hotel front desk carrying the **structured identity presets** (`tone`, `verbosity`) and the
   ElevenLabs conversation knobs (`turnEagerness`, the `interruptionIgnoreTerms` /
@@ -85,7 +85,7 @@ handoff as a **disabled group draft** the user finishes in the dashboard:
   can't be read programmatically, and `groupId` is an integer so it is omitted, never blanked to `""`. It also scaffolds `confirmationRequired` and `includeProperties`/`customProperties`
   (the data handed to the human who picks up the transfer). While the skill is off the prompt offers a
   callback, not a handoff. It pairs that with a `sendSms` scenario whose `params.message` is **fixed config
-  text** — the LLM only decides *whether* to send — and which contains no link at all, since AIVA cannot
+  text** — the LLM only decides *whether* to send — and which contains no link at all, since an AI Voice Agent cannot
   generate one. It also shows a `## Known facts` section handing the agent `{{contact.*}}` /
   `{{caller_number}}` values (with the empty-string trap spelled out) and one scenario shipped
   `enabled: false`. **One account value to replace** (`params.senderNumber`), plus the transfer to finish in
