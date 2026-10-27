@@ -9,12 +9,12 @@ confirmation first).
 > `authoring` class (see below). Each doc here is a *thin lens* that points at that schema rather
 > than restating it — so one fact lives in exactly one place.
 
-This folder **is** a Claude Skill (open [Agent Skills](https://agentskills.io) format).
+This folder **is** an Agent Skill (open [Agent Skills](https://agentskills.io) format), used by Claude and ChatGPT.
 [`SKILL.md`](./SKILL.md) is the entry point: its `description` is the trigger, and its body is a lean
 workflow router. The lens docs below are bundled references the skill loads **on demand** (progressive
 disclosure). It ships as part of the CloudTalk plugin — see the repo README for installation and for
 connecting your account. Its sibling skill,
-[`simulate-conversation`](../simulate-conversation/README.md), roleplays a caller against a finished
+[`voice-agent-simulator`](../../claude-skills/voice-agent-simulator/README.md) (Claude only), roleplays a caller against a finished
 config and judges the transcript.
 
 ## Who reads what
@@ -29,7 +29,7 @@ config and judges the transcript.
 
 | File | Owns (single source of truth for…) |
 |---|---|
-| [`SKILL.md`](./SKILL.md) | The Claude Skill entry point: trigger `description` + the lean workflow router that points at the lenses below. |
+| [`SKILL.md`](./SKILL.md) | The skill entry point: trigger `description` + the lean workflow router that points at the lenses below. |
 | [`scripts/validate_config.py`](./scripts/validate_config.py) | Structural + behavioral validator (stdlib Python 3.8+). Keys off `fields.json`; reports errors, behavioral warnings, and what still needs wiring. |
 | [`fields.json`](./fields.json) | The field set + each field's `authoring` tag. Machine-readable spine. |
 | [`schema.md`](./schema.md) | Field shapes, enums, dependency rules, choosing provider/LLM, `optimizedSettings`. Human view of `fields.json`. |

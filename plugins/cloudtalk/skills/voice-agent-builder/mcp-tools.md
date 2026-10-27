@@ -2,19 +2,20 @@
 
 > Semantics last verified against the MCP server source and live gateway: **2026-09-02**.
 
-The connected-mode reference: the 20 tools the CloudTalk MCP's voice-agents profile exposes for reading real IDs, saving configs, and placing test calls — plus the write-safety rules and what still needs the Dashboard.
+The connected-mode reference: the 20 voice agent tools the CloudTalk MCP exposes for reading real IDs, saving configs, and placing test calls — plus the write-safety rules and what still needs the Dashboard.
 
 **Connected mode** is this skill working against your CloudTalk account directly, through the CloudTalk
-MCP (voice-agents profile at `https://mcp.cloudtalk.io/voice-agents`; HTTP Basic auth with your company's
-API keys — Dashboard → Account → Settings → API keys). Connection setup is documented in the **repo
-README** — not here. **Offline mode always works:** without the MCP, you paste the generated JSON into
+MCP. Two ways in, same tools: CloudTalk sign-in (OAuth) at `https://mcp.cloudtalk.io`, which carries every
+CloudTalk tool, or the voice-agents profile at `https://mcp.cloudtalk.io/voice-agents` with a company API
+key over HTTP Basic (Dashboard → Account → Settings → API keys), which carries only the tools below.
+Connection setup is documented in the **repo README**, not here. **Offline mode always works:** without the MCP, you paste the generated JSON into
 the dashboard's Expert Mode and copy IDs from the Dashboard
 ([`referenced-resources.md`](./referenced-resources.md)).
 
-> **Never ask the user to paste their API key into the chat.** The key reaches the MCP through the
-> plugin's `userConfig` prompt (masked) and lives in the OS keychain — never in a chat message or a
-> settings file. If the MCP isn't connected, point the user to that prompt (or their own
-> `claude mcp add` server) rather than collecting the key here.
+> **Never ask the user to paste an API key, password or sign-in code into the chat.** Sign-in happens in
+> the app's connector settings; an API key reaches the MCP through the plugin's `userConfig` prompt
+> (masked) and lives in the OS keychain. If the MCP isn't connected, point the user there rather than
+> collecting credentials here.
 
 ## The tool surface
 
@@ -49,7 +50,7 @@ Read-only — useful for verifying behavior after a test call.
 
 | Tool | Purpose | Key caveat |
 |---|---|---|
-| `cloudtalk_health_check` | Confirm the MCP is reachable and see which company/user the key resolved to | Run it first when a tool fails — it separates an auth/tenant problem from a data problem. Makes **no** API call of its own, so it proves the credential was accepted, not that an upstream is healthy. **Check the echoed company id is the account you meant** — and the **`role_id`**: a non-admin key can still `cloudtalk_list_voice_agents`, but fails the other config reads (`get_voice_agent`, `list_knowledge_bases`, `list_voice_agent_tools`) **and every write** with an authorization error, which is the first thing to check when one list works and nothing else does. The response also carries **`rollout_enabled`**, which tells a *tenant not enabled for MCP* 403 apart from an auth/role problem |
+| `cloudtalk_health_check` | Confirm the MCP is reachable and see which company/user the sign-in or key resolved to | Run it first when a tool fails — it separates an auth/tenant problem from a data problem. Makes **no** API call of its own, so it proves the credential was accepted, not that an upstream is healthy. **Check the echoed company id is the account you meant** — and the **`role_id`**: a non-admin key can still `cloudtalk_list_voice_agents`, but fails the other config reads (`get_voice_agent`, `list_knowledge_bases`, `list_voice_agent_tools`) **and every write** with an authorization error, which is the first thing to check when one list works and nothing else does. The response also carries **`rollout_enabled`**, which tells a *tenant not enabled for MCP* 403 apart from an auth/role problem |
 | `cloudtalk_list_agents` | Human agents: id, name, email, **extension**, availability | Both halves of an `agent` transfer pair come from here. Still prefer groups as targets (behavioral §3.4) |
 | `cloudtalk_list_groups` | Ring groups — the preferred transfer targets | Returns **id + name only**. The `groupExtension` half is **not** in this response — take it from the Dashboard, the user, or the agent's current config |
 | `cloudtalk_list_numbers` | Company numbers: id, country/area code, name, E.164, per-channel support flags | Resolves outbound-number IDs **and** SMS senders (`sms_supported: true`). `country_code` here is the **numeric calling code** (`421`), not the ISO-2 code `cloudtalk_search_calls` wants |

@@ -1,4 +1,4 @@
-# simulate-conversation — dry-run a VoiceAgent before it takes calls
+# voice-agent-simulator — dry-run a VoiceAgent before it takes calls
 
 Give this skill a **VoiceAgent v2 config** and it plays a phone call against it: one subagent acts
 as the agent (strictly per the config) and as a caller persona, and a second, **blind** subagent
@@ -7,7 +7,7 @@ gaps, awkward moments, and at most five **config-level** edits. Nothing is diale
 saved, unless the user explicitly opts into the live lap.
 
 Its sibling skill,
-[`voice-agent-config-generator`](../voice-agent-config-generator/README.md), authors and validates
+[`voice-agent-builder`](../../skills/voice-agent-builder/README.md), authors and validates
 the config; this one asks whether the config actually behaves.
 
 ## How it is invoked
@@ -25,7 +25,7 @@ It takes three inputs, all with defaults:
 | **Depth** | one conversation · `thorough` = three personas in parallel | one conversation |
 
 A structurally broken config simulates badly for the wrong reasons, so validate first:
-`python3 ../voice-agent-config-generator/scripts/validate_config.py <config>`.
+`python3 ../../skills/voice-agent-builder/scripts/validate_config.py <config>`.
 
 ## Personas
 

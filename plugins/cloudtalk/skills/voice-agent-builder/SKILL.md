@@ -1,10 +1,10 @@
 ---
-name: voice-agent-config-generator
+name: voice-agent-builder
 description: >-
-  Generate, fix, or validate a CloudTalk VoiceAgent v2 "Expert Mode" configuration — offline as the JSON
-  you paste into the dashboard's Advanced/code tab, or connected through the CloudTalk MCP, where it reads
-  and writes the agent directly against your real account (numbers, knowledge bases, tools, transfer
-  targets; every write needs your confirmation). Use whenever the user wants to create or edit ANY inbound
+  Build, fix, or check a CloudTalk AI Voice Agent: its VoiceAgent v2 "Expert Mode" configuration. Connected
+  to CloudTalk, it reads and saves the agent directly against your real account (numbers, knowledge bases,
+  tools, transfer targets; every save needs your approval); offline, it returns the JSON you paste into the
+  dashboard's Advanced/code tab. Use whenever the user wants to create or edit ANY inbound
   or outbound AI voice/phone agent for CloudTalk — any use case or industry (reception, qualification,
   support, booking, surveys, reminders, notifications, lead capture, … — these are just examples, not the
   limit) — or asks for a VoiceAgent config, a goalPrompt/greeting/scenarios/skills, or pastes an existing
@@ -13,7 +13,7 @@ description: >-
 license: Apache-2.0
 ---
 
-# VoiceAgent v2 (Expert Mode) config generator
+# Build an AI Voice Agent (VoiceAgent v2 Expert Mode)
 
 Turn a use case — plus a few facts only the user can supply — into a **save-ready VoiceAgent v2** JSON
 config.
@@ -192,10 +192,16 @@ python3 scripts/validate_config.py path/to/draft.json
 itself.) ERRORs cause the save to fail — fix all. Review WARNINGs for quality; save-blocking ones exit 1.
 Then run the `behavioral-guidance.md` §8 self-check once more.
 
+**No way to run Python here** (some apps run skills without a shell): check the draft by hand against
+every gate above, the guardrails below and the `behavioral-guidance.md` §8 self-check, and say in the
+status line that the script didn't run. Connected, the confirmed save is still the platform's verdict
+(`mcp-tools.md` *Write safety*): a refused save stores nothing and says why, so fix it, show the new
+preview and ask again.
+
 ### 9 · Critique pass — non-trivial configs only
 
 Multilingual / any transfer / data capture / appointment booking / a referenced resource → get an
-**independent** critique first. **Preferred: run the `simulate-conversation` skill** — a persona subagent
+**independent** critique first. **Preferred: run the `voice-agent-simulator` skill** (Claude) — a persona subagent
 plays a caller against the config and a blind judge reports gaps and awkward moments. Else a fresh-context
 subagent, else a deliberate adversarial self-review (read it as a skeptic). Lenses: greeting realism
 (in the agent's language, spoken as written); **prose coherence** (re-read every prose field);
@@ -204,7 +210,7 @@ any finding you deliberately override.
 
 ### 10 · Return — `generator-contract.md` output shape
 
-**Connected:** validate locally, then write via `cloudtalk_update_voice_agent` (or `create`) — present the
+**Connected:** validate (step 8), then write via `cloudtalk_update_voice_agent` (or `create`) — present the
 confirmation preview, wait for the user, and after the confirmed save report the agent's **name + id**,
 what changed, what remains, and how to verify (a test call + `cloudtalk_get_call_transcript`). The write's
 structured result replaces the paste-and-see smoke test.
@@ -223,10 +229,10 @@ structured result replaces the paste-and-see smoke test.
 
 ## Non-negotiable guardrails
 
-- **Never ask the user to paste their CloudTalk API key into the chat.** The key is supplied through the
-  plugin's `userConfig` prompt (masked) and stored in the OS keychain — never in a chat message or a
-  settings file. If the MCP isn't connected, direct the user to that prompt (or their own
-  `claude mcp add` server); don't collect the key here (repo README).
+- **Never ask the user to paste a CloudTalk API key, password or sign-in code into the chat.** They
+  connect by signing in with CloudTalk in the app's connector settings, or, in Claude Code, through the
+  plugin's optional API key prompt (masked, stored in the OS keychain). If the MCP isn't connected, point
+  the user there; don't collect credentials here (repo README).
 - **Inbound** ⇒ `startSpeakingFirst: true` **and** a concrete `greeting`. There is no `firstMessage` field.
 - **≥1 `hangup` scenario**, or the agent literally cannot end a call (the validator blocks the handoff).
 - **Never emit the `guardrails` array — keep it empty (`[]`).** It is accepted and stored but **inert at

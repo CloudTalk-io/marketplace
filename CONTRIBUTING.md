@@ -8,20 +8,20 @@ small, focused PRs are easiest to review.
 The validator test suite (stdlib Python, no dependencies):
 
 ```bash
-python3 plugins/voice-agent-config-generator/skills/voice-agent-config-generator/scripts/test_validate.py
+python3 plugins/cloudtalk/skills/voice-agent-builder/scripts/test_validate.py
 ```
 
 The docs-sync check, which verifies the schema docs and `fields.json` agree:
 
 ```bash
-python3 plugins/voice-agent-config-generator/skills/voice-agent-config-generator/scripts/check_docs_sync.py
+python3 plugins/cloudtalk/skills/voice-agent-builder/scripts/check_docs_sync.py
 ```
 
 If you have the Claude Code CLI installed, also validate the plugin structure from the repo root:
 
 ```bash
 claude plugin validate .
-claude plugin validate ./plugins/voice-agent-config-generator
+claude plugin validate ./plugins/cloudtalk
 ```
 
 CI runs on every pull request (and on pushes to `main`): the validator test suite — which also validates

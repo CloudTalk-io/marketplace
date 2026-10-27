@@ -5,13 +5,24 @@ dated entry below, made whenever the config schema or the generation guidance ma
 Claude Code installs a release when the manifest version changes; the Claude app picks it up from the
 marketplace (Check for updates, or Sync automatically).
 
-## 0.3.0 — 2026-10-26
+## 0.3.0 — 2026-10-27
 
-- **New plugin: CloudTalk (`cloudtalk`) 0.1.0.** Connects to the CloudTalk MCP at `https://mcp.cloudtalk.io`
-  with sign-in (OAuth, no API key) and ships four skills: `get-started`, `conversation-insights`,
-  `next-best-call` and `call-coach`. The same folder carries the ChatGPT
-  plugin manifests (`plugin.json`, `mcp.json`), so it is also the package for OpenAI's plugin directory.
-  CloudTalk VoiceAgent Builder is unchanged (0.2.1).
+- **CloudTalk VoiceAgent Builder is now CloudTalk (`cloudtalk@cloudtalk`).** One plugin for the whole phone
+  system. It signs in to your account with CloudTalk (OAuth, no API key) at `https://mcp.cloudtalk.io` and
+  adds four skills: `get-started`, `conversation-insights`, `next-best-call` and `call-coach`. The same
+  folder carries the ChatGPT manifests (`plugin.json`, `mcp.json`), so it is also the package for OpenAI's
+  plugin directory.
+- **Renamed skills.** `voice-agent-config-generator` is now `voice-agent-builder`, and
+  `simulate-conversation` is now `voice-agent-simulator`, which stays Claude-only (in `claude-skills/`)
+  because it runs subagents. The schema, the guidance and the validator are unchanged. The builder now
+  connects through sign-in or the API key, and checks a draft by hand where the validator can't run (apps
+  without a shell, such as ChatGPT).
+- **The API key stays optional.** The `cloudtalk-voice-agents` connection
+  (`https://mcp.cloudtalk.io/voice-agents`, HTTP Basic) still carries the voice agent tools for anyone who
+  prefers a key.
+- **Upgrade once.** The marketplace's `renames` entry moves your settings to `cloudtalk@cloudtalk`. Then
+  install it (`/plugin install cloudtalk@cloudtalk`) and sign in, or paste your API key again: a saved key
+  doesn't carry over to the new name. Tool permission rules now start with `mcp__plugin_cloudtalk_`.
 
 ## 0.2.1 — 2026-10-23
 

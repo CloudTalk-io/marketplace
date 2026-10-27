@@ -4,7 +4,7 @@
     "name": "CloudTalk"
   },
   "metadata": {
-    "description": "CloudTalk plugins: run every call from your AI assistant, and build and test AI Voice Agents.",
+    "description": "CloudTalk for Claude: run every call from your AI assistant, and build and test AI Voice Agents.",
     "version": "0.3.0"
   },
   "plugins": [
@@ -12,13 +12,10 @@
       "name": "cloudtalk",
       "source": "./plugins/cloudtalk",
       "displayName": "CloudTalk",
-      "description": "Run every call from your AI assistant: AI agents answer first, humans close. Starts with a guided tour of your account."
-    },
-    {
-      "name": "voice-agent-config-generator",
-      "source": "./plugins/voice-agent-config-generator",
-      "displayName": "CloudTalk VoiceAgent Builder",
-      "description": "Generate, fix, validate, and simulate CloudTalk VoiceAgent (Expert Mode) configurations."
+      "description": "Run every call from your AI assistant: AI agents answer first, humans close. Guided tour, call insights, and an AI Voice Agent builder. Formerly CloudTalk VoiceAgent Builder."
     }
-  ]
+  ],
+  "renames": {
+    "voice-agent-config-generator": "cloudtalk"
+  }
 }

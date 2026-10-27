@@ -1,5 +1,5 @@
 ---
-name: simulate-conversation
+name: voice-agent-simulator
 description: >-
   Test a CloudTalk VoiceAgent v2 config by simulating a phone conversation against it: a subagent
   plays the agent strictly per the config against a caller persona, then a blind judge scores the
@@ -49,7 +49,7 @@ Prepare the run:
   Anything left over is unbound and renders as an empty gap, exactly like the runtime.
 - A structurally broken config simulates badly for the wrong reasons — if the JSON hasn't been
   validated yet, run the sibling skill's validator first:
-  `python3 ../voice-agent-config-generator/scripts/validate_config.py <config>` (relative to this
+  `python3 ../../skills/voice-agent-builder/scripts/validate_config.py <config>` (relative to this
   skill's directory).
 
 > **✓ Gate — before spawning:** full config JSON in hand · exactly one persona card per run, with

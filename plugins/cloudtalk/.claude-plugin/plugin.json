@@ -1,8 +1,8 @@
 {
   "name": "cloudtalk",
   "displayName": "CloudTalk",
-  "version": "0.1.0",
-  "description": "Run every call from your AI assistant. CloudTalk is the agent-first phone system: AI agents answer first, humans close. Starts with a guided tour, then finds open loops after your calls, picks your next best calls, and coaches your team and AI Voice Agents.",
+  "version": "0.3.0",
+  "description": "Run every call from your AI assistant. CloudTalk is the agent-first phone system: AI agents answer first, humans close. Starts with a guided tour, then finds open loops after your calls, picks your next best calls, coaches your team and AI Voice Agents, and builds and tests AI Voice Agents.",
   "author": {
     "name": "CloudTalk"
   },
@@ -14,17 +14,37 @@
     "business-phone",
     "ai-voice-agent",
     "voice-agent",
+    "voice-ai",
+    "ai-phone-agent",
+    "ai-receptionist",
     "calls",
     "sms",
+    "outbound-calls",
     "call-center",
     "telephony"
   ],
   "icon": "./assets/icon.png",
   "privacyPolicyUrl": "https://www.cloudtalk.io/privacy-notice/",
+  "skills": ["./claude-skills/"],
+  "userConfig": {
+    "api_key": {
+      "type": "string",
+      "title": "CloudTalk API key (optional)",
+      "description": "Leave empty and sign in with CloudTalk instead. Only for an API key connection to the AI Voice Agent tools: paste the base64 of API_KEY_ID:API_KEY_SECRET from Dashboard > Account > Settings > API keys. Build it with: echo -n \"API_KEY_ID:API_KEY_SECRET\" | base64",
+      "sensitive": true
+    }
+  },
   "mcpServers": {
     "cloudtalk": {
       "type": "http",
       "url": "https://mcp.cloudtalk.io"
+    },
+    "cloudtalk-voice-agents": {
+      "type": "http",
+      "url": "https://mcp.cloudtalk.io/voice-agents",
+      "headers": {
+        "Authorization": "Basic ${user_config.api_key}"
+      }
     }
   }
 }

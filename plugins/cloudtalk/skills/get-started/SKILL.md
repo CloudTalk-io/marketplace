@@ -41,10 +41,11 @@ Pick the three that fit what step 2 found, in this order of preference, and show
 | Recent calls carry AI insights | Find this week's calls with negative sentiment and tell me what went wrong |
 | The account has campaigns | How are my running campaigns doing, and which one should I pause? |
 
-How to run the first three:
+How to run them:
 
 - **Missed calls:** `cloudtalk_search_calls` with `status: "missed"` for yesterday, then `cloudtalk_get_contact_interactions_summary` for at most 10 callers. Rank callbacks by how often the caller tried and how recent their last contact was. Say why each caller is ranked where they are.
 - **AI agent calls a customer:** ask which customer if the user didn't say. Find them with `cloudtalk_list_contacts`, pick the outbound agent from `cloudtalk_list_voice_agents` whose name fits the task (check with `cloudtalk_get_voice_agent`, and ask if several fit), then call `cloudtalk_trigger_aiva_call` without `confirm` to get the preview. The call carries only the agent and the number, not details like the appointment time: tell the user what the agent will do from its own setup. See Approvals below.
+- **Set up an AI Voice Agent:** hand the request to the `voice-agent-builder` skill. It asks for the business's real name and anything only the user knows, then saves the agent after approval.
 - **AI agents and team:** `cloudtalk_list_voice_agents`, then `cloudtalk_get_voice_agent` for each to get its numeric id (`voice_agent.voice_agent_id`). Call `cloudtalk_search_calls` for last week once per voice agent with `voice_agent_id` set to that numeric id, and once for all answered calls. Report the totals side by side, and name the date range.
 
 After the first task, suggest the one skill that fits what the user did next:
@@ -52,6 +53,7 @@ After the first task, suggest the one skill that fits what the user did next:
 - `conversation-insights`: what's still open after this week's calls, and who should close it.
 - `next-best-call`: who to call next, and what an AI Voice Agent can handle.
 - `call-coach`: coaching for the team and the AI Voice Agents.
+- `voice-agent-builder`: build or fix an AI Voice Agent, and save it after approval.
 
 ## Approvals
 

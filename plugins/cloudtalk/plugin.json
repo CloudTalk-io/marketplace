@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "cloudtalk",
-  "version": "0.1.0",
-  "description": "Run every call from your AI assistant. CloudTalk is the agent-first phone system: AI agents answer first, humans close. Starts with a guided tour, then finds open loops after your calls, picks your next best calls, and coaches your team and AI Voice Agents.",
+  "version": "0.3.0",
+  "description": "Run every call from your AI assistant. CloudTalk is the agent-first phone system: AI agents answer first, humans close. Starts with a guided tour, then finds open loops after your calls, picks your next best calls, coaches your team and AI Voice Agents, and builds and tests AI Voice Agents.",
   "author": {
     "name": "CloudTalk",
     "url": "https://www.cloudtalk.io/"
@@ -16,8 +16,12 @@
     "business-phone",
     "ai-voice-agent",
     "voice-agent",
+    "voice-ai",
+    "ai-phone-agent",
+    "ai-receptionist",
     "calls",
     "sms",
+    "outbound-calls",
     "call-center",
     "telephony"
   ],

@@ -4,7 +4,8 @@ Run every call from your AI assistant. CloudTalk is the agent-first phone system
 first, humans close.
 
 This plugin connects your AI assistant to your CloudTalk account through the CloudTalk MCP
-(`https://mcp.cloudtalk.io`) and ships four skills:
+(`https://mcp.cloudtalk.io`) and ships six skills. It used to be **CloudTalk VoiceAgent Builder**; the
+[repo README](../../README.md#upgrading-from-cloudtalk-voiceagent-builder) has the two upgrade steps.
 
 | Skill | What it does | Needs |
 |---|---|---|
@@ -12,6 +13,8 @@ This plugin connects your AI assistant to your CloudTalk account through the Clo
 | [`conversation-insights`](./skills/conversation-insights/SKILL.md) | Turns recent conversations into open loops: what is still owed after your calls (unanswered questions, broken promises, missed callers, risks) and who should close each loop: a person or an AI Voice Agent. | Conversation Intelligence |
 | [`next-best-call`](./skills/next-best-call/SKILL.md) | Ranks leads by readiness from what was said on calls, and picks the next move and who makes it: you, an AI Voice Agent, or a text. | Conversation Intelligence |
 | [`call-coach`](./skills/call-coach/SKILL.md) | Coaches your team and your AI Voice Agents from real calls: one moment to keep, one to change, and a better line or setup change. | Conversation Intelligence |
+| [`voice-agent-builder`](./skills/voice-agent-builder/README.md) | Builds, fixes and validates an AI Voice Agent from a plain-language description, reusing your real numbers, knowledge bases and tools, and saves it after your approval. | AI Voice Agents; works offline too |
+| [`voice-agent-simulator`](./claude-skills/voice-agent-simulator/README.md) | Plays a difficult caller against an agent's setup and scores the call, before real customers reach it. Claude only. | Nothing; a real test call needs AI Voice Agents |
 
 ## Example prompts
 
@@ -19,6 +22,7 @@ This plugin connects your AI assistant to your CloudTalk account through the Clo
 - Have our AI Voice Agent call a customer to confirm their appointment
 - Set up an AI Voice Agent that answers questions from our website
 - What's still open after this week's calls?
+- Test this agent against an impatient caller who keeps interrupting
 
 ## Install
 
@@ -33,7 +37,8 @@ This plugin connects your AI assistant to your CloudTalk account through the Clo
 `CloudTalk-io/marketplace`, then add **CloudTalk**.
 
 On first use, sign in with CloudTalk as an **Admin** and approve the access. There is no API key to
-create or paste. CloudTalk's AI connection needs the Essential plan or higher; AI Voice Agents,
+create or paste. Claude Code also offers an optional API key connection to the voice agent tools only; see
+the [repo README](../../README.md#connect-your-cloudtalk-account). CloudTalk's AI connection needs the Essential plan or higher; AI Voice Agents,
 Conversation Intelligence and Sales Dialer unlock the matching tools.
 
 ## ChatGPT
@@ -42,16 +47,17 @@ The same folder is the ChatGPT plugin package. Each assistant reads its own mani
 
 | File | Read by |
 |---|---|
-| `.claude-plugin/plugin.json` | Claude: plugin identity and the MCP server |
+| `.claude-plugin/plugin.json` | Claude: plugin identity, the MCP server, and the optional API key connection |
 | `plugin.json` | ChatGPT: identity, listing, starter prompts, review test cases, translations (`extensions.com.openai`) |
 | `mcp.json` | ChatGPT: the MCP server. Sign-in is discovered from the server (Client ID Metadata Document) |
 | `skills/`, `assets/` | Both |
+| `claude-skills/` | Claude only (`voice-agent-simulator` needs subagents) |
 
 Build the upload ZIP from this folder:
 
 ```bash
 cd plugins/cloudtalk
-zip -r ../../cloudtalk-chatgpt.zip plugin.json mcp.json skills assets
+zip -r ../../cloudtalk-chatgpt.zip plugin.json mcp.json skills assets -x '*/__pycache__/*'
 ```
 
 Upload it at [platform.openai.com/plugins](https://platform.openai.com/plugins), then connect the MCP

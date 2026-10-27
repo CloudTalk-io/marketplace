@@ -249,7 +249,7 @@ in a sentence; never block on a question whose answer you can sensibly default (
 ## Connected mode (CloudTalk MCP)
 
 Everything above is the **offline** contract: you emit JSON, the user pastes it into Expert Mode. With the
-**CloudTalk MCP** (voice-agents profile) connected you can read the account's real IDs and save the config
+**CloudTalk MCP** connected you can read the account's real IDs and save the config
 yourself. None of the emit rules relax — they tighten, because a mistake now lands in a live agent instead
 of a chat message. The tool surface and its per-tool caveats live in [`mcp-tools.md`](./mcp-tools.md); what
 follows is the **contract**.
