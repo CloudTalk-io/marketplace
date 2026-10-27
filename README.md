@@ -100,9 +100,10 @@ tab). The other skills need a connection.
   its base64 step is yours to run once: the plugin stores the result, it does not compute it.
 - **A non-admin API key is more limited than it looks.** It can list your VoiceAgents, but the other
   config reads (fetching one agent, listing knowledge bases or custom tools) and **every** write fail with
-  an authorization error. If one list works and nothing else does, check the key's role
-  (`cloudtalk_health_check` echoes it, along with `rollout_enabled`, which tells "this account isn't
-  enabled for the MCP yet" apart from an auth problem).
+  an authorization error. If one list works and nothing else does, check the key's role:
+  `cloudtalk_health_check` echoes the company, user and role the connection resolved to. An account that
+  isn't eligible is refused before any tool runs, with a message that says why: the account isn't active,
+  the plan is below Essential, or the account couldn't be verified.
 - **Authorization** is account-wide today. Finer role-based restriction of what a connection can do
   through the MCP is still evolving.
 - **Some operations stay in the dashboard** for now: inbound number routing, calendar connections,

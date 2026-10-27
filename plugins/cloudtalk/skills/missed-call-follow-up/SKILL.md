@@ -38,18 +38,22 @@ CloudTalk doesn't hold the business name customers know: ask for it unless the u
 
 ### 3. Drop callers already reached
 
-A caller is **reached** when an answered call with the same number, inbound or outbound, started after their latest missed call.
+A caller is **reached** when a person spoke with them after their latest missed call: an answered call with the same number, inbound or outbound, that started later and has a person on it (an `agent` on the row). Two exceptions keep the caller on the list:
+
+- **The row shows no person** (no `agent`), so an AI Voice Agent or the call flow may have taken the call. Read its summary and notes: `cloudtalk_get_call_insights` with `include: ["summary", "smart_notes"]`, at most 3 per run. If the request was settled, they're reached. If it took a message, promised a callback, or transferred and nobody picked up, keep them as "Spoke to the AI Voice Agent, waiting for a person". No summary, or past the 3 reads: keep them, and say a call was answered but no person was on it.
+- **Our callback was very short** (outbound, `talking_time` under 30 seconds): it may have reached their voicemail. Keep them, note the time, and the text should say "we tried to call you back".
 
 - Call `cloudtalk_search_calls` with `status: "answered"` and no direction, `date_from` set to the earliest missed call, `date_to` now, `limit: 200`.
   - Page 1 says 600 calls or fewer (`items_count`): page through all of them and match numbers.
-  - More than 600: stop paging. Check each caller you look up in step 4 on its own instead: `cloudtalk_search_calls` with `public_external` set to their number, `status: "answered"`, `date_from` set to their latest missed call, `limit: 1`. Any row means reached.
+  - More than 600: stop paging. Check each caller you look up in step 4 on its own instead: `cloudtalk_search_calls` with `public_external` set to their number, `status: "answered"`, `date_from` set to their latest missed call, `limit: 5`. A row with a person on it means reached; rows without one follow the exceptions above.
 - Call `cloudtalk_search_calls` once more with `status: "missed"`, `direction: "outgoing"`, the same window, `limit: 200`. A missed outgoing call to a caller after their miss means someone tried to call back and didn't get through. Keep that caller on the list and note the time: the text should say "we tried to call you back".
 - In the same conversation, remember who you texted or queued. On a later run, show them as "Texted at 12:05" and draft again only if they called again after that.
 
 > **✓ Gate: before ranking**
 > - [ ] the search covered the whole period, or the coverage line says where it stopped
 > - [ ] only incoming missed calls; repeat tries grouped into one caller
-> - [ ] every caller with a later answered call, either direction, is dropped and counted
+> - [ ] every caller a person reached later, either direction, is dropped and counted
+> - [ ] a later answered call with no person on it, or our callback under 30 seconds of talk, didn't drop anyone on its own
 > - [ ] hidden numbers are counted, not listed
 
 ### 4. Rank, then look up the top 10
@@ -65,7 +69,7 @@ Within each group, the longest wait comes first (the earliest latest-missed call
 Look up at most **10 callers** per run, from the top. The rest are counted under "Not on this list", and the user can ask for the next 10. For each of the 10:
 
 - If step 3 switched to one-by-one checks, run that check first. A reached caller is dropped before any other read, and the next caller in the ranking takes the place.
-- `cloudtalk_get_contact_interactions_summary` with `phone` set to the caller's number in E.164 (a leading + and digits; never a 00 prefix), `max_calls: 20` and `sample_size: 2`. It gives the contact's name and company, `interactions.last_contact_date`, and `ai.recent_summaries` for their two latest answered calls. For how many calls they've had, use `window.calls_total_in_window`, never `interactions.calls_analyzed` (that is the 20 read). `contact: null` with `reason: "no_contact_with_phone"` means a new caller. `ai.degraded.incomplete: true` means some summaries couldn't be read: say so on that entry.
+- `cloudtalk_get_contact_interactions_summary` with `phone` set to the caller's number in E.164 (a leading + and digits; never a 00 prefix), `max_calls: 20` and `sample_size: 2`. It gives the contact's name and company, and `ai.recent_summaries` for their two latest answered calls: the `date` of the first one is when someone last spoke with them. Never use `interactions.last_contact_date` for that: it counts today's missed call. For how many calls they've had, use `window.calls_total_in_window`, never `interactions.calls_analyzed` (that is the 20 read). `contact: null` with `reason: "no_contact_with_phone"` means a new caller. `ai.degraded.incomplete: true` means some summaries couldn't be read: say so on that entry.
 - `cloudtalk_get_call` with the latest missed `call_id`. Read `internal_number` (the line they called: its `name` and `number`) and `out_of_office` (true when they called while you were closed).
 - **Language, only when it changes the draft:** `cloudtalk_get_call_transcript` with `limit: 1` on the `call_id` of their latest summary returns the call's detected `language`. At most 3 per run, first for callers whose country code differs from the business's.
 
@@ -83,7 +87,7 @@ Calls under 30 seconds have no transcript or summary, whether a person or an AI 
 Suggest one reply per caller:
 
 - **Text:** the default.
-- **AI Voice Agent callback:** a routine callback (a new caller, a simple question, a booking) when the account has an outbound AI Voice Agent built for it. Call `cloudtalk_list_voice_agents` once (`limit: 50`) and keep the agents whose `direction` is outbound; it takes no direction filter. Check with `cloudtalk_get_voice_agent` (its `voice_agent_id`) that the setup fits a callback to someone whose reason for calling it won't know. Ask if several fit. None fits: don't offer it, and mention once that you can help set one up with the `voice-agent-builder` skill.
+- **AI Voice Agent callback:** a routine callback (a new caller, a simple question, a booking) when the account has an outbound AI Voice Agent built for it. Call `cloudtalk_list_voice_agents` once (`limit: 50`) and keep the agents whose `direction` is outbound; it takes no direction filter. Check with `cloudtalk_get_voice_agent` (its `voice_agent_id`) that the setup fits a callback to someone whose reason for calling it won't know. Ask if several fit. None fits: don't offer it, and mention once that you can help set one up with the `voice-agent-builder` skill. If that setup read is refused (it needs a CloudTalk Admin sign-in), don't offer AI Voice Agent callbacks, and say once why.
 - **A person calls back:** a complaint, a cancellation, a billing, access or legal issue, a deal in progress, or a last call that went badly. Draft a short holding text too, so the caller hears from you today.
 - **Hold:** it's outside business hours now (step 7).
 - **Skip:** the user said not to contact them.
@@ -105,10 +109,10 @@ The shape, not a template: a greeting, the business name, sorry we missed your c
 
 Reply in the user's language. In this order:
 
-1. **Top line:** the period in the user's timezone, then: missed calls and callers found, already reached, hidden numbers, and how many are on this list.
+1. **Top line:** the period in the user's timezone, then: missed calls and callers found, already reached, hidden numbers, and how many are on this list (and how many of them spoke only to an AI Voice Agent since).
 2. **The list**, ranked and numbered, one entry per caller:
    - **Header:** name (or "New caller"), the number masked to its last 3 digits, how many tries, the latest one's time, and the line they called.
-   - **Who:** a known customer with how many calls and when they last spoke to you, or "Not in your contacts".
+   - **Who:** a known customer with how many calls they've had and when someone last spoke with them (their latest answered call, not today's miss), or "Not in your contacts".
    - **History:** one line from their latest call summary, with a quote of at most 15 words, and that call's date and call reference. Mark it partial when it is. Skip this line for a new caller.
    - **Why here:** the reason for this rank (tried 3 times; complaint last week; waited since 9:12).
    - **Reply:** text from which line, which AI Voice Agent, a person, hold until when, or skip.
@@ -162,7 +166,7 @@ After the first run, offer this once.
 
 ## Budget and privacy
 
-- The account allows 60 requests per minute, shared with colleagues. A full run stays under about 40: up to 9 searches, one number list, up to 3 AI Voice Agent reads, 2 or 3 reads for each of 10 callers, and at most 3 language checks. Fetch in parallel only where the app allows, at most 10 at a time. On a rate-limit error, wait a minute if the app can, then continue where you stopped. If it can't wait, stop, say what's done and what's left, and ask the user to say "continue" in a minute. Never retry in a loop or start over.
+- The account allows 60 requests per minute, shared with colleagues. A normal run stays under about 40: up to 9 searches, one number list, up to 3 AI Voice Agent reads, 2 reads for each of 10 callers, up to 3 summary checks for answered calls with no person on them, and at most 3 language checks. On a very busy day (more than 600 answered calls, so step 3 checks each caller on its own), each caller costs 3 reads: make at most 1 language check then, and expect about 45 requests in all. Fetch in parallel only where the app allows, at most 10 at a time. On a rate-limit error, wait a minute if the app can, then continue where you stopped. If it can't wait, stop, say what's done and what's left, and ask the user to say "continue" in a minute. Never retry in a loop or start over.
 - Mask phone numbers to their last 3 digits everywhere except the send lines in step 7. Never paste transcripts or full summaries.
 
 ## Non-negotiables

@@ -197,9 +197,13 @@ as though it is. So every enabled unit gets **explicit, complete wiring**, or it
   read programmatically, so the target is theirs to finish).
   When there is no group in mind at all, `enabled: false` + `rules: []` is the other draft shape. Both save
   cleanly, the dashboard shows the skill as *"Requires configuration,"* and you tell the user in plain,
-  user-facing terms — *"finish setting up the transfer to your team in the dashboard"* — never in DB terms
-  like "add a group extension." Keep the prompt honest while it's off: the agent offers a **callback**, not
-  a handoff it can't perform — a promise it can't keep is the defect the config would otherwise ship. Never
+  user-facing terms: *"the transfer is in place but switched off; tell me which team should take the calls
+  and its extension, and I'll switch it on and change the callback lines to a handoff in one save"* (or
+  they switch it on in the dashboard, then have you change the instructions), never in DB terms like "add
+  a group extension." Keep the prompt honest while it's off: the agent offers a **callback**, not
+  a handoff it can't perform — a promise it can't keep is the defect the config would otherwise ship. The
+  save that switches it on rewrites those callback lines to offer the handoff: instructions that still
+  refuse handoffs under a live transfer are the same defect, reversed. Never
   guess an id/extension for a live rule: nothing validates them, so a wrong one fails only mid-call — where
   advanced transfer is enabled the AI announces the failure and resumes, but on a cold fallback the caller
   is dropped.
@@ -466,7 +470,7 @@ Run a generated config against this before presenting it:
 | 4 | Every `extractData` property atomic; active collection instructed, not assumed |
 | 5 | `answerQuestions` doesn't auto-transfer without KB/skills to try first |
 | 6 | `takeMessage` not enabled on outbound |
-| 7 | Transfer conditions specific, **< 120 chars**, no "anything/everything"; each **enabled** direct target carries **both** its id and extension, or the skill ships `enabled: false` as a draft — a scaffolded group rule with the id/extension **omitted** (never blanked to `""`), or `rules: []` — with the prompt offering a **callback** instead of a handoff (§3.4) |
+| 7 | Transfer conditions specific, **< 120 chars**, no "anything/everything"; each **enabled** direct target carries **both** its id and extension, or the skill ships `enabled: false` as a draft — a scaffolded group rule with the id/extension **omitted** (never blanked to `""`), or `rules: []` — with the prompt offering a **callback** instead of a handoff (§3.4); a **switched-on** transfer's prompt offers the handoff and never says it can't connect callers |
 | 8 | Hangup scenarios present with an **explicit `action: "hangup"` and `enabled: true`** (an omitted action is a plain reply, and a switched-off scenario grants nothing): normal end + silence (+ voicemail if outbound) |
 | 9 | Every scenario without a `hangup`/`sendSms` action has a `reply`: the line to say or an instruction, not spoken word for word, in any language (§4.2) |
 | 10 | No behavior owned twice (greeting duplication, silence handling, conflicting rules) |
@@ -489,7 +493,7 @@ Run a generated config against this before presenting it:
 | 27 | **Outbound `startSpeakingFirst` is a deliberate choice**, not a leftover default: `true` with a concrete identifying `greeting`, unless the user asked for an agent that waits (§6) |
 | 28 | `tone`/`verbosity` emitted **only when the use case wants a non-default**, every label from the closed set — otherwise the keys are absent and the platform default applies (§2.1) |
 | 29 | `dialTime` (outbound only) is `0` or **≤ 90 s** — 91–120 passes validation but the call is refused when it's dispatched (§9) |
-| 30 | **Connected:** the document being saved was **round-tripped from `cloudtalk_get_voice_agent`** — not assembled from the conversation — with `knowledgeBaseIds` and `elevenLabsSettings` carried forward (`generator-contract.md`) |
+| 30 | **Connected:** the update was built on a **fresh `cloudtalk_get_voice_agent` read in this turn**, not assembled from the conversation, and sends only the changed fields, each changed collection or `elevenLabsSettings` in full (`generator-contract.md` *Connected mode*) |
 
 ---
 
@@ -585,7 +589,8 @@ available yet, and the dashboard shows the user the one field it still needs. Tw
   programmatically); `rules: []` is the alternative when no group is in mind (§3.4). `agentId`/`groupId` are
   integers, so **omit them on a draft — never blank one to `""`**, which is an INVALID_TYPE the save rejects
   even while the skill is off. Keep the prompt honest while it is off: the agent offers a **callback**, never
-  a handoff it can't perform. (Note that `appointmentBooking` below is the opposite case — its `integrationId`
+  a handoff it can't perform; and when it is switched on, the same save rewrites those lines to offer the
+  handoff (`SKILL.md` step 6). (Note that `appointmentBooking` below is the opposite case — its `integrationId`
   and `calendarId` are string fields, so an empty string is the right *not-chosen-yet* draft value there.)
 - **`appointmentBooking`** — disabled, with the non-ID fields authored (`eventName`, `durationMinutes`,
   the descriptions) while `integrationId` and `calendarId` stay **empty strings** until a calendar is

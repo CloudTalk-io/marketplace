@@ -889,11 +889,15 @@ def _check_transfer_destination(rule, where, rep, enabled=True, direction=None):
                     "work (schema §6.1).")
         else:
             rep.info("unfinished-transfer", where,
-                     "destination is unset — pick the agent or ring group on the skill in the dashboard, then "
-                     "switch the skill on (referenced-resources.md#direct-transfers).")
+                     "destination is unset: once the user names the team and its extension, switch the skill "
+                     "on, fill the target and change the callback lines to a handoff in one save (fallback: "
+                     "they pick it on the skill in the dashboard and switch it on, and the instructions still "
+                     "need that change) (referenced-resources.md#direct-transfers).")
             rep.reference("%s.destination" % where, "agent_or_group", pending=True,
-                          what="Undecided target: pick the real agent or ring group on the skill in the "
-                          "dashboard, then switch it on (referenced-resources.md#direct-transfers).")
+                          what="Undecided target: the user names the real agent or ring group and its "
+                          "extension; then switch the skill on and change the callback lines to a handoff in "
+                          "one save (fallback: they pick it in the dashboard, and the instructions still need "
+                          "that change) (referenced-resources.md#direct-transfers).")
         return
     if dest not in TRANSFER_DESTINATIONS:
         rep.err("bad-enum", "%s.destination" % where,
@@ -952,9 +956,10 @@ def _check_transfer_destination(rule, where, rep, enabled=True, direction=None):
         else:
             rep.info("unfinished-transfer", where,
                      "Switched-off transfer draft: the %s destination is scaffolded but its target isn't "
-                     "filled in (%s) — finish setting up the transfer to your team on this skill in the "
-                     "dashboard (it shows \"Requires configuration\"), then switch it on "
-                     "(referenced-resources.md#direct-transfers)."
+                     "filled in (%s). Once the user names the team and its extension, switch the skill on, "
+                     "fill the target and change the callback lines to a handoff in one save (fallback: they "
+                     "finish it in the dashboard, where it shows \"Requires configuration\", and the "
+                     "instructions still need that change) (referenced-resources.md#direct-transfers)."
                      % (dest, ", ".join(missing)))
     # A half-set pair is work someone still has to do, wherever the enabled toggle sits; a complete
     # pair is wiring done — listed only so the user double-checks values nothing else will.
@@ -1058,10 +1063,11 @@ def validate_skills(cfg, rep, direction, fields=None):
                          "switched off (schema §6.1).")
             else:
                 rep.reference("skills.transferToHuman", "agent_or_group",
-                              pending=True, what="Transfer shipped switched-off: pick the real agent or ring group on the skill in "
-                              "the dashboard (it shows \"Requires configuration\"), then switch it on — or supply "
-                              "the id + extension pair and the next config ships it wired "
-                              "(referenced-resources.md#direct-transfers).")
+                              pending=True, what="Transfer shipped switched-off: once the user names the real "
+                              "agent or ring group and its extension, the next save switches it on with the "
+                              "callback lines changed to a handoff (fallback: they pick it on the skill in the "
+                              "dashboard, where it shows \"Requires configuration\", switch it on, and the "
+                              "instructions still need that change) (referenced-resources.md#direct-transfers).")
         else:
             for idx, rule in enumerate(rules):
                 loc = "skills.transferToHuman.rules[%d]" % idx

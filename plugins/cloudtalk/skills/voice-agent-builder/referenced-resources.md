@@ -146,9 +146,12 @@ find the resource kind below.
   The default **scaffolds the group** — a rule with `destination: "group"` and the id/extension keys
   **omitted** (`groupId`/`groupExtension` absent), so the intent stays visible and the user completes it;
   `rules: []` is the alternative when no group is in mind. Both save, and the dashboard shows the skill as
-  *"Requires configuration"* with a locked toggle: open it, pick the ring group with the real pickers, and
-  switch it on. Tell the user in plain terms — *"finish setting up the transfer to your team in the
-  dashboard"* — not in DB terms. (Product templates ship the same way.)
+  *"Requires configuration"* with a locked toggle. Tell the user in plain terms, not in DB terms: *"the
+  transfer is in place but switched off; tell me which team should take the calls and its extension, and
+  I'll switch it on and change the callback lines to a handoff in one save."* Connected, the group id comes
+  from `cloudtalk_list_groups` and the extension from the user. The fallback is the dashboard: open the
+  skill, pick the ring group with the real pickers, switch it on, then have the builder change the
+  instructions, which still promise a callback until then. (Product templates ship the same way.)
 - **`destination: "call_flow"`** needs no ID: the agent hangs up and the Call Flow Designer routes next —
   **always a cold hand-off with no resume**. That is only useful when the agent **runs as a step inside a
   Call Flow** — for a standalone agent it just ends the call — so it is used on request, not as a stand-in

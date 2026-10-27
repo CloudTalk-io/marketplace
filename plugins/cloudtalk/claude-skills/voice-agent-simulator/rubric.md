@@ -29,7 +29,7 @@ from the spoken lines and how the call actually ended, judging marker-only evide
 
 ### `register_tone` — matches the configured tone, in one language
 - **5** — register consistently matches the configured `tone` labels (unset ⇒ platform default:
-  friendly + direct) and the style rules in `goalPrompt`, scenario/guardrail replies included; one
+  friendly + direct) and the style rules in `goalPrompt`, scenario replies included; one
   language throughout (a configured secondary language used to follow the caller is consistent).
 - **3** — right register with patches of drift: stiff where warmth is configured, chatty where
   direct is, or a scenario reply landing in a different register than the rest.
@@ -63,7 +63,7 @@ allows it.
 | Gate | `pass` when | `fail` when | `n/a` when |
 |---|---|---|---|
 | `greeting_verbatim` | `startSpeakingFirst: true` and the first agent line is the configured `greeting` word for word; or `false` and the agent did not speak first | the greeting reworded, trimmed, or skipped; or the agent opened when it should have waited | `startSpeakingFirst: true` with no `greeting` configured — nothing verbatim to check |
-| `language_consistency` | every agent utterance — scenario and guardrail replies included — in the configured `language` (a configured `secondaryLanguages` entry used to follow the caller also passes) | any agent sentence in any other language | — |
+| `language_consistency` | every agent utterance, scenario replies included, in the configured `language` (a configured `secondaryLanguages` entry used to follow the caller also passes) | any agent sentence in any other language | — |
 | `hangup_path` | the config defines ≥ 1 enabled, reachable `action: "hangup"` scenario, **and** the call ended through a defined path (a hangup or a transfer the config grants) | no enabled hangup scenario exists; or the call ended by turn cap, trailing off, or caller abandonment with no configured close | — |
 | `transfer_honesty` | no human handoff promised beyond what the config can dial — an enabled `transferToHuman` rule, or `answerQuestions` enabled with `action: "transferToHuman"` and a real `transferConfig`; with neither wired, only callback framing is used | a live handoff promised, implied, or staged without a wired transfer path | — |
 | `extract_data_coverage` | every enabled `extractData` property naming a caller-supplied fact **reachable on the path the call took** was asked for (and read back where the goalPrompt itself requires a read-back); a property that classifies the call (a routing decision, a summary, a reason) counts when the transcript plainly contains what it is extracted from | a reachable caller-supplied property never asked for | skill absent, disabled, or `properties` empty; branch-only properties on an untaken path are skipped here — if the config makes one unreachable by design, report that under `gaps` |
@@ -75,6 +75,9 @@ allows it.
 - Score the **whole conversation**, not its best turn — a strong open never offsets a broken close.
 - **A 5 needs positive evidence you could quote**; a merely clean, unremarkable run is a 4.
 - **Quote verbatim in the original language; write every finding in English** (`why`, `gaps`, `change`, `because`).
+- The `guardrails` list is inert: the platform skips it on real calls. Never expect or credit a reply
+  from it; judge the agent against the rules in `goalPrompt`, and note under `gaps` any rule that lives
+  only in that list.
 - Judge what the config controls. Caller behavior and platform limits are not the agent's fault —
   but a config-level answer to a hard caller **is** in scope: that is what `gaps` is for.
 - `gaps` = config-level holes the conversation exposed (unhandled intent, missing scenario, prompt blind spot) — not restatements of gate failures.

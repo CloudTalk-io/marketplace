@@ -154,8 +154,11 @@ shapes:
    `destination: "group"` and the id/extension keys **omitted** (`groupId`/`groupExtension` absent). The
    group intent is visible; the target is the user's to complete. It saves cleanly and the dashboard shows
    the skill as *"Requires configuration"* with a locked toggle (see `examples/E9`). Say so in
-   **user-facing** terms: *"the transfer skill is in place but off — finish setting up the transfer to your
-   team in the dashboard and switch it on."* Never phrase it as DB internals ("add a group extension").
+   **user-facing** terms: *"The transfer to your team is in place but switched off, so for now the agent
+   offers a callback. When you're ready, tell me which team should take the calls and its extension, and
+   I'll switch the transfer on and change the callback lines to a handoff in one save."* Switching it on in
+   the dashboard is the fallback: then the user tells you, so you change the instructions to offer the
+   handoff. Never phrase it as DB internals ("add a group extension").
 2. **`rules: []`** — the same disabled-draft idea when there is no specific group in mind at all
    (see `examples/E1`).
 3. **Wire a complete real pair** — only when the user has given you **both** halves (`agentId` +
@@ -164,7 +167,11 @@ shapes:
    does not). Then emit the rule with `enabled: true`.
 
 In every case keep the **prompt honest** while the skill is off: the agent offers a callback, not a handoff
-it can't perform (see `examples/E1`, `examples/E9`).
+it can't perform (see `examples/E1`, `examples/E9`). **And keep it honest when the skill goes on:** the
+save that switches a draft transfer on also fills the real pair and rewrites every line that refuses or
+replaces a handoff (the callback task step, a "can't put callers through" guardrail), so the agent offers
+the handoff and keeps the callback only for when the transfer fails. Instructions that still refuse
+handoffs under a switched-on transfer mean the agent never transfers anyone (`SKILL.md` step 6).
 
 Non-negotiables around this:
 
@@ -254,23 +261,30 @@ yourself. None of the emit rules relax — they tighten, because a mistake now l
 of a chat message. The tool surface and its per-tool caveats live in [`mcp-tools.md`](./mcp-tools.md); what
 follows is the **contract**.
 
-**1. Round-trip or don't write.** Every update begins with `cloudtalk_get_voice_agent`, which returns the
-agent's **complete config document**. Modify *that document* and send **the whole thing** back through
-`cloudtalk_update_voice_agent`. **Never synthesize an update payload from the conversation** — the update
-replaces the stored document with exactly what you send, so any field you didn't carry across is a field
-you just deleted. No `get`, no write.
+**1. Read fresh, then send only the change.** Every update begins with `cloudtalk_get_voice_agent` in the
+same turn, which returns the agent's **complete config document**: the base you edit and the source of its
+real IDs. **Never synthesize an update payload from memory or the conversation.** Then send
+`cloudtalk_update_voice_agent` the `voice_agent_id` plus **only the fields you change** (for a fresh config
+on a blank agent, every field you authored). The tool merges what you send onto its own fresh read of the
+stored agent: a field you leave out keeps its stored value, and a top-level field you send replaces the
+stored one whole. So a changed collection (`skills`, `scenarios`, `guardrails`, `secondaryLanguages`,
+`knowledgeBaseIds`) or `elevenLabsSettings` goes in complete, as read and then edited. Don't re-send the
+whole document: it would overwrite, field by field, anything changed in the dashboard since your read. No
+`get`, no write.
 
-**2. Carry the two preserve/replace fields deliberately.**
-- `knowledgeBaseIds` — **omitting it unlinks every knowledge base** on the agent. Carry forward the list
-  you read, even when the task has nothing to do with knowledge.
-- `elevenLabsSettings` — **omitted preserves** the stored object; **present replaces it wholesale**. To
-  change one knob, send back the whole object with that knob changed (behavioral §9).
+**2. Know what omission means where.** On the connected update, omission keeps the stored value (item 1).
+On a **full document** (an Expert-Mode paste, or `cloudtalk_create_voice_agent`, a clone included) it does
+not:
+- `knowledgeBaseIds`: **omitting it from a full document unlinks every knowledge base**. Carry forward the
+  list you read, even when the task has nothing to do with knowledge.
+- `elevenLabsSettings`: **omitted preserves** the stored object; **present replaces it wholesale**,
+  everywhere. To change one knob, send the whole object with that knob changed (behavioral §9).
+- `optimizeStreamingLatency` behaves the opposite way to `dialTime`: omitted from a full document it
+  **resets to `0`** rather than preserving, so a full document always carries it.
 - **Cloning is `get` → `create`, and the copy is not the original.** There is no clone tool: whatever you
   copy is what the new agent gets. Decide **deliberately** whether `knowledgeBaseIds` should carry over
   (two agents sharing a KB is a choice, not a default), and remember that **tool assignments do not
-  copy** — re-assign every custom tool the source agent had.
-`optimizeStreamingLatency` behaves the opposite way to `dialTime`: omitted on a write it **resets
-to `0`** rather than preserving — one more reason the update body is always the fetched document.
+  copy**: re-assign every custom tool the source agent had.
 
 **3. The write is the user's decision, not yours.** Every write acts on its first call, and the app
 (Claude or ChatGPT) asks the user to approve it: that prompt is the user's one approval. So say plainly what
@@ -314,7 +328,9 @@ exist and can't be created, fall back to the offline endings: **ask**, or **omit
 **7. Output shape, connected.** *Before* the write, your output is a short summary: what changes, on
 which agent, and what is still unwired. *After the save*, report
 
-- **what was written and where** — the agent's **name and id**, plus the fields that changed, and the
+- **what was written and where** — the agent's **name and id**, plus the fields that changed (the result's
+  `changed_fields` *when it carries them*; an older server's result doesn't, so then list the changes you
+  described before the save), and the
   **`dashboard_url`** *when the write returned one*: the VoiceAgent create/update and a KB create do,
   the tool and assignment writes and `cloudtalk_trigger_aiva_call` do not — hand over the link where
   there is one rather than describing the navigation, and don't promise it where there isn't;
@@ -325,7 +341,9 @@ which agent, and what is still unwired. *After the save*, report
 - **how to verify** — a test call (inbound: the user calls the agent's number; outbound:
   `cloudtalk_trigger_aiva_call` to a number they name), then `cloudtalk_search_calls` filtered by the
   agent's **numeric** `voice_agent_id` to find the call, then `cloudtalk_get_call_transcript` /
-  `cloudtalk_get_call_insights` to see what actually happened.
+  `cloudtalk_get_call_insights` to see what actually happened. Ask the user to stay on the call for **at
+  least 30 seconds**: a shorter call has no transcript or insights (`reason: "no_transcript"`), which is an
+  answer, not a reason to retry. Say so once and ask what they heard.
 
 The offline **save smoke-test** reminder (*Output shape*, item 5) does not apply in connected mode: the
 write returns its own structured result, which already tells you whether the save stuck. Re-saving to find
@@ -353,8 +371,11 @@ unchanged. Return:
    list.
 3. **A short setup checklist — only when step 2 flags something.** One line per action, specific, with
    the dashboard path, pointing at [`referenced-resources.md`](./referenced-resources.md): e.g. create
-   a knowledge base and add its ID; pick the ring group on the switched-off transfer skill and switch it
-   on; place the agent in a Call Flow if you asked for a `call_flow` handoff. An inbound agent with no
+   a knowledge base and add its ID; for the switched-off transfer, the user names the team and its
+   extension and you switch it on with the instructions changed to a handoff, in one save (fallback: they
+   pick the ring group on the skill in the dashboard, switch it on, then have you change the instructions);
+   place the agent in a Call Flow if you
+   asked for a `call_flow` handoff. An inbound agent with no
    transfer and no new resource gets the clean headline and **no checklist** — keep the warning rare so
    it gets read. When a transfer *is* switched off, also warn plainly that a **wrong** id/extension is
    validated nowhere and fails only during a live call — which is why the values come from the user, not

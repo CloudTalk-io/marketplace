@@ -14,7 +14,7 @@
 //   `defaultOutboundNumberId`, and behind Automatic (1) a real owned `failoverOutboundNumberId` in both
 //   directions (only 1 is magic; never guess 2; a bare 1 with no failover 400s).
 {
-  "agentName": "Cedar Clinic — Front Desk (US)",
+  "agentName": "Cedar Clinic: Front Desk (US)",
   "direction": "inbound",
   "defaultOutboundNumberId": 1,    // Automatic — required even for an inbound agent, which never calls out
   "failoverOutboundNumberId": 202, // replace with a real owned number id (cloudtalk_list_numbers or the

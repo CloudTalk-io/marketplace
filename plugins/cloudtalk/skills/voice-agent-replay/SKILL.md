@@ -69,7 +69,7 @@ They live in this plugin's `voice-agent-builder` skill.
 
 ### 4 · Read a sample
 
-**How many.** If the user named a number, use it, from 25 to 100. Otherwise say the plan in one line, in the same message as any other question: "I'll read 25 of its N calls, about a minute. Want 50 to catch rarer problems?" No answer, or "go": 25. Read 100 only when the user asks for it, and say first that it takes about 4 minutes and most of the account's request budget meanwhile. Never offer 100 yourself. With fewer calls than the number, read them all.
+**How many.** If the user named a number, use it, from 25 to 100. Otherwise say the plan in one line, in the same message as any other question: "I'll read 25 of its N calls, a little over a minute. Want 50 to catch rarer problems?" No answer, or "go": 25. Read 100 only when the user asks for it, and say first that it takes about 4 minutes and most of the account's request budget meanwhile. Never offer 100 yourself. With fewer calls than the number, read them all.
 
 Why these numbers: a cause needs two calls of proof, and the chance of seeing a failure at least twice grows with the sample.
 
@@ -83,11 +83,11 @@ More calls catch rarer failures but cost time and the account's shared request b
 
 - **Pick:** calls the user named, first. Then negative calls, up to a third of the sample, then fill from the pool, evenly spaced over it (every *n*-th call), so every day of the period counts, not only the newest.
 - **Insights:** for each, `cloudtalk_get_call_insights` with `include: ["summary", "sentiment", "smart_notes"]`, in batches of at most 10, in parallel only where the app allows it. A field that comes back `null` has no insight. One that comes back with `reason: "rate_limited"` or `reason: "error"` is a failed read, not an empty one. A call with no insights doesn't count toward the sample: replace it with the next pick, up to 40% more insight reads than the sample.
-- **No insights at all:** when the first 10 reads have none, stop reading. Say once that this agent's calls carry no transcript or insights yet: they aren't analysed yet, or Conversation Intelligence isn't on the plan. Offer what still works: the user listens to a call they pick (`cloudtalk_get_call_recording` with `action: "play"`), or the `voice-agent-checkup` skill checks the setup without calls.
+- **No insights at all:** when the first 10 reads have none, stop reading. Say once that this agent's calls carry no transcript or insights yet: they aren't analysed yet, or Conversation Intelligence isn't on the plan. Offer what still works: the user listens to a call they pick (`cloudtalk_get_call_recording` with `action: "play"`; not available when CloudTalk is connected with an API key, so then they listen to it in the dashboard), or the `voice-agent-checkup` skill checks the setup without calls.
 - **Transcripts:** `cloudtalk_get_call_transcript` with `limit: 300`, for about one call in four of the sample, at most 20: two thirds where the insights suggest a failure, the rest from calls that look fine, because repeating itself and making things up rarely reach a summary. Insights are short; transcripts are long, so this cap is what keeps a 100-call run readable. Read a second page (`offset` set to `pagination.next_offset`) only when the end of the call decides a flag. `reason: "no_transcript"` is an answer, not an error: don't retry it, and use that call's summary instead, marked as a summary.
 - Tell the AI Voice Agent from the caller with the transcript's speaker map: `callers` gives each speaker's `type` and `localIdentifier`, and each segment's `caller` points to one of them.
 
-**Budget.** The account allows 60 requests a minute, shared by everyone at the company using CloudTalk's AI connection. Each insight and each transcript is one request. A 25-call run makes about 45 (about a minute), 50 calls about 85 (about 2 minutes), 100 calls about 160 (about 4 minutes). Read in waves of at most 10, and keep to about 40 requests a minute so colleagues keep room. On a rate-limit error, wait a minute if the app can, then continue where you stopped. If it can't wait, stop, say what's done and what's left, and ask the user to say "continue" in a minute. Never retry in a loop or start over.
+**Budget.** The account allows 60 requests a minute, shared by everyone at the company using CloudTalk's AI connection. Each search, insight and transcript is one request. A 25-call run makes about 45 requests, 50 calls about 85, 100 calls about 160. Pace them so no minute goes over about 40, which leaves colleagues a third of the budget: read in waves of at most 10, and start each wave at least 15 seconds after the previous one started. So a 25-call run takes a little over a minute, 50 calls a little over 2 minutes and 100 calls about 4 minutes. Where the app can't pause between waves, run them one after another, never two at once. On a rate-limit error, wait a minute if the app can, then continue where you stopped. If it can't wait, stop, say what's done and what's left, and ask the user to say "continue" in a minute. Never retry in a loop or start over.
 
 > **✓ Gate:**
 > - [ ] you can say how many calls you read and how you picked them
@@ -159,20 +159,20 @@ Follow the connected-mode write contract (`generator-contract.md` *Connected mod
 
 1. Say in plain words which agent changes and, per field, what changes: before and after, one line each. Say once that the app will ask them to approve the save.
 2. Call `cloudtalk_get_voice_agent` again, so you edit the current setup and not the copy from step 2.
-3. Change only the agreed fields in that document. Collections are replaced whole (`skills`, `scenarios`, `guardrails`, `secondaryLanguages`, `knowledgeBaseIds`): to change one entry, send the full list. Carry forward `knowledgeBaseIds` (left out, every knowledge base is unlinked), `elevenLabsSettings` as a whole object, `provider`, `llm`, and `optimizeStreamingLatency` (left out, it resets to 0).
+3. Edit only the agreed fields on that fresh copy, and send `voice_agent_id` plus just those fields. The save merges them onto the stored setup, so anything you leave out keeps its value (`knowledgeBaseIds`, `provider`, `llm` and `optimizeStreamingLatency` included). A field you send replaces the stored one whole, so a changed collection (`skills`, `scenarios`, `guardrails`, `secondaryLanguages`, `knowledgeBaseIds`) or `elevenLabsSettings` goes in complete: to change one entry, send the full list with that entry changed. Don't send the whole setup back: it would undo anything changed in the dashboard since your read.
 4. Save everything in **one** `cloudtalk_update_voice_agent` call with `voice_agent_id` set to the **config id**. It acts on that first call. An older server answers `status: "confirmation_required"` with a preview instead: nothing happened yet, so show the preview and call again with `"confirm": true` once the user agrees.
-5. Report the result, not the attempt. `status: "updated"`: list `changed_fields` in plain words and hand over the `dashboard_url`. Surface any `voice_agent.error_codes` or `voice_agent.warnings` in plain words: saved is not clean. `status: "validation_failed"`: nothing was saved, so explain the error in plain words, fix it, and ask before saving again.
+5. Report the result, not the attempt. `status: "updated"`: when the result carries `changed_fields`, list them in plain words (an older server's result doesn't: then list the changes you described in point 1), and hand over the `dashboard_url`. Surface any `voice_agent.error_codes` or `voice_agent.warnings` in plain words: saved is not clean. `status: "validation_failed"`: nothing was saved, so explain the error in plain words, fix it, and ask before saving again.
 
 > **✓ Gate:**
 > - [ ] the user asked for these changes
-> - [ ] the saved document came from a fresh read
+> - [ ] the saved fields were edited on a fresh read, and only the agreed ones were sent
 > - [ ] the result says it was saved
 
 ### 9 · Check that it worked
 
 Note when the save happened (UTC), then offer two ways to verify:
 
-- **A test call now.** Inbound: the user calls the agent's number and tries the case that failed. Outbound: `cloudtalk_trigger_aiva_call` with the **config id** and a number the user names, in E.164 (`+` then digits only). It places a real call, so the app asks them to approve it. Keep the call over 30 seconds so it gets a transcript, then find it with `cloudtalk_search_calls` (numeric id, period starting at the save) and read it as in step 4.
+- **A test call now.** Inbound: the user calls the agent's number and tries the case that failed. Outbound: `cloudtalk_trigger_aiva_call` with the **config id** and a number the user names, in E.164 (`+` then digits only). It places a real call, so the app asks them to approve it. An older server answers the first call with `status: "confirmation_required"` and dials nothing: show its preview and call again with `"confirm": true` once the user agrees. A `queued` result is queued, not answered. Keep the call over 30 seconds so it gets a transcript, then find it with `cloudtalk_search_calls` (numeric id, period starting at the save) and read it as in step 4.
 - **A later replay.** Run this skill again on calls after the save, with the same sample size, once there are that many. The sampling is the same, so the counts per cause compare.
 
 ## Output
@@ -197,7 +197,7 @@ After a save: what changed and the link (step 8), then the two ways to check it 
 - **No cause without two calls of proof.** Put only words that were said inside quote marks, and keep what you read apart from what you infer.
 - **Calls take the numeric id, the setup takes the config id.** The config id finds no calls, and the numeric id reads and saves nothing.
 - **No write the user didn't ask for.** Say what will change first, save once, and report the save's result, not the attempt.
-- **Never build a save from memory.** Fresh read, change the agreed fields, send the whole document back. Leaving out `knowledgeBaseIds` unlinks every knowledge base.
+- **Never build a save from memory.** Fresh read, then send only the agreed fields, with any collection you change in full.
 - **Never put a fact, id or number into the setup that the user or a CloudTalk read didn't give you.** What a caller said, or what you guess the answer is, is not a fix.
 - **Never place a test call to a number the user didn't name.**
 - **Privacy:** quote only what proves the point, mask phone numbers to their last 3 digits, say "the caller" instead of a name, and never paste a whole transcript.

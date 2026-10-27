@@ -24,7 +24,7 @@
 // NOT ElevenLabs-only — they are provider-agnostic, which is why this Deepgram agent carries them
 // (schema §11). Niche product names are handled via the canonical-name list in the prompt.
 {
-  "agentName": "VoltGear — Support Assistant",
+  "agentName": "VoltGear: Support Assistant",
   "direction": "inbound",
   "defaultOutboundNumberId": 1,    // Automatic — required even for an inbound agent, which never calls out
   "failoverOutboundNumberId": 202, // replace with a real owned number id (cloudtalk_list_numbers or the

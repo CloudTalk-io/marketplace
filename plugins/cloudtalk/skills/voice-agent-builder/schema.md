@@ -62,7 +62,7 @@ The legacy v1 wizard fields (`voiceAgentPrompt`, `extractionPrompt`, `transferEn
 | `maxCallDuration` | generate | int | ✅ | minutes; **hard cap** — call is cut off when reached; no hard API cap, but keep it **≤ 120** (a value above that draws a recommendation warning, not a save refusal) | Required; the dashboard fills **30** if omitted (no 240 default). Set generous headroom, not a tight fit; ~20–30 min inbound, ~10–15 min outbound (behavioral §4.4). |
 | `temperature` | generate | float | ✅ | `0.0`–`1.0` | LLM sampling temperature. Baseline `0.5`; highly structured/deterministic flows may go lower (~`0.1`–`0.3`) (§7a-bis). |
 | `voice` | generate | string | ✅ | a voice ID in the library (§4.4) | Built-in premade set is global (self-contained). |
-| `optimizeStreamingLatency` | generate | int | ❌ | `0`–`4` | ElevenLabs latency tuning; **optional (not API-required), and the API applies no default**. Omitted on a write = **reset to `0`**, not preserved — so always emit it deliberately. Baseline `2`, never `4` (§7a-bis). Unlike `elevenLabsSettings` (omit-to-let-provider-default), this is not backfilled. |
+| `optimizeStreamingLatency` | generate | int | ❌ | `0`–`4` | ElevenLabs latency tuning; **optional (not API-required), and the API applies no default**. Omitted from a full document (Expert-Mode paste, create) = **reset to `0`**, not preserved, so always emit it deliberately there; the connected update keeps the stored value when it's omitted. Baseline `2`, never `4` (§7a-bis). Unlike `elevenLabsSettings` (omit-to-let-provider-default), this is not backfilled. |
 | `stability` | generate | float | ✅ | `0.0`–`1.0` | Voice stability. **Required and passed straight through to ElevenLabs — the API applies no default and does NOT backfill it**; omitting it fails the save. Baseline `0.3` (§7a-bis). |
 | `similarity` | generate | float | ✅ | `0.0`–`1.0` | Voice similarity boost. **Required and passed straight through to ElevenLabs — the API applies no default and does NOT backfill it**; omitting it fails the save. Baseline `0.7` (§7a-bis). |
 | `provider` | generate | string | ❌ (emit it) | `"elevenlabs"` \| `"deepgram"` | The agent's speech provider. Filled at creation, kept on every save; omitted = keep the stored one (§5). |
@@ -77,7 +77,7 @@ The legacy v1 wizard fields (`voiceAgentPrompt`, `extractionPrompt`, `transferEn
 | `skills` | (per-skill) | object | ❌ | see §6 | Structured capabilities; tags vary by skill. |
 | `scenarios` | generate¹ | array | ❌ | see §7 | ¹`action` sub-value changes the tag (§7). |
 | `guardrails` | generate | array | ❌ | see §7 | Condition → safe reply. |
-| `knowledgeBaseIds` | **reference** | string[] | ❌ | KB IDs owned by the company | Needs ElevenLabs (§5). **No preserve-on-omit:** omitting it on a full-document update unlinks every KB — carry the current value forward when editing. See [referenced-resources](./referenced-resources.md). |
+| `knowledgeBaseIds` | **reference** | string[] | ❌ | KB IDs owned by the company | Needs ElevenLabs (§5). **No preserve-on-omit in a full document:** omitting it from an Expert-Mode paste or a create unlinks every KB, so carry the current value forward there; the connected update keeps the stored list when it's omitted. See [referenced-resources](./referenced-resources.md). |
 
 > **System-managed fields — do NOT author (`forbidden`): `presetType`, `status`, `lastConfigurationStep`.**
 > These are real stored fields, but on the Expert-Mode editor save path the dashboard sources them from the

@@ -11,7 +11,7 @@
 // `Communicate in German` directive governs what the agent says, so English ones would also be spoken in
 // German (behavioral §1/§5). Only the `greeting` is spoken as written, so it must be German.
 {
-  "agentName": "Praxis Dr. Weber — Terminbestätigung",
+  "agentName": "Praxis Dr. Weber: Terminbestätigung",
   "direction": "outbound",
   "defaultOutboundNumberId": 1,    // Automatic — outbound calls go out FROM the chosen number, so this matters here
                                    // NO `failoverOutboundNumberId` on purpose: this is the one example that FAILS the

@@ -21,7 +21,7 @@
 // knows and takes details for a callback, so the prompt never promises a handoff. E9 is the transfer
 // variant, scaffolding a group handoff as a disabled draft for the user to finish in the dashboard.
 {
-  "agentName": "Riverstone Hotel — Front Desk",
+  "agentName": "Riverstone Hotel: Front Desk",
   "direction": "inbound",
   "defaultOutboundNumberId": 1,    // Automatic — required even for an inbound agent, which never calls out
   "failoverOutboundNumberId": 202, // replace with a real owned number id (cloudtalk_list_numbers or the

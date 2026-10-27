@@ -20,7 +20,7 @@ Goal: coaching a team lead can use in a 1:1 this week, and that changes the next
 
 Say each of these once, where it matters, never per call:
 
-- **No call score.** CloudTalk's call scoring results aren't part of the call insights this connection reads. Coach against the six moments below or the user's own scorecard, and never make up a score. Step 4 checks once whether call details carry one.
+- **No call score.** CloudTalk's call scoring results aren't readable through this connection. Coach against the six moments below or the user's own scorecard, and never make up a score. A call's `call_rating` is the agent's own rating of call quality, not a score: never present it as one.
 - **Group membership isn't readable.** The team is the people who answered that group's calls in the period, or the names the user gives.
 - **A person's call list doesn't show call length.** Short calls show up as a missing or tiny transcript, and get swapped.
 - **Coaching notes can't be saved in CloudTalk.** Drafts stay in the chat.
@@ -36,7 +36,7 @@ Reads run straight away, without asking. Nothing is written until step 8, and on
 - **People.**
   - **Names given:** match them in `cloudtalk_list_agents` (follow `pagination.next_page` if needed). The person's id is the agent's `id`.
   - **A team or group given:** find its id with `cloudtalk_list_groups`, then make one `cloudtalk_search_calls` with `group_id`, the period, `status: "answered"` and `limit: 100`. The team is the `agent` on those rows, most calls first. If `next_page` is set, say the list comes from the group's latest 100 calls and ask whether anyone is missing.
-  - **Neither:** if exactly one group name fits the request, use it and say so. Otherwise ask once which team, listing the group names.
+  - **Neither:** if exactly one group name fits the request, use it and say so. If the account has no groups, coach everyone who answered calls in the period: one `cloudtalk_search_calls` with the period, `status: "answered"` and `limit: 100`, and the team is the `agent` on those rows, most calls first. Otherwise ask once which team, listing the group names.
 - **AI Voice Agents**, when the user asks about them or about "everyone": `cloudtalk_list_voice_agents`, then `cloudtalk_get_voice_agent` with each one's `voice_agent_id` (the 24-character id). The read's `voice_agent.voiceAgentId` is the **numeric** id that call searches need; the 24-character id matches no calls. If this read fails with a permissions error, say once that the AI Voice Agent check needs a CloudTalk Admin sign-in, and carry on with people.
 - **How many calls.** Two numbers per person: calls **screened** (each call's summary and notes, which show how often something goes wrong) and calls **read in full** (word for word, where the quotes come from). If the user named a number, use it. Otherwise say the plan in one line, in the same message as any other question: "I'll screen 25 calls per person and read 6 of them word for word, one person a minute, about N minutes in all. Want 50 per person to catch rarer habits?" No answer, or "go": the defaults below.
 
@@ -46,7 +46,7 @@ Reads run straight away, without asking. Nothing is written until step 8, and on
   | 2 to 4 | 25 (50 on request) | 6 | all |
   | 5 or more | 25 (50 on request) | 6 | 4; offer the next 4 |
 
-  Work one person at a time, about one a minute: at the defaults a person is about 35 requests, inside the account's budget with room left for colleagues. At 50 screened, a person takes about 2 minutes. Fewer analyzed calls than the screening number: screen them all.
+  Work one person at a time, about one a minute: at the defaults a person is about 35 requests, inside the account's budget with room left for colleagues. Write each person's card (step 7) as soon as their reads are done, before starting the next person: writing it paces the run, and if a rate limit stops the run, the cards already written stand. At 50 screened, a person takes about 2 minutes. Fewer analyzed calls than the screening number: screen them all.
 
   Each AI Voice Agent counts as one person. At most 2 per batch: the ones the user named, else the 2 with the most calls (a `cloudtalk_search_calls` with its numeric id and `limit: 1` gives each total in `pagination.items_count`). Offer the rest afterwards.
 
@@ -70,7 +70,7 @@ Choose the calls to screen:
 
 A person with fewer than 5 analyzed calls isn't coached this time: say how many there were and offer a longer period.
 
-**Conversation Intelligence, checked once.** If all three searches come back empty for someone, search their answered calls once without `sentiment` (`limit: 3`). If there are calls, read one transcript. No transcript means Conversation Intelligence isn't on the plan, or hasn't analyzed these calls yet. If that holds for the first two people, say so once, stop coaching people, and go to step 6: its outcome check works without transcripts.
+**Conversation Intelligence, checked once.** If all three searches come back empty for someone, don't use their own call list for the check: it shows no call length, so it may only offer calls under 30 seconds. Make one `cloudtalk_search_calls` for the period with `status: "answered"`, `limit: 20` and no person filter (these rows carry `talking_time`), and read the transcript (`limit: 1`) of a call with at least 60 seconds of talk. A transcript means this person simply has no analyzed calls in the period: say so and offer a longer period. No transcript means Conversation Intelligence isn't on the plan, or hasn't analyzed these calls yet. If that holds, say so once, stop coaching people, and go to step 6: its outcome check works without transcripts.
 
 > **✓ Gate, per person:**
 > - [ ] the calls chosen, at most a third of them negative
@@ -79,7 +79,7 @@ A person with fewer than 5 analyzed calls isn't coached this time: say how many 
 
 ### 3. Screen, then read in full
 
-**Screen** each chosen call: `cloudtalk_get_call_insights` with `include: ["summary", "sentiment", "smart_notes"]`, adding `"talk_listen"` on sales or discovery calls. Note one line per call: how it ended (solved, a next step with an owner and a time, or left open), any wrong or corrected information the notes flag, the customer's feedback, and the sentiment. A call with no insights is replaced from the same group. Screening tells you how often a moment goes wrong ("no next step in 9 of 25 calls"); it never supplies a quote.
+**Screen** each chosen call: `cloudtalk_get_call_insights` with `include: ["summary", "sentiment", "smart_notes"]`, adding `"talk_listen"` on sales or discovery calls. Note one line per call: how it ended (solved, a next step with an owner and a time, or left open), any wrong or corrected information the notes flag, the customer's feedback, and the sentiment. A call with no insights is replaced from the same group. Screening tells you how often a moment goes wrong ("no next step in 9 of 25 calls"); it never supplies a quote. Summaries and notes only show Resolution, Accuracy and the customer's feedback, so screening counts only those. Opening, Understanding, Tone and Close are counted from calls read in full only.
 
 **Read in full** the read-in-full number per person, chosen by rule: two calls for each of the person's two most frequent screening problems, at least one call that went well, and the rest evenly spaced over the screened calls. Then, for each: `cloudtalk_get_call_transcript` with the `call_id` and `limit: 150`. When `pagination.next_offset` is set (a long call), read only the close as well: `offset` set to `pagination.total` minus 30, and `limit: 30`. A long call counts as two of the batch's reads.
 
@@ -108,7 +108,7 @@ Judge fairly:
 - Judge what the person did, not how the customer felt. A negative call is often about the problem, not the person.
 - Transcripts are machine-made. Don't coach accent or grammar, or a word that may have been misheard, and don't quote a garbled line.
 - If the user gave their own scorecard, use its items and its scale instead, unchanged, with n/a the same way.
-- If the user says the team uses CloudTalk call scoring, read `cloudtalk_get_call` for one chosen call. If it carries a call score with sections, use those sections as the moments and read the details of the other chosen calls too. If not, say once that scores aren't available here, and carry on.
+- If the user says the team uses CloudTalk call scoring, say once that scores aren't readable here, and coach against the six moments, or against their scorecard's sections if they paste them.
 
 ### 5. One change and one strength per person
 
@@ -158,32 +158,32 @@ Pick **one** change per AI Voice Agent: the pattern seen most often, with the mo
 
 ### 7. Write the coaching
 
-Reply in the user's language, in this order. Keep each card to five lines.
+Reply in the user's language, in this order. Keep each card to five lines. Each person's card is written as soon as that person is done (step 1), so the team pattern and the coverage come after the cards.
 
-1. **Header:** the team and the period, then a coverage line: people coached, calls screened and read in full out of how many analyzed calls, and AI Voice Agent calls checked and how.
-2. **Team pattern**, only with 3 or more people, and without names: the change most people share (N of M people), the team's strongest habit, and one thing for the next team meeting.
-3. **One card per person:**
+1. **Header:** the team, the period, and who is in this batch.
+2. **One card per person:**
    - **Name** · N calls screened, M read in full, of T analyzed
    - **Keep doing:** the behaviour. "Quote" (call id, day, date, time, at m:ss)
-   - **Change one thing:** the behaviour, seen in N of M screened calls and confirmed in K read in full. "Quote" (call id, day, date, time, at m:ss)
+   - **Change one thing:** the behaviour, seen in K of M calls read in full, and in N of S screened calls when the moment is Resolution or Accuracy. "Quote" (call id, day, date, time, at m:ss)
    - **Try instead:** "The better line." When to use it.
    - **Look for next time:** what the lead will hear when it lands.
+3. **Team pattern**, after the last person, only with 3 or more people, and without names: the change most people share (N of M people), the team's strongest habit, and one thing for the next team meeting.
 4. **One card per AI Voice Agent:**
    - **Name (AI Voice Agent)** · N calls in the period, N checked from call records, N in detail
    - **What callers ran into:** the pattern, counted, with a caller's words from a call a person answered where you have them
    - **Setup change:** the field, what it says now, and what it should say
    - **Confirm it:** the test call, or next week's check
-5. **Not covered:** people left for the next batch or skipped (too few calls), calls swapped (too short or not analyzed), AI Voice Agent calls that couldn't be read, and anything a rate limit cut short.
+5. **Coverage:** people coached, calls screened and read in full out of how many analyzed calls, and AI Voice Agent calls checked and how. Then **not covered:** people left for the next batch or skipped (too few calls), calls swapped (too short or not analyzed), AI Voice Agent calls that couldn't be read, and anything a rate limit cut short.
 
 When a quote or better line is in another language than the user's, add a short translation in brackets after it. Show dates and times in the user's timezone when you know it, otherwise say UTC.
 
 Example person card:
 
 - **Ada Bennett** · 25 calls screened, 6 read in full, of 41 analyzed
-- **Keep doing:** owns the next step. "I'll call you back by 3 today with the refund number." (call 51234, Tue 21 Oct 10:02, at 3:40)
-- **Change one thing:** ends the call before checking the customer is sorted, seen in 9 of 25 screened calls and confirmed in 3 read in full. "Okay, that's it then, bye." (call 51240, Wed 22 Oct 14:15, at 5:02)
-- **Try instead:** "Before I let you go, is there anything else I can sort out for you today?" Once the main issue is solved.
-- **Look for next time:** that question in the last minute of her calls.
+- **Keep doing:** names the feeling when the customer is upset. "I can hear how frustrating this has been, let's fix it now." (call 51234, Tue 21 Oct 10:02, at 3:40)
+- **Change one thing:** ends calls without a next step the customer can count on, seen in 3 of 6 calls read in full and in 9 of 25 screened calls. "Someone will get back to you on that." (call 51240, Wed 22 Oct 14:15, at 5:02)
+- **Try instead:** "I'll email you the refund number by 3 today, and call you if it slips." When the fix needs a colleague.
+- **Look for next time:** a named time and owner in the last minute of her calls.
 
 Close with one line: this is coaching input for a 1:1, not a performance rating, and it's worth listening to one cited call before the conversation.
 
@@ -204,7 +204,7 @@ Every write acts on its first call, and the app asks the user to approve it. Say
 The account allows 60 requests a minute, shared by everyone at the company who uses CloudTalk's AI connection. Every tool call is one request: per person, 3 searches, one per screened call and one per call read in full. At the defaults that is about 35 per person, and about 60 at 50 screened. Going one person at a time, about one a minute, keeps a run under about 40 requests a minute; a team of 4 takes about 4 minutes. Screening is cheap on context (a few lines per call); calls read in full are long, which is why that number stays at 6 to 8. Say the expected time before the run. So:
 
 - Read in waves of at most 10.
-- A rate-limit error, or an insight whose `reason` is `rate_limited`: On a rate-limit error, wait a minute if the app can, then continue where you stopped. If it can't wait, stop, say what's done and what's left, and ask the user to say "continue" in a minute. Never retry in a loop or start over. Don't re-read what you already have.
+- A rate-limit error, or an insight whose `reason` is `rate_limited`: wait a minute if the app can, then continue where you stopped. If it can't wait, stop, say what's done and what's left, and ask the user to say "continue" in a minute. Never retry in a loop or start over. Don't re-read what you already have.
 - If it happens twice in a row, finish with what you have and say what's missing.
 
 ## Non-negotiables

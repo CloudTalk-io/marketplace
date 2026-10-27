@@ -50,7 +50,7 @@ Read-only — useful for verifying behavior after a test call.
 
 | Tool | Purpose | Key caveat |
 |---|---|---|
-| `cloudtalk_health_check` | Confirm the MCP is reachable and see which company/user the sign-in or key resolved to | Run it first when a tool fails — it separates an auth/tenant problem from a data problem. Makes **no** API call of its own, so it proves the credential was accepted, not that an upstream is healthy. **Check the echoed company id is the account you meant** — and the **`role_id`**: a non-admin key can still `cloudtalk_list_voice_agents`, but fails the other config reads (`get_voice_agent`, `list_knowledge_bases`, `list_voice_agent_tools`) **and every write** with an authorization error, which is the first thing to check when one list works and nothing else does. The response also carries **`rollout_enabled`**, which tells a *tenant not enabled for MCP* 403 apart from an auth/role problem |
+| `cloudtalk_health_check` | Confirm the MCP is reachable and see which company/user the sign-in or key resolved to | Run it first when a tool fails — it separates an auth/tenant problem from a data problem. Makes **no** API call of its own, so it proves the credential was accepted, not that an upstream is healthy. **Check the echoed company id is the account you meant** (silently: never show a company id, user id or tool name to the user) — and the **`role_id`**: a non-admin key can still `cloudtalk_list_voice_agents`, but fails the other config reads (`get_voice_agent`, `list_knowledge_bases`, `list_voice_agent_tools`) **and every write** with an authorization error, which is the first thing to check when one list works and nothing else does. The response also carries **`rollout_enabled`**, which tells a *tenant not enabled for MCP* 403 apart from an auth/role problem |
 | `cloudtalk_list_agents` | Human agents: id, name, email, **extension**, availability | Both halves of an `agent` transfer pair come from here. Still prefer groups as targets (behavioral §3.4) |
 | `cloudtalk_list_groups` | Ring groups — the preferred transfer targets | Returns **id + name only**. The `groupExtension` half is **not** in this response — take it from the Dashboard, the user, or the agent's current config |
 | `cloudtalk_list_numbers` | Company numbers: id, country/area code, name, E.164, per-channel support flags | Resolves outbound-number IDs **and** SMS senders (`sms_supported: true`). `country_code` here is the **numeric calling code** (`421`), not the ISO-2 code `cloudtalk_search_calls` wants |
@@ -103,8 +103,10 @@ called. Only the get and write responses carry the numeric one: `voice_agent.voi
   fields you pass onto it before the upstream full replace, so only `voice_agent_id` is required and an
   omitted field keeps its stored value. **Collections are replaced, not merged** (`skills`, `scenarios`,
   `guardrails`, `secondaryLanguages`, `knowledgeBaseIds`): to change one entry, pass the whole list.
-  Still **get → modify → update** — the read gives you the current lists and the real IDs; never compose an
-  update from memory or a stale copy.
+  Still **get → modify → update**: read the agent in this turn (the read gives you the current lists and
+  the real IDs; never compose an update from memory or a stale copy), then send `voice_agent_id` plus
+  only the fields you change, each changed collection or `elevenLabsSettings` in full. Re-sending the
+  whole document would overwrite anything changed in the dashboard since your read.
 - **Applying optimized settings is its own opt-in.** The agent's read (`cloudtalk_get_voice_agent`)
   carries `optimizedSettings`: the platform's picks for the agent's current setup (`provider`, `llm`, the ElevenLabs turn settings, the latest `minorVersion`;
   `schema.md` §5). Nothing in it is applied on its own. `apply_optimized_settings: true` copies every
@@ -121,7 +123,8 @@ called. Only the get and write responses carry the numeric one: `voice_agent.voi
   required*.
 - **On a full-document save (Expert Mode, or the create), omission is not neutral, and not uniform** —
   one habit covers all three cases: send back the document `cloudtalk_get_voice_agent` gave you, modified.
-  - `knowledgeBaseIds` **omitted = every KB unlinked** — carry the current list through each update.
+  (The connected update is the exception: it merges, so there you send only the change, as above.)
+  - `knowledgeBaseIds` **omitted = every KB unlinked**: carry the current list through each full document.
   - `elevenLabsSettings` omitted = stored settings **preserved**; present = **replaced wholesale** —
     when connected, edit individual sub-fields on the fetched object rather than authoring the
     container fresh.
@@ -140,8 +143,10 @@ called. Only the get and write responses carry the numeric one: `voice_agent.voi
   (only `/validate` and the bundled validator flag it) — so run the validator to catch a typo the save
   would swallow.
 - **The save is the platform's verdict.** There is no separate validate tool: run the bundled validator
-  first (below), then let the write return the server's answer. `cloudtalk_update_voice_agent` also
-  reports `changed_fields` and `applied_optimized_settings`.
+  first (below), then let the write return the server's answer. On newer servers the
+  `cloudtalk_update_voice_agent` result also carries `changed_fields` and `applied_optimized_settings`;
+  an older server's result doesn't (only its preview lists `changed_fields`). Report `changed_fields`
+  only when the result carries them; otherwise list the changes you described before the save.
 - **Read what a successful write returns.** Three writes carry a **`dashboard_url`** — create and update
   VoiceAgent, and create knowledge base: hand that link to the user instead of describing where to
   click. The tool and assignment writes and `cloudtalk_trigger_aiva_call` return none, so don't promise a
@@ -184,3 +189,10 @@ the numeric CDR one) — and `call_number`, strict **E.164**: a leading `+` then
 dashes or parentheses. The result carries a **`session_id`**, the correlation key for that call attempt;
 keep it when reporting back. To find the call afterwards, `cloudtalk_search_calls` filtered by the
 agent's **numeric** `voice_agent_id` (*Two ids, one name*), then transcript/insights.
+
+Ask the user to stay on a test call for **at least 30 seconds**. A shorter call has no transcript or
+insights: `cloudtalk_get_call_transcript` answers `reason: "no_transcript"`, which is an answer, not a
+reason to retry. Say so once and ask the user what they heard. *Older servers:* the first
+`cloudtalk_trigger_aiva_call` answers `status: "confirmation_required"` and dials nothing; show its
+preview and call again with `"confirm": true` once the user agrees. A `queued` result is queued, not
+answered.

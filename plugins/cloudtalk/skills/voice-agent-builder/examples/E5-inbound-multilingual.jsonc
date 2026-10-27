@@ -14,7 +14,7 @@
 // To let the agent book into a calendar directly, connect a Google/Outlook calendar in the UI and enable
 // the appointmentBooking skill with its integrationId + calendarId (referenced-resources.md).
 {
-  "agentName": "Studio Lumen — Booking Assistant",
+  "agentName": "Studio Lumen: Booking Assistant",
   "direction": "inbound",
   "defaultOutboundNumberId": 1,    // Automatic — required even for an inbound agent, which never calls out
   "failoverOutboundNumberId": 202, // replace with a real owned number id (cloudtalk_list_numbers or the

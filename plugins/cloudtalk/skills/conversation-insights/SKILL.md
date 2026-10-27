@@ -1,6 +1,6 @@
 ---
 name: conversation-insights
-description: Turn recent CloudTalk conversations into insights you can act on. It finds the open loops, meaning questions not answered, promises not kept, callers not called back and risks not handled, and say who should close each one, a person or an AI Voice Agent. Use when the user asks what needs attention, what's still open, what the team owes customers, who to follow up with, or for a daily or weekly call digest. It only reads, and it is not a call-volume report. Summaries need Conversation Intelligence.
+description: Turn recent CloudTalk conversations into insights you can act on. It finds the open loops, meaning questions not answered, promises not kept, callers not called back and risks not handled, and says who should close each one, a person or an AI Voice Agent. Use when the user asks what needs attention, what's still open, what the team owes customers, who to follow up with, or for a daily or weekly call digest. It reads first and changes nothing until the user picks a loop to close, and it is not a call-volume report. Summaries need Conversation Intelligence; texts need a number with SMS enabled; callbacks need AI Voice Agents.
 ---
 
 # Conversation insights
@@ -9,7 +9,7 @@ CloudTalk is the agent-first phone system: AI agents answer first, humans close.
 
 Goal: a short list a manager can clear in one sitting. Every loop points to the conversation it came from. Explicit user instructions always win over this skill.
 
-It only reads. Nothing is sent, tagged or changed while the list is built.
+It reads first. Nothing is sent, tagged or changed while the list is built, and afterwards only the loops the user picks (step 6).
 
 ## Two kinds of input
 
@@ -30,17 +30,23 @@ A loop you infer is labelled as inferred. A next step nobody promised is labelle
 
 ## 2. Look in three places
 
-1. **Missed calls.** Call `cloudtalk_search_calls` with `status: "missed"` and group by caller. A caller who tried more than once, or a known customer, is a loop. Call `cloudtalk_get_contact_interactions_summary` for those.
-2. **Answered calls, by people and by AI Voice Agents.** Call `cloudtalk_search_calls` with `status: "answered"` and page up to 200 calls. Read up to 20 (40 when the user asks for a fuller list, after saying it takes about 2 minutes): longest first, then negative sentiment. For each, call `cloudtalk_get_call_insights` with `include: ["summary", "sentiment", "smart_notes"]`. Action items, risks and unanswered questions in the smart notes are the main source of loops. Open `cloudtalk_get_call_transcript` only to quote proof for an urgent loop.
+1. **Missed calls.** Call `cloudtalk_search_calls` with `status: "missed"`, `direction: "incoming"`, the period and `limit: 200`. Page with `page` while `pagination.next_page` is set, at most 3 pages; `pagination.items_count` comes on page 1 only, so keep that figure. Group the rows by caller (`external_number`, compared digit for digit).
+   - A caller who tried more than once, or a known customer, may be a loop. Take at most 5, repeat callers first, and check each is still waiting.
+   - A caller is **reached**, and not a loop, when an answered call with the same number, inbound or outbound, started after their latest miss. Look in the answered rows from point 2 first. If those rows don't reach back to the miss, make one `cloudtalk_search_calls` with `public_external` set to their number, `status: "answered"`, `date_from` set to their latest miss and `limit: 1`. Any row means reached.
+   - For a known customer still waiting, call `cloudtalk_get_contact_interactions_summary` with `phone` set to their number in E.164, `max_calls: 20` and `sample_size: 2`, at most 3 per run.
+   - Count the other missed callers under "Not covered", and offer `missed-call-follow-up` for them.
+2. **Answered calls, by people and by AI Voice Agents.** Two searches over the period: `cloudtalk_search_calls` with `status: "answered"` and `limit: 200`, and the same with `sentiment: "negative"` and `limit: 50`. Rows come newest first, so on a busy week the first search covers only the latest days: say from when. The negative search reaches across the whole period. When the user names a team, add its `group_id` (from `cloudtalk_list_groups`) to both. Read up to 20 (40 when the user asks for a fuller list, after saying it takes about 2 minutes): the negative calls first, up to 10, then the longest by `talking_time`, spread over different days and customers. Skip rows with under 30 seconds of talk. For each, call `cloudtalk_get_call_insights` with `include: ["summary", "sentiment", "smart_notes"]`. Action items, risks or issues, and customer feedback in the smart notes are the main source of loops; open questions come from the summary. Open `cloudtalk_get_call_transcript` (`limit: 150`) only to quote proof for an urgent loop, at most 3 per run.
 3. **Texts, when the user asks.** SMS is read per agent: call `cloudtalk_list_sms_conversations` for the agents named, then `cloudtalk_list_sms_messages` for the threads that matter.
 
 Calls under 30 seconds have no transcript or insights, whoever answered them. Empty insights on a longer call mean it isn't analyzed yet, or Conversation Intelligence isn't on the plan. Say so once, not per call.
 
-> **✓ Gate:** you know how many missed and answered calls the period has, how many you read, and whether texts were in scope. A list built from fewer than 5 readable calls says so at the top.
+> **✓ Gate:** you know how many missed and answered calls the period has, how many you read, and whether texts were in scope · only incoming missed calls, and callers reached since are dropped. A list built from fewer than 5 readable calls says so at the top.
 
 ## 3. Decide what's open, and how urgent
 
 A loop is open when the conversation shows something still owed. It is not open when it was settled, was only small talk, or is a guess from silence.
+
+**Already closed?** Before listing a loop, look for a later answered call with the same number in the rows you have. For a "Close today" loop, read that later call's summary, at most 3 such reads per run. If it settled the matter, drop the loop; if not, keep it and add "called again on" with the date. When several calls are about the same customer and topic, keep the newest state, but keep an earlier promise or deadline nobody kept.
 
 **Close today:**
 - a customer waiting past a promised time
@@ -64,34 +70,41 @@ Rank inside each group by customer harm, then money at stake, then how clearly t
 For each loop, suggest an owner:
 
 - **The agent who had the call**, when it needs judgment, negotiation or a relationship.
-- **An AI Voice Agent**, when it's routine and the account has one set up for it, such as a confirmation, a reminder, or a callback to collect details. Name the agent from `cloudtalk_list_voice_agents`.
+- **An AI Voice Agent**, when it's routine, such as a confirmation, a reminder, or a callback to collect details, and the account has an outbound agent for it: from `cloudtalk_list_voice_agents`, only agents whose `direction` is outbound. Name the agent. It gets the customer's number, not the reason for the call, so say that on the loop.
 - **Unassigned**, when nobody obvious owns it.
 
 ## 5. Write the list
 
-1. **Top line:** the period, then what you looked at: missed calls, answered calls read and in total, and texts reviewed or not.
+1. **Top line:** the period, then what you looked at: missed callers (still waiting, and reached since), answered calls read and in total, and texts reviewed or not.
 2. **Close today** and **Close this week.** One entry per loop:
    - **Customer:** name, with the phone number masked to its last 3 digits.
-   - **What's open:** one sentence, with a quote of at most 15 words.
+   - **What's open:** one sentence. Quote the customer only from a transcript you read, at most 15 words. Otherwise say it in your own words and add "(from the call summary)". Never put summary or note text in quotation marks.
    - **Why now:** the deadline, risk or money involved.
    - **Who closes it:** a person, an AI Voice Agent, or unassigned.
    - **Next step:** a real promise from the call, or a suggestion marked "Suggested".
-   - **Source:** date, time and who took the call, plus the call reference so the user can find it.
+   - **Source:** date, time and who took the call, plus the call reference so the user can find it. When the row shows no person, say "an AI Voice Agent or the call flow" rather than guessing a name.
 3. **Worth knowing:** one line each.
 4. **Patterns:** only those seen in at least two separate conversations.
-5. **Not covered:** calls not read, calls under 30 seconds, voicemails, texts not requested. Don't present counts as call volumes or performance.
+5. **Not covered:** calls not read, missed callers not checked, calls under 30 seconds, voicemails, texts not requested. Don't present counts as call volumes or performance.
 
 Show about 10 loops by default: all "close today", then the strongest of the rest. Say how many more there are.
 
 ## 6. Then offer to close loops
 
-Offer, and act only when the user agrees. The app asks for approval each time:
+Offer, and act only on the loops the user picks. The app asks the user to approve each write. Say who gets what, one line each, before the first one.
 
-- save a loop as a note on the contact (`cloudtalk_add_contact_note`)
-- send a follow-up text (`cloudtalk_send_sms`)
-- have an AI Voice Agent make the routine callback (`cloudtalk_trigger_aiva_call`)
+- **Note on the contact** (`cloudtalk_add_contact_note`): only for a loop whose customer is a contact. A new caller has none: offer a text or a callback instead.
+- **Follow-up text** (`cloudtalk_send_sms`): before the first text, ask once for the business name customers know and its opening hours, unless the user gave them. Send from a line with `sms_supported: true` (`cloudtalk_list_numbers`, once per run), the line the customer called when it can text. `recipient` is the customer's number in E.164 exactly as the call log has it; never guess a country code. No amounts, health, account or order details, and no link, price, offer or time the user didn't give. Under 160 characters where you can, never over 300, and no em or en dashes.
+- **AI Voice Agent callback** (`cloudtalk_trigger_aiva_call`): only an agent whose `direction` is outbound, with the 24-character `voice_agent_id` from `cloudtalk_list_voice_agents`. Tell the user the agent gets the number, not the reason for the call.
+- **When:** texts and AI Voice Agent calls go out only inside the business's hours, and for a number from another country only between 8:00 and 20:00 in its timezone. Outside those hours, hold them and say until when: CloudTalk can't schedule a text.
+- **Older server:** if a tool answers `status: "confirmation_required"`, nothing happened yet: show its preview, and call again with `"confirm": true` once the user agrees.
+- **Report the result, not the attempt:** a text is sent only when the result says `status: "sent"`; an AI Voice Agent call is "queued", not made. A refused send: say why in plain words, and don't retry without telling the user.
 
-Say who gets what before each one.
+> **✓ Gate: before each write**
+> - [ ] the user picked this loop in this conversation
+> - [ ] the recipient is the customer's own number from the call log, in E.164
+> - [ ] the text has no sensitive detail and promises nothing the user didn't give
+> - [ ] it is inside business hours, and daytime for the customer
 
 ## Non-negotiables
 

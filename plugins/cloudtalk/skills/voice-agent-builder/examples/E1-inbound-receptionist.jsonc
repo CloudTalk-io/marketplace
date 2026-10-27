@@ -17,7 +17,7 @@
 // Until then the prompt promises a callback rather than a handoff, so the agent never offers something it
 // cannot do, and `routingDecision` still records who should follow up.
 {
-  "agentName": "Bright Smile Dental — Receptionist",
+  "agentName": "Bright Smile Dental: Receptionist",
   "direction": "inbound",
   "defaultOutboundNumberId": 1,    // Automatic — required even for an inbound agent, which never calls out
   "failoverOutboundNumberId": 202, // replace with a real owned number id (cloudtalk_list_numbers or the

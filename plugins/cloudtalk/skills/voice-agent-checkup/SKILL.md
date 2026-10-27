@@ -107,8 +107,10 @@ Grade every finding:
    - A transfer switched off on purpose is fine when the instructions offer a callback instead.
    - Must fix: a switched-on rule missing its id or extension; a target not in step 2's lists, or a person
      whose extension differs; switched on with no rules; transfers off while the instructions promise to
-     connect the caller; a `call_flow` handoff on an agent that doesn't run inside a Call Flow (ask once:
-     standalone, it just hangs up).
+     connect the caller; transfers switched on while the instructions still refuse handoffs ("always offer
+     a callback", "you can't put callers through") or never mention them, so the agent offers a callback
+     instead of the transfer (fix: the builder rewrites those lines to offer the handoff); a `call_flow`
+     handoff on an agent that doesn't run inside a Call Flow (ask once: standalone, it just hangs up).
    - Should fix: a vague condition ("anything it can't handle") or one over 120 characters; one person as
      target instead of a group; `answerQuestions` set to transfer with nothing to answer from first.
    - Worth knowing: a group's extension can't be read here; the user confirms it in the dashboard.
@@ -231,8 +233,10 @@ Only the lines that apply, as checkboxes:
   this here: it is always a dashboard step.
 - **Outbound:** whatever starts the calls (a campaign, the API, a Call Flow) passes every call property the
   instructions use, under exactly the same names.
-- A transfer switched off on purpose: finish setting up the transfer to your team in the dashboard and
-  switch it on, if you want handoffs.
+- A transfer switched off on purpose, if you want handoffs: tell the builder which team should take the
+  calls and its extension, and it switches the transfer on and changes the callback lines to a handoff in
+  one save. If you switch it on in the dashboard instead, have the builder change those lines afterwards:
+  until then the agent keeps offering a callback.
 - Booking: the calendar is connected in the dashboard. Values that drive Call Flow routing: test they come
   through.
 - Listen back to the first few real calls.

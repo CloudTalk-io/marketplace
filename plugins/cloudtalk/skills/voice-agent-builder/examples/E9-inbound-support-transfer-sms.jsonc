@@ -28,7 +28,7 @@
 // and the placeholder `failoverOutboundNumberId` (like every example here), which must be a real owned
 // number id (referenced-resources.md).
 {
-  "agentName": "Fibrelink — Support Line",
+  "agentName": "Fibrelink: Support Line",
   "direction": "inbound",
   "defaultOutboundNumberId": 1,    // Automatic — required even for an inbound agent, which never calls out
   "failoverOutboundNumberId": 202, // replace with a real owned number id (cloudtalk_list_numbers or the

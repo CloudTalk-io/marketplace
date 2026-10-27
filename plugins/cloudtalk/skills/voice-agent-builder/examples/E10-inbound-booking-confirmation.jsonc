@@ -31,7 +31,7 @@
 // below carries no URL at all. If the user wants one, it must be a static address they supply verbatim
 // (behavioral §6).
 {
-  "agentName": "Kestrel Auto Service — Booking Assistant",
+  "agentName": "Kestrel Auto Service: Booking Assistant",
   "direction": "inbound",
   "defaultOutboundNumberId": 1,    // Automatic — required even for an inbound agent, which never calls out
   "failoverOutboundNumberId": 202, // replace with a real owned number id (cloudtalk_list_numbers or the

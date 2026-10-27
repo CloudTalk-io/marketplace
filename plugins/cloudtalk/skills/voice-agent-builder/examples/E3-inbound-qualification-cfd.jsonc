@@ -30,7 +30,7 @@
 //   [Sales group / hangup]. The config imports cleanly without it; routing just won't fire until
 //   the flow exists.
 {
-  "agentName": "NorthPeak Software — Lead Qualifier",
+  "agentName": "NorthPeak Software: Lead Qualifier",
   "direction": "inbound",
   "defaultOutboundNumberId": 1,    // Automatic — required even for an inbound agent, which never calls out
   "failoverOutboundNumberId": 202, // replace with a real owned number id (cloudtalk_list_numbers or the

@@ -4,9 +4,9 @@ description: >-
   Test a CloudTalk VoiceAgent v2 config by simulating a phone conversation against it: a subagent
   plays the agent strictly per the config against a caller persona, then a blind judge scores the
   transcript and returns gaps, awkward moments, and concrete config-level fixes. Use whenever the
-  user wants to test or preview a VoiceAgent config — "test my agent", "simulate a call", "how
+  user wants to test or preview a VoiceAgent config ("test my agent", "simulate a call", "how
   would my agent handle an angry caller", "find gaps in this config", "run a simulated
-  conversation" — and as a quality pass right after generating a config. Works on a conversation
+  conversation"), and as a quality pass right after generating a config. Works on a conversation
   draft or pasted JSON; with the CloudTalk MCP connected it can also fetch a saved config and, on
   explicit user opt-in, place a real test call and judge that transcript.
 license: Apache-2.0
@@ -57,6 +57,15 @@ Prepare the run:
 
 ## 2 · Simulator subagent
 
+**No subagent tool in this app?** Then there is no independent simulation here: never play the agent,
+the caller and the judge in this one chat and present the result as a simulation, a blind verdict or a
+pass. Say so in one line and offer the user two paths instead:
+
+- **A self-review**, clearly labelled: read the config as a skeptical caller with the chosen persona's
+  goal would, walk it turn by turn against `rubric.md`, and report under the heading *"Self-review by
+  this assistant (not an independent simulation)"*: gaps and suggested edits only, no scores and no verdict.
+- **The real test call** (§6), when CloudTalk is connected.
+
 Spawn a fresh subagent per persona via the Agent/Task tool — never a raw API call — and run it on a
 **small, fast model (haiku)**: production VoiceAgents run on small low-latency models, so a haiku
 simulator is the honest approximation of how the config will actually be interpreted; a stronger
@@ -94,8 +103,9 @@ AGENT — act strictly per the config:
   caller corrects it.
 - Enabled scenario matched → voice its `reply` the way the runtime frames it: follow it exactly,
   rephrasing naturally in your own words (empty `reply` = say nothing extra), then honor its `action` (`toolCall`/`sendSms`/`hangup`); a `booking_confirmed` scenario fires off a successful
-  in-call booking, not off its `when`. Enabled guardrail matched → speak its `reply`. Disabled ones
-  never fire.
+  in-call booking, not off its `when`. Disabled scenarios never fire. The `guardrails` list never
+  fires either, enabled or not: the platform skips it on real calls, so follow only the rules written
+  in `goalPrompt`.
 - Never invent a capability the config doesn't grant: no SMS without a sendSms scenario, no booking
   without enabled appointmentBooking, no transfer without an enabled rule or transferConfig, no
   live lookup without a toolCall scenario, no email, no keypad/IVR.
@@ -183,12 +193,20 @@ connected. **Never auto-place a call.**
    `cloudtalk_get_voice_agent` and confirm it matches the config under test before anything dials.
 2. **Outbound agent:** `cloudtalk_trigger_aiva_call` places a **real phone call** — say so plainly.
    The app asks the user to approve it, and the destination is a number the user provides as their own phone.
-   **Never suggest, guess, or reuse a customer's number.**
+   **Never suggest, guess, or reuse a customer's number.** On an older server the first call answers
+   `status: "confirmation_required"` and dials nothing: show its preview and call again with
+   `"confirm": true` once the user agrees. A `queued` result is queued, not answered.
 3. **Inbound agent:** trigger nothing — tell the user to call the agent's assigned number from
    their own phone.
-4. **Judge the real call:** locate it with `cloudtalk_search_calls`, fetch the transcript with
-   `cloudtalk_get_call_transcript`, and run the **same §3 judge** on it. Real transcripts carry no
-   bracket markers — the judge scores from the spoken lines and how the call actually ended.
+4. **Judge the real call:** ask the user to stay on the call for **at least 30 seconds**: a shorter
+   call has no transcript. Then find it with `cloudtalk_search_calls`, `voice_agent_id` set to the
+   **numeric** id (`voice_agent.voiceAgentId` from the read in step 1, never the 24-character id),
+   `date_from` a few minutes before the call in UTC (`YYYY-MM-DD HH:MM:SS`), `limit: 5`; a just-ended
+   call can take a minute to appear. Fetch the transcript with `cloudtalk_get_call_transcript` and run
+   the **same §3 judge** on it. An answer of `reason: "no_transcript"` (a call under 30 seconds, or not
+   analysed yet) is not a reason to retry: say so once and ask the user what they heard. Real
+   transcripts carry no bracket markers: the judge scores from the spoken lines and how the call
+   actually ended.
 
 ## 7 · What this cannot verify
 

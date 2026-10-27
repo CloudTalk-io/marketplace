@@ -5,9 +5,9 @@ description: >-
   to CloudTalk, it reads and saves the agent directly against your real account (numbers, knowledge bases,
   tools, transfer targets; every save needs your approval); offline, it returns the JSON you paste into the
   dashboard's Advanced/code tab. Use whenever the user wants to create or edit ANY inbound
-  or outbound AI voice/phone agent for CloudTalk — any use case or industry (reception, qualification,
-  support, booking, surveys, reminders, notifications, lead capture, … — these are just examples, not the
-  limit) — or asks for a VoiceAgent config, a goalPrompt/greeting/scenarios/skills, or pastes an existing
+  or outbound AI voice/phone agent for CloudTalk, for any use case or industry (reception, qualification,
+  support, booking, surveys, reminders, notifications, lead capture and more; these are just examples, not
+  the limit), or asks for a VoiceAgent config, a goalPrompt/greeting/scenarios/skills, or pastes an existing
   config to review, edit, or reuse. Produces a behaviorally-sound, save-ready config that reuses the
   agent's existing setup, and runs a structural + behavioral validator first.
 license: Apache-2.0
@@ -169,8 +169,22 @@ ground truth (step 1). A genuine *cross-account* paste strips `toolCall`/`sendSm
 `destination: "group"` and `groupId`/`groupExtension` **omitted**), or `rules: []` when no group is in mind.
 OMIT the id/extension keys on a draft — never blank an integer id to `""` (an INVALID_TYPE the save rejects
 even when the skill is off). Keep the prompt promising a **callback** rather than a handoff, and tell the
-user in plain terms to *finish setting up the transfer to their team in the dashboard* (the skill shows
-*"Requires configuration"*), then switch it on. **`destination: "call_flow"` only when the user asks for it or says the agent runs inside a
+user in plain terms: *"The transfer to your team is in place but switched off, so for now the agent offers
+a callback. When you're ready, tell me which team should take the calls and its extension (the dashboard
+shows it under Settings, Groups), and I'll switch the transfer on and change the callback lines to a
+handoff in one save."* Switching it on in the dashboard (the skill shows *"Requires configuration"*) is the
+fallback; then add: *"After you switch it on there, tell me, so I change the instructions to offer the
+handoff. Until then they keep promising a callback."*
+
+**Switching a draft transfer on** (the user comes back with the target): read the agent fresh (offline: ask
+for its current config), then in **one** save set `enabled: true`, fill the rule's real pair (`groupId`
+from `cloudtalk_list_groups` plus the extension the user gave, or an `agent` pair from
+`cloudtalk_list_agents`), and rewrite every `goalPrompt` line that refuses or replaces a handoff (the
+callback task step, a "can't put callers through" guardrail) so the agent offers the handoff and keeps the
+callback only for when the transfer fails. A switched-on transfer whose instructions still refuse handoffs
+never transfers anyone.
+
+**`destination: "call_flow"` only when the user asks for it or says the agent runs inside a
 Call Flow** (it hangs up and the flow continues; for a standalone agent it does nothing). A wrong
 id/extension is validated **nowhere** and fails only mid-call — the AI resumes where advanced transfer is
 enabled, but on a cold fallback the caller is dropped.
@@ -212,9 +226,12 @@ any finding you deliberately override.
 
 **Connected:** validate (step 8), say what will change on which agent, then write via
 `cloudtalk_update_voice_agent` (or `create`) once the user wants it (the app asks them to approve the
-call). After the save, report the agent's **name + id**, what changed (`changed_fields`), what remains,
-and how to verify (a test call + `cloudtalk_get_call_transcript`). The write's
-structured result replaces the paste-and-see smoke test.
+call). After the save, report the agent's **name + id**, what changed (the result's `changed_fields` when
+it carries them; an older server's result doesn't, so then list the changes you described before the
+save), what remains, and how to verify: a test call of **at least 30 seconds**, then
+`cloudtalk_get_call_transcript`. A shorter call has no transcript (`reason: "no_transcript"`): say so once,
+don't retry, and ask the user what they heard. The write's structured result replaces the paste-and-see
+smoke test.
 
 **Offline:**
 1. **The importable JSON** — pure, schema-only, save-ready (no comments, no `_requiredResources`, no
@@ -247,10 +264,17 @@ structured result replaces the paste-and-see smoke test.
   `presetType`, `status`, …) — nor the retired `providerOverride`/`llmOverride`/`hasOverrides`/
   `upgradeAvailable`.
 - **Always emit `provider` and `llm`** — nothing picks them for you after creation (`schema.md` §5).
-- **Connected writes are round-trips.** Never synthesize an update payload from the conversation:
-  `cloudtalk_get_voice_agent` → modify → send the **whole document** back. Carry `knowledgeBaseIds`
-  (omitting it unlinks every KB), `elevenLabsSettings` (present replaces wholesale) and `provider`/`llm`
-  (the agent's own values) forward. Each write acts on its first call and the app asks the user to
+- **Connected updates read fresh, then send only the change.** Never compose an update payload from memory
+  or the conversation: read the agent with `cloudtalk_get_voice_agent` in this turn, then send
+  `cloudtalk_update_voice_agent` the `voice_agent_id` plus **only the fields you change** (for a fresh
+  config on a blank agent, every field you authored). The update merges them onto its own fresh read of the
+  stored agent, so a field you leave out keeps its stored value (`knowledgeBaseIds`,
+  `optimizeStreamingLatency`, `provider` and `llm` included). A field you send replaces the stored one
+  whole, so a changed collection (`skills`, `scenarios`, `guardrails`, `secondaryLanguages`,
+  `knowledgeBaseIds`) or `elevenLabsSettings` goes in complete, as read and then edited. Don't send the
+  whole document back: it would overwrite anything changed in the dashboard since your read. (A full
+  document is still the rule offline and for a create: `generator-contract.md` *Connected mode*.) Each
+  write acts on its first call and the app asks the user to
   approve it: **say what will change before you call, and write only what the user asked for.** (An older
   server answers a write with `confirmation_required` and a preview instead: show it, and call again with
   `"confirm": true` only once the user agrees.)
