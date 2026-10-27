@@ -37,9 +37,9 @@ The same folder is also the ChatGPT plugin package; see its [README](./plugins/c
 VoiceAgent Builder is now the CloudTalk plugin. When the marketplace updates, your settings move to the new
 name on their own. Two steps are yours, once:
 
-1. **Install the new name.** In Claude Code, run `/plugin install cloudtalk@cloudtalk`. Until you do, the
-   old plugin no longer loads. In the Claude app, open Customize → **Plugins** and add **CloudTalk** if it
-   isn't there.
+1. **Install the new name.** In Claude Code, run `/plugin install cloudtalk@cloudtalk`; it replaces
+   VoiceAgent Builder. In the Claude app, open Customize → **Plugins** and add **CloudTalk** if it isn't
+   there.
 2. **Connect again.** Sign in with CloudTalk (below). If you prefer your API key, paste it once more: a
    saved key doesn't carry over to the new name.
 
@@ -72,9 +72,9 @@ It carries the tools `voice-agent-builder` and `voice-agent-simulator` use, and 
    echo -n "API_KEY_ID:API_KEY_SECRET" | base64
    ```
 
-3. **Claude Code** asks for it when the plugin is enabled. Paste the base64 from step 2; the input is
-   masked and stored in your OS keychain (or `~/.claude/.credentials.json`), not a dotfile. In the
-   **Claude app**, Connect the `cloudtalk-voice-agents` connector and paste it into the popup (a "Bearer"
+3. **Claude Code** asks for it when the plugin is enabled, or later with
+   `/plugin configure cloudtalk@cloudtalk`. Paste the base64 from step 2; the input is masked and stored
+   in your OS keychain (or `~/.claude/.credentials.json`), not a dotfile. In the **Claude app**, Connect the `cloudtalk-voice-agents` connector and paste it into the popup (a "Bearer"
    label there is cosmetic; the plugin sends it as **Basic**).
 
 Leave the key empty if you signed in. The `cloudtalk-voice-agents` connection then shows as failed in
