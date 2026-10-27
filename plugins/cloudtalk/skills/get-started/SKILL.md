@@ -34,7 +34,7 @@ Call `cloudtalk_health_check`.
 These are reads, so they run without asking. Make them in parallel when the app allows it:
 
 - `cloudtalk_list_voice_agents` with `limit: 5`: AI Voice Agents, and which are outbound.
-- `cloudtalk_search_calls` for the last 7 days with `limit: 5`: recent calls, and whether they carry AI insights (a summary or sentiment).
+- `cloudtalk_search_calls` for the last 7 days with `status: "answered"` and `limit: 5`: recent calls. The rows don't say whether a call has insights, so then read `cloudtalk_get_call_insights` with `include: ["summary"]` for the one with the longest `talking_time` over 30 seconds. A summary means call insights are on; none means they're off or not ready yet.
 - `cloudtalk_list_numbers`: whether any number can send texts (`sms_supported: true`).
 - `cloudtalk_list_campaigns`: outbound campaigns. An error here means the Sales Dialer add-on isn't on the plan. That's normal; don't treat it as a failure.
 

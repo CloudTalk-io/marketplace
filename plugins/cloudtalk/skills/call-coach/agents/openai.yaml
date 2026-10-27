@@ -1,7 +1,7 @@
 interface:
   display_name: "Call coach"
   short_description: "Coaching for your team and AI Voice Agents"
-  default_prompt: "Use $call-coach to review last week's support calls and give each person and AI agent one thing to keep and one to change."
+  default_prompt: "Use $call-coach to coach my support team on last week's calls: one thing each person should keep doing and one to change, with quotes, plus one setup change for each AI Voice Agent."
 dependencies:
   tools:
     - type: "mcp"
