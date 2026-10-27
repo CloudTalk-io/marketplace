@@ -58,7 +58,7 @@ They live in this plugin's `voice-agent-builder` skill.
 ### 3 · Find the calls
 
 - Call `cloudtalk_search_calls` with `voice_agent_id` set to the **numeric id**, `date_from`, `date_to`, `status: "answered"` and `limit: 200`. Page 1 carries the total in `pagination.items_count`; later pages report it as null, so keep the page 1 figure. Follow `next_page` for at most two more pages (600 calls). Beyond that, the sample comes from the newest 600: say so, or offer a shorter period.
-- Call it once more with the same filters plus `sentiment: "negative"` and `limit: 50`: the calls the platform already judged negative.
+- Call it once more with the same filters plus `sentiment: "negative"` and `limit: 100`: the calls the platform already judged negative.
 - Each row has `call_id`, `started_at`, `talking_time`, `total_time`, the contact and `external_number`. Use `talking_time` for the 30 second line: a call under 30 seconds has no transcript or insights, so count it and don't read it. A row with no `talking_time` stays in the pool; reading it tells you.
 - No calls: say so, and check the period and the agent with the user. An inbound agent with no calls may not be routed to any number, which is set in the Dashboard only.
 
@@ -69,15 +69,25 @@ They live in this plugin's `voice-agent-builder` skill.
 
 ### 4 · Read a sample
 
-The sample is **25 calls with insights**. A failure that hits 1 call in 5 shows up at least twice in 97 of 100 such samples, and one that hits 1 call in 10 in about 3 of 4. That finds the problems that matter most and fits the budget below. Rarer problems may not show, and the coverage line says so.
+**How many.** If the user named a number, use it, from 25 to 100. Otherwise say the plan in one line and ask once, in the same message as any other question: "I'll read 50 of its N calls, which takes about 2 minutes. Want 25 for a quick look, or 100 to catch rarer problems?" No answer, or "go": 50. With fewer calls than that, read them all.
 
-- **Pick:** calls the user named, first. Then up to 8 from the negative list, then fill to 25 from the pool, evenly spaced over it (every *n*-th call), so every day of the period counts, not only the newest. With 25 or fewer, read them all.
-- **Insights:** for each, `cloudtalk_get_call_insights` with `include: ["summary", "sentiment", "smart_notes"]`, in batches of at most 10, in parallel only where the app allows it. A field that comes back `null` has no insight. One that comes back with `reason: "rate_limited"` or `reason: "error"` is a failed read, not an empty one. A call with no insights doesn't count toward the 25: replace it with the next pick, up to 35 insight reads in all.
+Why these numbers: a cause needs two calls of proof, and the chance of seeing a failure at least twice grows with the sample.
+
+| Sample | Failure in 1 call of 5 | 1 in 10 | 1 in 20 | 1 in 50 |
+|---|---|---|---|---|
+| 25 | 97% | 73% | 36% | 9% |
+| 50 | over 99% | 97% | 72% | 26% |
+| 100 | over 99% | over 99% | 96% | 60% |
+
+More calls catch rarer failures but cost time and the account's shared request budget (see Budget). Say in the coverage line which rare failures the sample could miss.
+
+- **Pick:** calls the user named, first. Then negative calls, up to a third of the sample, then fill from the pool, evenly spaced over it (every *n*-th call), so every day of the period counts, not only the newest.
+- **Insights:** for each, `cloudtalk_get_call_insights` with `include: ["summary", "sentiment", "smart_notes"]`, in batches of at most 10, in parallel only where the app allows it. A field that comes back `null` has no insight. One that comes back with `reason: "rate_limited"` or `reason: "error"` is a failed read, not an empty one. A call with no insights doesn't count toward the sample: replace it with the next pick, up to 40% more insight reads than the sample.
 - **No insights at all:** when the first 10 reads have none, stop reading. Say once that this agent's calls carry no transcript or insights yet: they aren't analysed yet, or Conversation Intelligence isn't on the plan. Offer what still works: the user listens to a call they pick (`cloudtalk_get_call_recording` with `action: "play"`), or the `voice-agent-checkup` skill checks the setup without calls.
-- **Transcripts:** `cloudtalk_get_call_transcript` with `limit: 300`, for at most 12 calls: up to 8 where the insights suggest a failure, and at least 4 that look fine, because repeating itself and making things up rarely reach a summary. Read a second page (`offset` set to `pagination.next_offset`) only when the end of the call decides a flag. `reason: "no_transcript"` is an answer, not an error: don't retry it, and use that call's summary instead, marked as a summary.
+- **Transcripts:** `cloudtalk_get_call_transcript` with `limit: 300`, for about one call in four of the sample, at most 20: two thirds where the insights suggest a failure, the rest from calls that look fine, because repeating itself and making things up rarely reach a summary. Insights are short; transcripts are long, so this cap is what keeps a 100-call run readable. Read a second page (`offset` set to `pagination.next_offset`) only when the end of the call decides a flag. `reason: "no_transcript"` is an answer, not an error: don't retry it, and use that call's summary instead, marked as a summary.
 - Tell the AI Voice Agent from the caller with the transcript's speaker map: `callers` gives each speaker's `type` and `localIdentifier`, and each segment's `caller` points to one of them.
 
-**Budget.** The account allows 60 requests a minute, shared by everything connected to it. This run makes at most about 55: setup 2 to 3, searches 2 to 4, insights up to 35, transcripts up to 12, plus a rare second transcript page. On a rate-limit error, wait a minute and continue where you stopped; don't start over.
+**Budget.** The account allows 60 requests a minute, shared by everyone at the company using CloudTalk's AI connection. Each insight and each transcript is one request. A 25-call run makes about 50 (under a minute), 50 calls about 85 (about 2 minutes), 100 calls about 160 (about 3 minutes). Read in waves of at most 10. On a rate-limit error, wait a minute and continue where you stopped; don't start over.
 
 > **✓ Gate:**
 > - [ ] you can say how many calls you read and how you picked them
@@ -163,14 +173,14 @@ Follow the connected-mode write contract (`generator-contract.md` *Connected mod
 Note when the save happened (UTC), then offer two ways to verify:
 
 - **A test call now.** Inbound: the user calls the agent's number and tries the case that failed. Outbound: `cloudtalk_trigger_aiva_call` with the **config id** and a number the user names, in E.164 (`+` then digits only). It places a real call, so the app asks them to approve it. Keep the call over 30 seconds so it gets a transcript, then find it with `cloudtalk_search_calls` (numeric id, period starting at the save) and read it as in step 4.
-- **A later replay.** Run this skill again on calls after the save, once there are about 25 of them. The sampling is the same, so the counts per cause compare.
+- **A later replay.** Run this skill again on calls after the save, with the same sample size, once there are that many. The sampling is the same, so the counts per cause compare.
 
 ## Output
 
 In the user's language, in this order:
 
 1. **Top line:** the agent's name and direction, the period (in the user's timezone when known, plus the UTC times queried), and what was read: answered calls in the period, how many ended under 30 seconds, how many were sampled and how they were picked, how many transcripts were read.
-2. **What went wrong:** one line per flag with its count, for example "Missed a handoff: 4 of 25 calls". These are counts in a sample, not a score for every call.
+2. **What went wrong:** one line per flag with its count, for example "Missed a handoff: 7 of 50 calls". These are counts in a sample, not a score for every call.
 3. **Causes**, ranked, one block each:
    - **Cause:** one plain sentence.
    - **Flags:** which ones it explains, and in how many sampled calls.
