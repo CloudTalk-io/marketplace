@@ -9,7 +9,9 @@ marketplace (Check for updates, or Sync automatically).
 
 - **CloudTalk VoiceAgent Builder is now CloudTalk (`cloudtalk@cloudtalk`).** One plugin for the whole phone
   system. It signs in to your account with CloudTalk (OAuth, no API key) at `https://mcp.cloudtalk.io` and
-  adds four skills: `get-started`, `conversation-insights`, `next-best-call` and `call-coach`. The same
+  adds new skills: `get-started`, `conversation-insights`, `missed-call-follow-up` and `call-coach`, plus
+  `voice-agent-checkup` (is an AI Voice Agent ready to go live?) and `voice-agent-replay` (improve a live
+  one from its real calls), beside the builder and simulator below. The same
   folder carries the ChatGPT manifests (`plugin.json`, `mcp.json`), so it is also the package for OpenAI's
   plugin directory.
 - **Renamed skills.** `voice-agent-config-generator` is now `voice-agent-builder`, and

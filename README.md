@@ -6,16 +6,18 @@ system: AI agents answer first, humans close.
 ## The CloudTalk plugin
 
 [**CloudTalk**](./plugins/cloudtalk) (`cloudtalk`) runs every call from your AI assistant. It signs in to
-your CloudTalk account and ships six skills. It used to be **CloudTalk VoiceAgent Builder**
+your CloudTalk account and ships eight skills. It used to be **CloudTalk VoiceAgent Builder**
 (`voice-agent-config-generator`); see [Upgrading](#upgrading-from-cloudtalk-voiceagent-builder).
 
 | Skill | What it does |
 |---|---|
 | [`get-started`](./plugins/cloudtalk/skills/get-started/SKILL.md) | Checks the connection, finds what your account has, and offers three first tasks that work on it. |
 | [`conversation-insights`](./plugins/cloudtalk/skills/conversation-insights/SKILL.md) | Turns recent conversations into open loops, and says who should close each one: a person or an AI Voice Agent. |
-| [`next-best-call`](./plugins/cloudtalk/skills/next-best-call/SKILL.md) | Ranks leads by readiness from what was said on calls, and picks the next move. |
+| [`missed-call-follow-up`](./plugins/cloudtalk/skills/missed-call-follow-up/SKILL.md) | Finds today's missed callers nobody has reached yet, drafts a short text back to each from their history, and sends only what you approve. |
 | [`call-coach`](./plugins/cloudtalk/skills/call-coach/SKILL.md) | Coaches your team and your AI Voice Agents from real calls. |
 | [`voice-agent-builder`](./plugins/cloudtalk/skills/voice-agent-builder) | Generates, fixes and validates **VoiceAgent v2 (Expert Mode)** configurations for any inbound or outbound use case, and runs a structural and behavioral validator before every hand-back. Works offline too. |
+| [`voice-agent-checkup`](./plugins/cloudtalk/skills/voice-agent-checkup/SKILL.md) | Checks whether an AI Voice Agent is ready to go live: a verdict, the fix to make first, the tests to run and a go-live checklist. Read-only. |
+| [`voice-agent-replay`](./plugins/cloudtalk/skills/voice-agent-replay/SKILL.md) | Improves a live AI Voice Agent from its real calls: failures grouped by cause, two calls of proof each, and the setup change that fixes each one. |
 | [`voice-agent-simulator`](./plugins/cloudtalk/claude-skills/voice-agent-simulator/README.md) | Roleplays a caller persona against a configuration and scores the transcript with an automated judge, so you can test an agent before it takes real calls. Claude only. |
 
 The same folder is also the ChatGPT plugin package; see its [README](./plugins/cloudtalk/README.md).
@@ -134,9 +136,11 @@ marketplace/
         ├── skills/             ← skills for Claude and ChatGPT
         │   ├── get-started/
         │   ├── conversation-insights/
-        │   ├── next-best-call/
+        │   ├── missed-call-follow-up/
         │   ├── call-coach/
-        │   └── voice-agent-builder/   ← SKILL.md, bundled refs, examples, validator
+        │   ├── voice-agent-builder/   ← SKILL.md, bundled refs, examples, validator
+        │   ├── voice-agent-checkup/
+        │   └── voice-agent-replay/
         └── claude-skills/      ← skills for Claude only
             └── voice-agent-simulator/
 ```

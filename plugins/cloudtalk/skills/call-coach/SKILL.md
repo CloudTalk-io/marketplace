@@ -15,7 +15,7 @@ Default: the last 7 days, the support group, every person in it, and every AI Vo
 
 ## 2. Pick fair calls
 
-- People: call `cloudtalk_search_calls` with `status: "answered"`, the period and `user_id`. AI agents: the same with `voice_agent_id` set to the agent's numeric id. Get it from `cloudtalk_get_voice_agent` (`voice_agent.voice_agent_id`); the text id from `cloudtalk_list_voice_agents` won't match calls.
+- People: call `cloudtalk_search_calls` with `status: "answered"`, the period and `user_id`. AI agents: the same with `voice_agent_id` set to the agent's numeric id. Get it from `cloudtalk_get_voice_agent` (`voice_agent.voiceAgentId`); the text id from `cloudtalk_list_voice_agents` won't match calls.
 - Take up to 5 calls over 60 seconds each. Include up to 2 with negative sentiment (`sentiment: "negative"`), and fill the rest from ordinary calls, so nobody is judged on their worst day.
 - Read each with `cloudtalk_get_call_transcript`, plus `cloudtalk_get_call_insights` with `include: ["summary", "sentiment"]`. Calls under 30 seconds have no transcript; skip them and count them.
 

@@ -72,12 +72,12 @@ Read-only — useful for verifying behavior after a test call.
 
 ## Two ids, one name
 
-A VoiceAgent has **two** identifiers, and a write response carries both:
+A VoiceAgent has **two** identifiers. The read and every write carry both, under different key names:
 
-| In the response | Shape | Used by |
-|---|---|---|
-| `id` | 24-hex string | `cloudtalk_get_voice_agent`, `cloudtalk_update_voice_agent`, `cloudtalk_trigger_aiva_call` (`voice_agent_id`) |
-| `voice_agent.voice_agent_id` | number | `cloudtalk_search_calls` (`voice_agent_id`) — the call-record side |
+| Id | Shape | In `cloudtalk_get_voice_agent` | In a write's result | Used by |
+|---|---|---|---|---|
+| config id | 24-hex string | `voice_agent.id` | `id` | `cloudtalk_get_voice_agent`, `cloudtalk_update_voice_agent`, `cloudtalk_trigger_aiva_call` (`voice_agent_id`) |
+| numeric id | number | `voice_agent.voiceAgentId` | `voice_agent.voice_agent_id` | `cloudtalk_search_calls` (`voice_agent_id`), the call-record side |
 
 Same name at the call boundary, different type. Passing the 24-hex config id to `search_calls`, or the
 numeric one to `get`/`update`/`trigger`, fails or returns nothing — take each from the write's own result
@@ -85,7 +85,8 @@ rather than guessing which one you are holding.
 
 **The key name does not tell you which id you hold.** `cloudtalk_list_voice_agents` returns the **24-hex**
 id under the key name `voice_agent_id`, so a value read from a list is the config id whatever it is
-called. Only the get and write responses carry the numeric one, and there it is `voice_agent.voice_agent_id`.
+called. Only the get and write responses carry the numeric one: `voice_agent.voiceAgentId` on the get
+(the raw config document), `voice_agent.voice_agent_id` on a write's result.
 
 ## Write safety
 
@@ -153,7 +154,7 @@ called. Only the get and write responses carry the numeric one, and there it is 
   failed write. (Custom tools are the exception: tool creates, tool updates, and assign/unassign all
   clear the tool list cache.)
 - **Wire the *right* id.** The write returns both a 24-hex `id` and a numeric
-  `voice_agent.voice_agent_id` — see *Two ids, one name* above for which tool takes which.
+  `voice_agent.voice_agent_id`; see *Two ids, one name* above for which tool takes which.
 - **Parse results tolerantly.** Results have no output schema, so shapes can vary — and a
   successful-looking result carrying a `"validation_failed"` status **is a failure**: read the status,
   not just the transport-level success.

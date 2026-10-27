@@ -11,11 +11,22 @@ Goal: a short list a manager can clear in one sitting. Every loop points to the 
 
 It only reads. Nothing is sent, tagged or changed while the list is built.
 
+## Two kinds of input
+
+| | What you do | Covers |
+|---|---|---|
+| **Judgment** | Decide it yourself, without asking. | What counts as a loop, its urgency, who should close it, how to word it |
+| **Ground truth** | Read it from CloudTalk, or ask. Never invent it. | Who called, when, what was said or promised, which AI Voice Agents exist |
+
+A loop you infer is labelled as inferred. A next step nobody promised is labelled "Suggested".
+
 ## 1. Pick the period
 
 - Use the user's dates when they give them. Otherwise use the last 7 days, from midnight 7 days ago to now.
 - For "what's new since last time", start where the previous list ended, and say so.
 - Don't stretch the period on your own. Name it at the top in the user's timezone if you know it, plus the UTC times you queried (`YYYY-MM-DD HH:MM:SS`).
+
+> **✓ Gate:** one period, named with its exact start and end · no longer than the user asked for.
 
 ## 2. Look in three places
 
@@ -24,6 +35,8 @@ It only reads. Nothing is sent, tagged or changed while the list is built.
 3. **Texts, when the user asks.** SMS is read per agent: call `cloudtalk_list_sms_conversations` for the agents named, then `cloudtalk_list_sms_messages` for the threads that matter.
 
 Calls under 30 seconds have no transcript or insights, whoever answered them. Empty insights on a longer call mean it isn't analyzed yet, or Conversation Intelligence isn't on the plan. Say so once, not per call.
+
+> **✓ Gate:** you know how many missed and answered calls the period has, how many you read, and whether texts were in scope. A list built from fewer than 5 readable calls says so at the top.
 
 ## 3. Decide what's open, and how urgent
 
@@ -63,7 +76,7 @@ For each loop, suggest an owner:
    - **Why now:** the deadline, risk or money involved.
    - **Who closes it:** a person, an AI Voice Agent, or unassigned.
    - **Next step:** a real promise from the call, or a suggestion marked "Suggested".
-   - **Source:** the call id and date.
+   - **Source:** date, time and who took the call, plus the call reference so the user can find it.
 3. **Worth knowing:** one line each.
 4. **Patterns:** only those seen in at least two separate conversations.
 5. **Not covered:** calls not read, calls under 30 seconds, voicemails, texts not requested. Don't present counts as call volumes or performance.
@@ -80,7 +93,13 @@ Offer, and act only when the user agrees. The app asks for approval each time:
 
 Say who gets what before each one.
 
-## Rules
+## Non-negotiables
 
 - No loop without its source. Keep what you inferred apart from what was said.
-- Never paste full transcripts. Reply in the user's language.
+- Never invent a customer, a promise, a date or a quote. If a read returns nothing, say so.
+- Nothing is sent, tagged or saved unless the user asks for that one action.
+- Never show a company id, user id or tool name to the user; name people, agents and numbers.
+- Mask phone numbers to their last 3 digits. Quote at most 15 words. Never paste full transcripts.
+- The account allows 60 requests per minute. On a rate-limit error, wait a minute and say what was left unread.
+- Never present counts as call volumes, answer rates or performance.
+- Reply in the user's language.
