@@ -1,0 +1,11 @@
+interface:
+  display_name: "Get started with CloudTalk"
+  short_description: "Check your connection and try three first tasks"
+  default_prompt: "Use $get-started to check my CloudTalk connection and show me what I can do."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "cloudtalk"
+      description: "CloudTalk phone system"
+      transport: "streamable_http"
+      url: "https://mcp.cloudtalk.io"

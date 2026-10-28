@@ -1,0 +1,11 @@
+interface:
+  display_name: "AI Voice Agent checkup"
+  short_description: "Is your AI Voice Agent ready to go live?"
+  default_prompt: "Use $voice-agent-checkup to check whether our AI Voice Agent is ready to go live and what to fix first."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "cloudtalk"
+      description: "CloudTalk phone system"
+      transport: "streamable_http"
+      url: "https://mcp.cloudtalk.io"
