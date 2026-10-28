@@ -188,7 +188,8 @@ other way around: the user calls the agent's assigned number.
 
 Its two parameters: `voice_agent_id` — the **24-hex config id** (`cloudtalk_get_voice_agent`'s `id`, not
 the numeric CDR one) — and `call_number`, strict **E.164**: a leading `+` then digits only, no spaces,
-dashes or parentheses. The result carries a **`session_id`**, the correlation key for that call attempt;
+dashes or parentheses. Nothing else goes with the call, so `{{variables}}` meant to arrive with a call
+(a name, an appointment time) are empty on a test call: say so before placing it. The result carries a **`session_id`**, the correlation key for that call attempt;
 keep it when reporting back. To find the call afterwards, `cloudtalk_search_calls` filtered by the
 agent's **numeric** `voice_agent_id` (*Two ids, one name*), then transcript/insights.
 

@@ -178,7 +178,8 @@ shapes:
 
 In every case keep the **prompt honest** while the skill is off: the agent offers a callback, not a handoff
 it can't perform (see `examples/E1`, `examples/E9`). **And keep it honest when the skill goes on:** the
-save that switches a draft transfer on also fills the real pair and rewrites every line that refuses or
+save that switches a draft transfer on also fills the real pair (adding the rule, with a `condition` and
+`destination`, when the draft has `rules: []`) and rewrites every line that refuses or
 replaces a handoff (the callback task step, a "can't put callers through" guardrail), so the agent offers
 the handoff and keeps the callback only for when the transfer fails. Instructions that still refuse
 handoffs under a switched-on transfer mean the agent never transfers anyone (`SKILL.md` step 6).

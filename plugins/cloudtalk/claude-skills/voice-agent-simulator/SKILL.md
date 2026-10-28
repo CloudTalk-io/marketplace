@@ -17,7 +17,8 @@ license: Apache-2.0
 Dry-run a config before it takes real calls. One subagent plays **both sides** of a phone call — the
 agent strictly per the config, the caller per a persona card — and a second, **blind** subagent
 judges the transcript against `rubric.md`. Output: a plain-words result, what the agent missed, and at
-most 5 changes to its setup. Nothing is dialed or saved; no MCP needed — except the optional live lap (§6).
+most 5 changes to its setup. Nothing is dialed or saved, and no MCP is needed. The one exception is the
+optional live lap (§6): it dials, testing the setup already saved on the agent, and never saves one.
 
 ## 1 · Inputs
 
@@ -40,9 +41,10 @@ Persona auto-pick — choose the card that stresses this config's riskiest surfa
 Prepare the run:
 
 - Fill the card's `goal_template` placeholder `<GOAL>` from the config's use case (for
-  `wrong-fit-caller`: an adjacent need this config does **not** serve). A **caller card** from a replay is
-  the persona as it stands: *who calls* sets the style and patience, *what they want* is the goal. Keep
-  its *what a pass looks like* to yourself for §4; neither subagent sees it.
+  `wrong-fit-caller`: an adjacent need this config does **not** serve). A **caller card** from a replay
+  becomes the persona: *who calls* sets the style and patience, *what they want* is the goal, and those
+  two lines are all the simulator gets. Keep *what went wrong on real calls* and *what a pass looks like*
+  to yourself for §4; neither subagent sees them, so the run stays an independent check.
 - **Knowledge.** When `knowledgeBaseIds` isn't empty and CloudTalk is connected, read
   `cloudtalk_list_knowledge_bases` once and build a `KNOWLEDGE` block: each linked one's name,
   description and, for a custom one, its text (`value`). A web page or file knowledge base's content
@@ -211,6 +213,9 @@ connected. **Never auto-place a call.**
 1. **Saved config only.** The live call runs what is SAVED on the agent, not your draft — fetch with
    `cloudtalk_get_voice_agent` and confirm it matches the config under test before anything dials.
 2. **Outbound agent:** `cloudtalk_trigger_aiva_call` places a **real phone call** — say so plainly.
+   It passes only the agent and the number, so `{{variables}}` meant to arrive with a call (a name, an
+   appointment time) are empty on this one: say so before it dials, and don't count that gap as a fault
+   in the setup.
    The app asks the user to approve it, and the destination is a number the user provides as their own phone.
    **Never suggest, guess, or reuse a customer's number.** On an older server the first call answers
    `status: "confirmation_required"` and dials nothing: show its preview and call again with

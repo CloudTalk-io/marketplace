@@ -70,7 +70,7 @@ Choose the calls to screen:
 
 A person with fewer than 5 analyzed calls isn't coached this time: say how many there were and offer a longer period.
 
-**Conversation Intelligence, checked once.** If all three searches come back empty for someone, don't use their own call list for the check: it shows no call length, so it may only offer calls under 30 seconds. Make one `cloudtalk_search_calls` for the period with `status: "answered"`, `limit: 20` and no person filter (these rows carry `talking_time`), and read the transcript (`limit: 1`) of a call with at least 60 seconds of talk. A transcript means this person simply has no analyzed calls in the period: say so and offer a longer period. No transcript means Conversation Intelligence isn't on the plan, or hasn't analyzed these calls yet. If that holds, say so once, stop coaching people, and go to step 6: its outcome check works without transcripts.
+**Conversation Intelligence, checked once.** If all three searches come back empty for someone, don't use their own call list for the check: it shows no call length, so it may only offer calls under 30 seconds. Make one `cloudtalk_search_calls` for the period with `status: "answered"`, `limit: 20` and no person filter (these rows carry `talking_time`), and read the transcript (`limit: 1`) of a call with at least 60 seconds of talk. If none of the 20 has 60 seconds, read the next page once; still none means the period is too quiet to check, so skip this person with that reason and don't stop coaching anyone else. A transcript means this person simply has no analyzed calls in the period: say so and offer a longer period. No transcript means Conversation Intelligence isn't on the plan, or hasn't analyzed these calls yet. If that holds, say so once, stop coaching people, and go to step 6: its outcome check works without transcripts.
 
 > **✓ Gate, per person:**
 > - [ ] the calls chosen, at most a third of them negative
@@ -127,7 +127,7 @@ Judge fairly:
 
 ### 6. Check each AI Voice Agent
 
-1. **Its calls:** `cloudtalk_search_calls` with `voice_agent_id` set to the numeric id, the period, `status: "answered"` and `limit: 30`. Page 1's `items_count` is its total. If it returns nothing, try once without `status`.
+1. **Its calls:** `cloudtalk_search_calls` with `voice_agent_id` set to the numeric id, the period, `status: "answered"` and `limit: 30`. Page 1's `items_count` is its total. If it returns nothing, try once without `status`, in case its calls aren't labelled answered, and keep only rows with talk time (`talking_time` above 0): that search also returns missed calls.
 2. **Screen and read its calls like a person's:** picked the same fair way (step 2, with `voice_agent_id` in place of `user_id`), screened and read as in step 3, with two more moments: **Handoff** (gets the caller to a person when it should, with the reason, so they don't repeat themselves) and **Knowledge** (answers from its setup, never invents). AI Voice Agent calls of 30 seconds or more are transcribed like any call. If the first two reads answer `reason: "no_transcript"`, stop reading transcripts and check by outcome (3 to 5 below) instead.
 3. **Outcomes, from the 30 rows, with no extra reads** (alongside the transcripts, or instead of them):
    - calls with under 20 seconds of talk (`talking_time`), when the rows show it

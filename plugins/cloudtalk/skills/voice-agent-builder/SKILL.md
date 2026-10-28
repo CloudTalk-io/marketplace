@@ -108,11 +108,12 @@ say so and offer the nearest supported path, never fake it:
 >       set a real owned `defaultOutboundNumberId` directly (reuse the agent's real ID fetched or pasted, pick
 >       one from `cloudtalk_list_numbers`, or ask). Never `2`, never fabricated, never `null`, never a bare
 >       `1`; offline, the user completes the failover/number in the dashboard. **Inbound: never ask about
->       it.** Callers never hear it, but the save needs it. Connected, keep the agent's own values, else use
+>       it.** Callers never hear it, but the save needs it. Connected, keep the agent's own values when they're complete (a real number, or `1` with a
+>       real failover), else use
 >       Automatic (`1`) with the first number in `cloudtalk_list_numbers` that has `voice_supported: true`
 >       as the failover, and explain it once: *"It needs a backup phone number on file even though it only
->       answers calls. I used the one ending 123; callers never hear it."* Offline, reuse the pasted values,
->       else it is a setup step in the status line
+>       answers calls. I used the one ending 123; callers never hear it."* Offline, reuse the pasted values
+>       when complete, else it is a setup step in the status line
 > - [ ] primary `language` (+ any `secondaryLanguages`)
 > - [ ] the data to collect **and** every use-case-specific need you identified (KB, calendar, transfer
 >       target, callee variables) — each one present, or omitted on purpose with the user told
@@ -224,7 +225,8 @@ handoff. Until then they keep promising a callback."*
 **Switching a draft transfer on** (the user comes back with the target): read the agent fresh (offline: ask
 for its current config), then in **one** save set `enabled: true`, fill the rule's real pair (`groupId`
 from `cloudtalk_list_groups` plus the extension the user gave, or an `agent` pair from
-`cloudtalk_list_agents`), and rewrite every `goalPrompt` line that refuses or replaces a handoff (the
+`cloudtalk_list_agents`), or, when the draft has `rules: []`, add one rule with a `condition`, its
+`destination` and the full pair, and rewrite every `goalPrompt` line that refuses or replaces a handoff (the
 callback task step, a "can't put callers through" guardrail) so the agent offers the handoff and keeps the
 callback only for when the transfer fails. A switched-on transfer whose instructions still refuse handoffs
 never transfers anyone.

@@ -71,19 +71,25 @@ same CloudTalk account for both.
 
 1. Create an API key in the CloudTalk dashboard: **Account → Settings → API keys**. You get a key ID and
    a key secret.
-2. Build the credential, the base64 of `API_KEY_ID:API_KEY_SECRET` (note the colon):
+2. Build the credential, the base64 of `API_KEY_ID:API_KEY_SECRET` (note the colon). Replace `API_KEY_ID`
+   with your key ID, and type the secret only at the hidden prompt, so it stays out of your shell history:
 
    ```bash
-   echo -n "API_KEY_ID:API_KEY_SECRET" | base64
+   printf 'API key secret: ' && read -rs API_KEY_SECRET && echo
+   AUTH=$(printf '%s' "API_KEY_ID:$API_KEY_SECRET" | base64 | tr -d '\n')
+   unset API_KEY_SECRET
    ```
 
-3. Add the server with the base64 from step 2:
+3. In the same terminal, add the server with the `AUTH` value from step 2:
 
    ```bash
    claude mcp add --scope user --transport http cloudtalk-voice-agents \
      https://mcp.cloudtalk.io/voice-agents \
-     -H "Authorization: Basic <base64 of API_KEY_ID:API_KEY_SECRET>"
+     -H "Authorization: Basic $AUTH"
+   unset AUTH
    ```
+
+   Claude Code keeps this header in its user settings, so treat that file like the key itself.
 
 **No connection at all?** `voice-agent-builder` still works offline: describe the agent, and Claude hands
 back a validated, save-ready configuration to paste into the dashboard's **Expert Mode** (Advanced/code

@@ -56,7 +56,9 @@ exists), adapted to plain words. Quote at most 15 words; no ids, field names or 
 
 1. **Opening:** the greeting was said word for word, or the agent waited when it should.
 2. **Language:** every line in the agent's language, or one of its other languages to follow the caller.
-3. **Ending:** it can end calls, and this one ended through its setup (a hang-up or a transfer it has).
+3. **Ending:** it can end calls, and a call that ended on its own ended through its setup (a hang-up or a
+   transfer it has). When the user said "end call" or the turn limit stopped it, say the call was stopped
+   early and skip this check.
 4. **Handoffs:** it never promised a person it couldn't reach.
 5. **Details:** it asked for each detail it is meant to note after the call, on the path this call took.
 6. **Capabilities:** it never claimed a text, booking, transfer, lookup, email or keypad it doesn't have.
@@ -97,7 +99,7 @@ is saved, and re-run on later replays:
 To run a card:
 
 - **In Claude, with the `voice-agent-simulator` skill:** use the card as the persona (who calls sets the
-  style, what they want fills the goal). After its blind judge, check *what a pass looks like* against the
+  style, what they want fills the goal; only those two lines go to the simulator). After its blind judge, check *what a pass looks like* against the
   transcript yourself and add one line: *Caller card: passed* or *not yet*.
 - **In any app:** a practice call where the user plays the card's caller.
 
