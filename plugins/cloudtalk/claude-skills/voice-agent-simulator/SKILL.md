@@ -227,7 +227,7 @@ connected. **Never auto-place a call.**
 3. **Inbound agent:** trigger nothing — tell the user to call the agent's assigned number from
    their own phone.
 4. **Judge the real call:** ask the user to stay on the call for **at least 30 seconds**: a shorter
-   call has no transcript. Then find it with `cloudtalk_search_calls`, `voice_agent_id` set to the
+   call usually gets no transcript. Then find it with `cloudtalk_search_calls`, `voice_agent_id` set to the
    **numeric** id (`voice_agent.voiceAgentId` from the read in step 1, never the 24-character id),
    `date_from` a few minutes before the call in UTC (`YYYY-MM-DD HH:MM:SS`), `limit: 5`; a just-ended
    call can take a minute to appear. Fetch the transcript with `cloudtalk_get_call_transcript` and run

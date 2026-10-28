@@ -297,8 +297,8 @@ ids, field names or tool names.
 6. **End with one next step:** *"Want me to check it's ready to go live? That includes a practice call you
    can do right here."* (the `voice-agent-checkup` skill; the practice call is `practice-call.md`). If they
    would rather place a real test call, ask them to stay on at least 30 seconds, then read it with
-   `cloudtalk_get_call_transcript`; a shorter call has no transcript (`reason: "no_transcript"`): say so
-   once, don't retry, and ask what they heard.
+   `cloudtalk_get_call_transcript`; a shorter call usually gets no transcript (`reason: "no_transcript"`):
+   say so once, don't retry, and ask what they heard.
 
 The write's structured result replaces the paste-and-see smoke test.
 
