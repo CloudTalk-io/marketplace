@@ -180,11 +180,13 @@ _two["defaultOutboundNumberId"] = 2
 if error_codes(_two):
     failures.append("defaultOutboundNumberId: 2 should produce no ERRORs (only a WARN), got %s" % error_codes(_two))
 
-# A save-blocking WARN must NOT read as "nothing else to wire" even with no references (the green ✅ bug).
+# Number id 2 must NOT read as "nothing else to wire" (the green ✅ bug): the save fails unless the company
+# really owns number 2, so it needs confirming first.
 _two_rep = V.Report()
 V.validate(_two, FIELDS, _two_rep)
-if not _two_rep.references and not any(i.code in V.SAVE_BLOCKING_CODES for i in _two_rep.issues):
-    failures.append("defaultOutboundNumberId: 2 must not read 'nothing else to wire' — the save fails")
+if not _two_rep.references and not any(i.code in (V.SAVE_BLOCKING_CODES | V.CONFIRM_FIRST_CODES)
+                                       for i in _two_rep.issues):
+    failures.append("defaultOutboundNumberId: 2 must not read 'nothing else to wire' — confirm it first")
 
 # 6) triggerType (schema §7.1): booking_confirmed + sendSms is the booking-confirmation recipe.
 def add_booking_confirmed_sms(c):
@@ -834,8 +836,8 @@ expect_warn("malformed language makes elevenLabsSettings ignored",
                        c.update({"language": "zz-ZZ", "elevenLabsSettings": {"vad": True}})),
             "elevenlabs-settings-ignored")
 
-# 23) Numeric thresholds: dialTime saves across 5-120 but dispatch refuses above 90, and maxCallDuration
-# above 120 is refused by the save itself.
+# 23) Numeric thresholds: dialTime saves across 5-120 but dispatch refuses above 90. maxCallDuration has no
+# hard API cap; above 120 is a recommendation warning only.
 expect_warn("dialTime above the dispatch limit", lambda c: c.__setitem__("dialTime", 100),
             "dialtime-dispatch-limit")
 expect_clean("dialTime at the dispatch limit", lambda c: c.__setitem__("dialTime", 90))
@@ -1054,6 +1056,8 @@ _clean_json = run_validator_json(BASE)
 if _clean_json.get("saveBlocking") is not False:
     failures.append("a clean config must report saveBlocking false, got %r"
                     % _clean_json.get("saveBlocking"))
+if _clean_json.get("confirmFirst") is not False:
+    failures.append("a clean config must report confirmFirst false, got %r" % _clean_json.get("confirmFirst"))
 if _clean_json.get("nothingElseToWire") is not True:
     failures.append("the pre-existing --json keys must keep their meaning on a clean config")
 _over_json = run_validator_json(_over)
@@ -1107,7 +1111,7 @@ for _path in ("provider", "llm"):
 for _path in ("providerOverride", "llmOverride", "hasOverrides", "upgradeAvailable"):
     if _path in _registry_top or _path in _registry_forbidden:
         failures.append("fields.json: retired `%s` must not be in the registry" % _path)
-for _path in ("minorVersion", "optimizedSettings"):
+for _path in ("minorVersion", "optimizedSettings", "hashes", "deepgramSettings"):
     if _path not in _registry_forbidden:
         failures.append("fields.json: `%s` must be forbidden" % _path)
 
@@ -1212,6 +1216,38 @@ if error_codes(_cfg) or "llm-legacy-alias" not in info_codes(_cfg):
                     % (error_codes(_cfg), info_codes(_cfg)))
 if set(V.NATIVE_LLM_MASKS.values()) - V.DEEPGRAM_MODELS:
     failures.append("every native mask must map to a model Deepgram offers")
+
+# 28) Keys a read returns that the builder never authors. `hashes` is server-computed (response-only), and
+# `deepgramSettings` is a stored Deepgram-only field, empty today and kept when omitted. A config copied
+# from a read must not turn either into an unknown-field ERROR.
+for _key, _value, _code in (("hashes", {"scheme": 1, "full": "f", "behaviour": "b"}, "response-only"),
+                            ("deepgramSettings", {}, "not-authored")):
+    _read = copy.deepcopy(BASE)
+    _read[_key] = _value
+    _read_rep = V.Report()
+    V.validate(_read, FIELDS, _read_rep)
+    if not any(i.level == "INFO" and i.code == _code and i.where == _key for i in _read_rep.issues):
+        failures.append("%s from a read must report as a %s INFO, got %s"
+                        % (_key, _code, [(i.level, i.code, i.where) for i in _read_rep.issues]))
+    if error_codes(_read) or warn_codes(_read):
+        failures.append("%s from a read must not error or warn, got %s / %s"
+                        % (_key, error_codes(_read), warn_codes(_read)))
+
+# 29) The CloudTalk connection refuses a create without `optimizeStreamingLatency`, and a full document
+# without it resets the stored value to 0, so a missing value is an ERROR, never a silent pass.
+expect_error("optimizeStreamingLatency missing", lambda c: c.pop("optimizeStreamingLatency"),
+             "missing-required")
+
+# 30) A real owned number id 2 is valid, so it must not block the save or fail the exit code; it only
+# keeps "nothing else to wire" false until the user confirms the number is theirs.
+_two_json = run_validator_json(_two)
+if _two_json["saveBlocking"] or _two_json["nothingElseToWire"]:
+    failures.append("defaultOutboundNumberId: 2 must be saveBlocking false and nothingElseToWire false, got %s / %s"
+                    % (_two_json["saveBlocking"], _two_json["nothingElseToWire"]))
+if _two_json.get("confirmFirst") is not True:
+    failures.append("defaultOutboundNumberId: 2 must report confirmFirst true, got %r" % _two_json.get("confirmFirst"))
+if run_validator_on(_two) != 0:
+    failures.append("defaultOutboundNumberId: 2 must exit 0: a number the company owns saves fine")
 
 if failures:
     print("FAIL — %d check(s):" % len(failures))

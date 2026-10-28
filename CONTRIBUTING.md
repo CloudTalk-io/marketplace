@@ -85,11 +85,12 @@ reviewer can check it against this list.
    authors without asking. *Ground truth* (names, numbers, IDs, dates, what was said on a call) it reads
    from CloudTalk or asks for, in one batch, and never invents, defaults or copies from an example.
 4. **A numbered workflow with gates.** Each step names the exact tools and arguments (including which of
-   the two voice agent IDs, date formats, `limit`s and pagination). A step that must not be skipped ends
+   the two AI Voice Agent IDs, date formats, `limit`s and pagination). A step that must not be skipped ends
    with a `> **✓ Gate:**` checklist the model checks before moving on.
 5. **Honest limits.** Say what CloudTalk cannot do and offer the nearest real path. Plan-gated data
    (Conversation Intelligence, Sales Dialer, AI Voice Agents) is reported once, not per call. Calls under
-   30 seconds have no transcript or insights, for people and AI Voice Agents alike.
+   30 seconds usually get no transcript and hold no conversation to read, even when they carry a
+   summary or a sentiment, for people and AI Voice Agents alike.
 6. **An exact output shape.** Sections in order, what each line contains, how evidence is cited (call id,
    a short quote), and a coverage line saying what was read and what was not.
 7. **Writes are the user's decision.** Reads run straight away. A write runs on one call after saying

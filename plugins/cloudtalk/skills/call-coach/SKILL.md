@@ -24,7 +24,7 @@ Say each of these once, where it matters, never per call:
 - **Group membership isn't readable.** The team is the people who answered that group's calls in the period, or the names the user gives.
 - **A person's call list doesn't show call length.** Short calls show up as a missing or tiny transcript, and get swapped.
 - **Coaching notes can't be saved in CloudTalk.** Drafts stay in the chat. Each person's weekly focus can be kept in a scheduled task, a doc the user names, or a focus list to paste next time (step 8).
-- Calls under 30 seconds have no transcript or insights. Internal calls between colleagues aren't in the call list.
+- Calls under 30 seconds of talk hold no conversation to read: most have no transcript or insights, and the ones that do are a voicemail greeting or a phone menu. Internal calls between colleagues aren't in the call list.
 
 ## Workflow
 
@@ -35,10 +35,10 @@ Reads run straight away, without asking. Nothing is written until step 8, and on
 - **Period.** The user's dates, otherwise the last 7 full days; "last week" is Monday to Sunday. Query in UTC as `YYYY-MM-DD HH:MM:SS`, and show it in the user's timezone when you know it. Don't stretch the period on your own; offer 14 or 30 days when calls are too few.
 - **People.**
   - **Names given:** match them in `cloudtalk_list_agents` (follow `pagination.next_page` if needed). The person's id is the agent's `id`.
-  - **"Me", "my calls":** the signed-in user. `cloudtalk_health_check` gives their id; `cloudtalk_list_agents` with `id` set to it gives their name. Not an agent: say they have no calls of their own to coach, and offer their team instead.
+  - **"Me", "my calls":** the signed-in user. `cloudtalk_health_check` gives their id. A `user_id` of 0, or none, means a company API key with no person signed in: there is no "me", so ask once which person or team to coach. Otherwise `cloudtalk_list_agents` with `id` set to it gives their name. Not an agent: say they have no calls of their own to coach, and offer their team instead.
   - **A team or group given:** find its id with `cloudtalk_list_groups`, then make one `cloudtalk_search_calls` with `group_id`, the period, `status: "answered"` and `limit: 100`. The team is the `agent` on those rows, most calls first. If `next_page` is set, say the list comes from the group's latest 100 calls and ask whether anyone is missing.
   - **Neither:** if exactly one group name fits the request, use it and say so. If the account has no groups, coach everyone who answered calls in the period: one `cloudtalk_search_calls` with the period, `status: "answered"` and `limit: 100`, and the team is the `agent` on those rows, most calls first. Otherwise ask once which team, listing the group names.
-- **AI Voice Agents**, when the user asks about them or about "everyone": `cloudtalk_list_voice_agents`, then `cloudtalk_get_voice_agent` with the `voice_agent_id` (the 24-character id) of at most 5 of them, the ones the user named first; name any others as not covered. The read's `voice_agent.voiceAgentId` is the **numeric** id that call searches need; the 24-character id matches no calls. If this read fails with a permissions error, say once that the AI Voice Agent check needs a CloudTalk Admin sign-in, and carry on with people.
+- **AI Voice Agents**, when the user asks about them or about "everyone": `cloudtalk_list_voice_agents`, then `cloudtalk_get_voice_agent` with the `voice_agent_id` (the 24-character id) of at most 5 of them: all of them when there are 5 or fewer, else the ones the user named. With more than 5 and none named, ask once which ones, by name or a word in the name; never take the first ones listed. Name any others as not covered. The read's `voice_agent.voiceAgentId` is the **numeric** id that call searches need; the 24-character id matches no calls. If this read fails with a permissions error, say once that the AI Voice Agent check needs a CloudTalk Admin sign-in, and carry on with people.
 - **How many calls.** Two numbers per person: calls **screened** (each call's summary and notes, which show how often something goes wrong) and calls **read in full** (word for word, where the quotes come from). If the user named a number, use it. Otherwise say the plan in one line, in the same message as any other question: "I'll screen 25 calls per person and read 6 of them word for word, 2 people per reply, about a minute each. Want 50 per person to catch rarer habits?" No answer, or "go": the defaults below.
 
   | People in scope | Screened per person | Read in full per person | People per reply |
@@ -48,7 +48,7 @@ Reads run straight away, without asking. Nothing is written until step 8, and on
 
   Work one person at a time, about one a minute: at the defaults a person is about 35 requests, inside the account's budget with room left for colleagues. Write each person's card (step 7) as soon as their reads are done, before starting the next person: writing it paces the run, and if a rate limit stops the run, the cards already written stand. After 2 people, end the reply and offer "Coach the next 2?", naming them. At 50 screened, a person takes about 2 minutes. Fewer analyzed calls than the screening number: screen them all.
 
-  Each AI Voice Agent counts as one person in a reply (its reads cost a little more, about 42 requests: one setup read, the searches, the screened and full reads): a reply covers at most 2 people and AI Voice Agents together, people first unless the user asked about the AI Voice Agents first. Check at most 2 AI Voice Agents per run: the ones the user named, else the 2 with the most calls (a `cloudtalk_search_calls` with its numeric id and `limit: 1` gives each total in `pagination.items_count`). Offer the rest afterwards.
+  Each AI Voice Agent counts as one person in a reply (its reads cost a little more, about 42 requests: one setup read, the searches, the screened and full reads): a reply covers at most 2 people and AI Voice Agents together, people first unless the user asked about the AI Voice Agents first. Check at most 2 AI Voice Agents per run: the ones the user named, else the 2 with the most calls (a `cloudtalk_search_calls` with its numeric id and `limit: 1` gives each total in `pagination.items_count`). An AI Voice Agent with no calls in the period: say so and offer the last 30 days. Offer the rest afterwards.
 
 > **✓ Gate:**
 > - [ ] the period, in UTC
@@ -66,11 +66,12 @@ Choose the calls to screen:
 
 - **In proportion** to the three groups' sizes, with negative calls at most a third, and at least 1 when there is one. Nobody is judged on their worst day, or spared their hardest.
 - **Spread out:** as many different days as the rows allow, and one call per customer.
+- **Not tests:** leave out calls the account marks as tests (a tag such as "Test call" or "AI TEST", or a contact whose name says it is a test), and say how many.
 - **By these rules only.** Never pick calls by guessing where the faults are.
 
 A person with fewer than 5 analyzed calls isn't coached this time: say how many there were and offer a longer period.
 
-**Conversation Intelligence, checked once.** If all three searches come back empty for someone, don't use their own call list for the check: it shows no call length, so it may only offer calls under 30 seconds. Make one `cloudtalk_search_calls` for the period with `status: "answered"`, `limit: 20` and no person filter (these rows carry `talking_time`), and read the transcript (`limit: 1`) of a call with at least 60 seconds of talk. If none of the 20 has 60 seconds, read the next page once; still none means the period is too quiet to check, so skip this person with that reason and don't stop coaching anyone else. A transcript means this person simply has no analyzed calls in the period: say so and offer a longer period. No transcript means Conversation Intelligence isn't on the plan, or hasn't analyzed these calls yet. If that holds, say so once, stop coaching people, and go to step 6: its outcome check works without transcripts.
+**Conversation Intelligence, checked once.** If all three searches come back empty for someone, don't use their own call list for the check: it shows no call length, so it may only offer calls under 30 seconds. Make one `cloudtalk_search_calls` for the period with `status: "answered"`, `limit: 20` and no person filter (these rows carry `talking_time`), and read the transcript (`limit: 1`) of a call with at least 60 seconds of talk. If none of the 20 has 60 seconds, read the next page once; still none means the period is too quiet to check, so skip this person with that reason and don't stop coaching anyone else. A transcript means this person simply has no analyzed calls in the period: say so and offer a longer period. A missing transcript can't tell a plan without Conversation Intelligence apart from a call that isn't analyzed yet. Only an explicit plan or permission error from the read means it isn't on the plan: then say so once, stop coaching people, and go to step 6, whose outcome check works without transcripts. Otherwise skip this person as not analyzed yet, and keep coaching the others.
 
 > **✓ Gate, per person:**
 > - [ ] the calls chosen, at most a third of them negative
@@ -79,11 +80,12 @@ A person with fewer than 5 analyzed calls isn't coached this time: say how many 
 
 ### 3. Screen, then read in full
 
-**Screen** each chosen call: `cloudtalk_get_call_insights` with `include: ["summary", "sentiment", "smart_notes"]`, adding `"talk_listen"` on sales or discovery calls. Note one line per call: how it ended (solved, a next step with an owner and a time, or left open), any wrong or corrected information the notes flag, the customer's feedback, and the sentiment. A call with no insights is replaced from the same group. Screening tells you how often a moment goes wrong ("no next step in 9 of 25 calls"); it never supplies a quote. Summaries and notes only show Resolution, Accuracy and the customer's feedback, so screening counts only those. Opening, Understanding, Tone and Close are counted from calls read in full only.
+**Screen** each chosen call: `cloudtalk_get_call_insights` with `include: ["summary", "sentiment", "smart_notes"]`, adding `"talk_listen"` on sales or discovery calls. Note one line per call: how it ended (solved, a next step with an owner and a time, or left open), any wrong or corrected information the notes flag, the customer's feedback, and the sentiment. A call with no insights, or whose summary shows a voicemail, a phone menu or no conversation, is replaced from the same group: those carry a sentiment too, but there is nothing to coach. Screening tells you how often a moment goes wrong ("no next step in 9 of 25 calls"); it never supplies a quote. Summaries and notes only show Resolution, Accuracy and the customer's feedback, so screening counts only those. Opening, Understanding, Tone and Close are counted from calls read in full only.
 
 **Read in full** the read-in-full number per person, chosen by rule: two calls for each of the person's two most frequent screening problems, at least one call that went well, and the rest evenly spaced over the screened calls. Then, for each: `cloudtalk_get_call_transcript` with the `call_id` and `limit: 150`. When `pagination.next_offset` is set (a long call), read only the close as well: `offset` set to `pagination.total` minus 30, and `limit: 30`. A long call counts as two of the person's reads.
 
 - **Too short:** `reason: "no_transcript"`, or a conversation that ends inside a minute (the last segment's `end` is under 60). Count it, and replace it once from the same sentiment group.
+- **Nothing left to coach:** when fewer than 2 calls read in full are real conversations, write no card. Say "not coached: N of M analyzed calls were voicemail or under a minute", and offer a longer period.
 - **Who said what:** the speaker map (`callers`, matched to each segment's `caller`) tells your team member from the customer. If it doesn't, work it out from who answers for the company; if it's still unclear, don't quote that call. If a call passed between colleagues, coach only this person's part.
 - **Language:** note `language`. Quotes stay in the call's language.
 - **Talk share, for sales or discovery calls:** the screening's `talk_listen` gives each speaker's share. Its keys (`CALLER1`, `CALLER2`) match the speaker map's ids, ignoring case.
@@ -127,19 +129,16 @@ Judge fairly:
 
 ### 6. Check each AI Voice Agent
 
-1. **Its calls:** `cloudtalk_search_calls` with `voice_agent_id` set to the numeric id, the period, `status: "answered"` and `limit: 30`. Page 1's `items_count` is its total. If it returns nothing, try once without `status`, in case its calls aren't labelled answered, and keep only rows with talk time (`talking_time` above 0): that search also returns missed calls.
+1. **Its calls:** `cloudtalk_search_calls` with `voice_agent_id` set to the numeric id, the period, `status: "answered"` and `limit: 30`. Page 1's `items_count` is its total. If it returns nothing, say the AI Voice Agent had no answered calls in the period and offer the last 30 days.
 2. **Screen and read its calls like a person's:** picked the same fair way (step 2, with `voice_agent_id` in place of `user_id`), screened and read as in step 3, with two more moments: **Handoff** (gets the caller to a person when it should, with the reason, so they don't repeat themselves) and **Knowledge** (answers from its setup, never invents). AI Voice Agent calls of 30 seconds or more are transcribed like any call. If the first two reads answer `reason: "no_transcript"`, stop reading transcripts and check by outcome (3 to 5 below) instead.
-3. **Outcomes, from the 30 rows, with no extra reads** (alongside the transcripts, or instead of them):
-   - calls with under 20 seconds of talk (`talking_time`), when the rows show it
-   - the same number or contact calling again within 2 days
-   - calls that all stop at the same length
-4. **Call details:** `cloudtalk_get_call` for up to 3 calls: one short, one repeat caller, one typical. Its call flow steps (queues, transfers) and timings, when present, show whether the caller reached a person.
+3. **Outcomes, from the 30 rows, with no extra reads** (alongside the transcripts, or instead of them): the same number or contact calling again within 2 days. These rows carry no call length, so how long calls lasted comes from the calls read and the call details in point 4 below.
+4. **Call details:** `cloudtalk_get_call` for up to 3 calls: a repeat caller, a typical one, and one from another day. Their timings show calls that end very early or all stop at the same length, and their call flow steps (queues, transfers) show whether the caller reached a person.
 5. **What callers told a person afterwards**, for up to 2 repeat or transferred callers: `cloudtalk_search_calls` with `public_external` set to the caller's number, from the AI Voice Agent's call to 2 days later, `status: "answered"`, `limit: 5`. For a call a person answered, `cloudtalk_get_call_transcript` with `limit: 30`. A caller's first words to a person ("I already told your assistant...") are the best evidence there is.
 6. **The cause, in its setup** (from the step 1 read):
 
 | What the calls show | Likely cause | Setup change |
 |---|---|---|
-| Many calls end within 20 seconds of talk | Greeting too long or unclear, or the wrong language | `greeting`: shorter, names the business and what it can help with. Check `language` and `secondaryLanguages` |
+| Many of the calls read or checked end within 20 seconds of talk | Greeting too long or unclear, or the wrong language | `greeting`: shorter, names the business and what it can help with. Check `language` and `secondaryLanguages` |
 | Callers call again about the same thing | Missing facts, or an action it can't take | Facts: a knowledge base or a `custom` skill. Actions: a tool, called from a `toolCall` scenario |
 | Questions it should answer go to a person | Missing facts, or `answerQuestions` set to transfer | Add the facts. Set `answerQuestions.action` to `offerAlternative` or `admitUncertainty` |
 | Callers repeat their details to the person | It doesn't collect and confirm the reason before transferring | A `goalPrompt` step that asks for the name and reason and reads them back, with matching `extractData` properties |

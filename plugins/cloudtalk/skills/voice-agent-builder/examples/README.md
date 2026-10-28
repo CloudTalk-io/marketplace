@@ -1,4 +1,4 @@
-# VoiceAgent v2 — reference example configs (E1–E10)
+# AI Voice Agent v2 — reference example configs (E1–E10)
 
 Ten archetype configs for the v2 Expert-Mode API, authored per the
 [corpus](../README.md). Each is schema-valid ([`schema.md`](../schema.md)) and passes the

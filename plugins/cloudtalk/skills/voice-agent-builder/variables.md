@@ -1,6 +1,6 @@
-# VoiceAgent v2 — template variables (`{{…}}`)
+# AI Voice Agent v2 — template variables (`{{…}}`)
 
-The consolidated reference for every `{{variable}}` the platform resolves in a VoiceAgent config — what each contains, when it resolves, and what an unset one does.
+The consolidated reference for every `{{variable}}` the platform resolves in an AI Voice Agent config — what each contains, when it resolves, and what an unset one does.
 
 One template engine resolves variables **at call time** over the config's prompt text — `goalPrompt`,
 `greeting`, and the scenario lines assembled into the same system prompt (behavioral §1) — and

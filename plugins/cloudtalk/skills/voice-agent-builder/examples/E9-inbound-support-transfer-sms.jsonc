@@ -15,7 +15,7 @@
 // the same skill switched off with `rules: []` (no group in mind at all); this file keeps the group
 // scaffolded. Also demonstrates a `sendSms` scenario: `params.message` is FIXED config text — the LLM
 // only decides *whether* to send, never what it says — and it deliberately contains no link, because
-// AIVA cannot generate one and any URL would have to be a static, user-supplied address copied verbatim
+// An AI Voice Agent cannot generate one and any URL would have to be a static, user-supplied address copied verbatim
 // (behavioral §6). Two more shapes worth copying: a `## Known facts` section that hands the agent CRM
 // values as `{{variables}}`, and a scenario shipped `enabled: false`.
 //

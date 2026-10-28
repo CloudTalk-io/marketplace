@@ -1,6 +1,6 @@
-# voice-agent-simulator: dry-run a VoiceAgent before it takes calls
+# voice-agent-simulator: dry-run an AI Voice Agent before it takes calls
 
-Give this skill a **VoiceAgent v2 config** and it plays a phone call against it: one subagent acts
+Give this skill an **AI Voice Agent v2 config** and it plays a phone call against it: one subagent acts
 as the agent (strictly per the config) and as a caller persona, and a second, **blind** subagent
 scores the resulting transcript. Output is a short chat block in plain words: the result, what the
 agent missed, six scores, awkward moments, and at most five changes to its setup, ending with one next
@@ -72,7 +72,7 @@ more dimensions at 1–2. All gates passing with some dimension ≤ 3 (or findin
 
 The two subagents are deliberately asymmetric:
 
-- **Simulator — small and fast.** Production VoiceAgents run on small, low-latency models, so a
+- **Simulator — small and fast.** Production AI Voice Agents run on small, low-latency models, so a
   small simulator is the honest approximation of how the config will really be interpreted. A
   stronger model quietly repairs prompt weaknesses a live agent would trip on, and the run comes
   back cleaner than reality.

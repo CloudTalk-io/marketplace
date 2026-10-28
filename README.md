@@ -15,7 +15,7 @@ your CloudTalk account and ships eight skills. It used to be **CloudTalk VoiceAg
 | [`conversation-insights`](./plugins/cloudtalk/skills/conversation-insights/SKILL.md) | Turns recent conversations into open loops, and says who should close each one: a person or an AI Voice Agent. |
 | [`missed-call-follow-up`](./plugins/cloudtalk/skills/missed-call-follow-up/SKILL.md) | Finds today's missed callers nobody has reached yet, drafts a short text back to each from their history, and sends only what you approve. |
 | [`call-coach`](./plugins/cloudtalk/skills/call-coach/SKILL.md) | Coaches your team and your AI Voice Agents from real calls. |
-| [`voice-agent-builder`](./plugins/cloudtalk/skills/voice-agent-builder) | Generates, fixes and validates **VoiceAgent v2 (Expert Mode)** configurations for any inbound or outbound use case, and runs a structural and behavioral validator before every hand-back. Works offline too. |
+| [`voice-agent-builder`](./plugins/cloudtalk/skills/voice-agent-builder) | Generates, fixes and validates **AI Voice Agent v2 (Expert Mode)** configurations for any inbound or outbound use case, and runs a structural and behavioral validator before every hand-back. Works offline too. |
 | [`voice-agent-checkup`](./plugins/cloudtalk/skills/voice-agent-checkup/SKILL.md) | Checks whether an AI Voice Agent is ready to go live: a verdict, the fix to make first, the tests to run and a go-live checklist. Changes nothing, except a test call to your own phone when you ask. |
 | [`voice-agent-replay`](./plugins/cloudtalk/skills/voice-agent-replay/SKILL.md) | Improves a live AI Voice Agent from its real calls: failures grouped by cause, two calls of proof each, and the setup change that fixes each one. |
 | [`voice-agent-simulator`](./plugins/cloudtalk/claude-skills/voice-agent-simulator/README.md) | Roleplays a caller persona against a configuration and scores the transcript with an automated judge, so you can test an agent before it takes real calls. Claude only. |
@@ -98,9 +98,9 @@ other skills need one.
 
 ## Limitations
 
-- **Sign-in** needs a CloudTalk **Admin**. The advanced API key connection reaches the voice agent tools
+- **Sign-in** needs a CloudTalk **Admin**. The advanced API key connection reaches the AI Voice Agent tools
   only, and you add it yourself.
-- **A non-admin API key is more limited than it looks.** It can list your VoiceAgents, but the other
+- **A non-admin API key is more limited than it looks.** It can list your AI Voice Agents, but the other
   config reads (fetching one agent, listing knowledge bases or custom tools) and **every** write fail with
   an authorization error. If one list works and nothing else does, check the key's role:
   the connection check (ask Claude to "check my CloudTalk connection") echoes the company, user and role the connection resolved to. An account that

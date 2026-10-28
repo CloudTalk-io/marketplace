@@ -1,10 +1,10 @@
 ---
 name: voice-agent-simulator
 description: >-
-  Test a CloudTalk VoiceAgent v2 config by simulating a phone conversation against it: a subagent
+  Test a CloudTalk AI Voice Agent v2 config by simulating a phone conversation against it: a subagent
   plays the agent strictly per the config against a caller persona, then a blind judge scores the
   transcript and returns gaps, awkward moments, and concrete config-level fixes. Use whenever the
-  user wants to test or preview a VoiceAgent config ("test my agent", "simulate a call", "how
+  user wants to test or preview an AI Voice Agent config ("test my agent", "simulate a call", "how
   would my agent handle an angry caller", "find gaps in this config", "run a simulated
   conversation"), and as a quality pass right after generating a config. Works on a conversation
   draft or pasted JSON; with the CloudTalk MCP connected it can also fetch a saved config and, on
@@ -12,7 +12,7 @@ description: >-
 license: Apache-2.0
 ---
 
-# Simulate a conversation against a VoiceAgent config
+# Simulate a conversation against an AI Voice Agent config
 
 Dry-run a config before it takes real calls. One subagent plays **both sides** of a phone call — the
 agent strictly per the config, the caller per a persona card — and a second, **blind** subagent
@@ -46,11 +46,13 @@ Prepare the run:
   two lines are all the simulator gets. Keep *what went wrong on real calls* and *what a pass looks like*
   to yourself for §4; neither subagent sees them, so the run stays an independent check.
 - **Knowledge.** When `knowledgeBaseIds` isn't empty and CloudTalk is connected, read
-  `cloudtalk_list_knowledge_bases` once and build a `KNOWLEDGE` block: each linked one's name,
-  description and, for a custom one, its text (`value`). A web page or file knowledge base's content
-  can't be read here: list it by name with *"content not available: the agent says it will check"*. With
-  no connection, list the ids as content not available. The block travels with the config to both
-  subagents, so knowledge answers are judged against the knowledge the agent was given.
+  `cloudtalk_list_knowledge_bases` with `limit: 100`, following `pagination.next_page` until every linked
+  id is found, and build a `KNOWLEDGE` block. The list doesn't return a knowledge base's content: `value` is
+  empty for a custom or file one and, for a web page one, holds its address. So list each linked one by
+  name, type and description (and a web page's address), marked
+  *"content not available: the agent says it will check"*. With no connection, list the ids as content
+  not available. The block travels with the config to both subagents, so knowledge answers are judged
+  against the knowledge the agent was given.
 - Bind every `{{variable}}` the way the runtime would, so the run neither invents context nor fakes a
   defect: user-declared call-property keys, `{{contact.*}}` and `{{caller_number}}` → plausible sample
   values (live, these come from the trigger's `call_properties` or a matched CRM contact);
@@ -81,7 +83,7 @@ pass. Say so in one line and offer the user these paths instead:
 - **The real test call** (§6), when CloudTalk is connected.
 
 Spawn a fresh subagent per persona via the Agent/Task tool — never a raw API call — and run it on a
-**small, fast model (haiku)**: production VoiceAgents run on small low-latency models, so a haiku
+**small, fast model (haiku)**: production AI Voice Agents run on small low-latency models, so a haiku
 simulator is the honest approximation of how the config will actually be interpreted; a stronger
 model papers over prompt weaknesses a real agent would trip on. **Model names depend on the
 environment** — haiku where the Claude family is available, otherwise the **smallest fast** model on
@@ -213,6 +215,8 @@ connected. **Never auto-place a call.**
 1. **Saved config only.** The live call runs what is SAVED on the agent, not your draft — fetch with
    `cloudtalk_get_voice_agent` and confirm it matches the config under test before anything dials.
 2. **Outbound agent:** `cloudtalk_trigger_aiva_call` places a **real phone call** — say so plainly.
+   Pass `voice_agent_id` set to the 24-character config id (`voice_agent.id` from the read in step 1),
+   never the numeric `voiceAgentId`.
    It passes only the agent and the number, so `{{variables}}` meant to arrive with a call (a name, an
    appointment time) are empty on this one: say so before it dials, and don't count that gap as a fault
    in the setup.

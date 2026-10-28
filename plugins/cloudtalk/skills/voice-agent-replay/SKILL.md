@@ -36,7 +36,7 @@ They live in this plugin's `voice-agent-builder` skill.
 
 ### 1 · Pick the agent and the period
 
-- Call `cloudtalk_list_voice_agents` with `limit: 200`, and follow `pagination.next_page` until it is null before saying an agent doesn't exist. Match the name the user gave. One agent on the account: use it. Several that fit, or none named: ask, listing names and direction (inbound or outbound). A list is a question for the user, not a pick for you. One agent per run.
+- Call `cloudtalk_list_voice_agents` with `limit: 200`, and follow `pagination.next_page` until it is null before saying an agent doesn't exist. Match the name the user gave, or a word in it. One agent on the account: use it. Several that fit: ask, listing only those, with direction (inbound or outbound). None named: with 10 or fewer agents, ask, listing names and direction; with more, ask for the agent's name, or a word in it, without listing them all. A list is a question for the user, not a pick for you. One agent per run.
 - The id this list returns (key `voice_agent_id`, 24 hex characters) is the **config id**. It reads and saves the setup. It finds no calls.
 - Period: the user's dates, else the last 7 days, from midnight UTC 7 days ago to now, written `YYYY-MM-DD HH:MM:SS` in UTC. One search spans at most 92 days and a wider one is rejected, so split it or ask to narrow it. After an earlier change, start at the time it was saved and say so.
 
@@ -49,7 +49,7 @@ They live in this plugin's `voice-agent-builder` skill.
 
 - Call `cloudtalk_get_voice_agent` with `voice_agent_id` set to the config id. Keep `voice_agent.voiceAgentId`: that number is the **numeric id**, the only id that finds this agent's calls (`mcp-tools.md` *Two ids, one name*).
 - Note what you will judge the calls against: direction, `language`, `greeting`, `goalPrompt` (role, style, task steps, guardrails, ending), `skills.custom`, `skills.transferToHuman` (`enabled`, each rule's `condition` and `destination`), `skills.answerQuestions.action`, `scenarios` (each `when`, `reply`, `action`, `enabled`), `knowledgeBaseIds`, `temperature`, `maxCallDuration`, and `elevenLabsSettings` when `provider` is `elevenlabs`.
-- When `knowledgeBaseIds` isn't empty, call `cloudtalk_list_knowledge_bases` with `limit: 200` and keep the linked ones: name, type, status, and `description` and `value` when filled. This is not a full copy of their content, so a claim you can't find here may still be in a knowledge base.
+- When `knowledgeBaseIds` isn't empty, call `cloudtalk_list_knowledge_bases` with `limit: 100`, following `pagination.next_page` until every linked id is found, and keep the linked ones: name, type, status and `description`, plus a web page's address (`value`). The list doesn't return their content, so a claim you can't find here may still be in a knowledge base.
 - A read refused for authorization means the sign-in lacks CloudTalk Admin rights, which reading a setup needs. Say so in plain words and stop.
 - **Caller cards from an earlier replay** (kept in this chat or in a document the user names): offer to re-run them on the current setup first (`practice-call.md` section 4: the simulator in Claude, a practice call in any app). Each costs a read or two (the setup, and its knowledge when linked). Report each as passed or not yet in the top line, as practice, not a real-engine test.
 
@@ -59,14 +59,15 @@ They live in this plugin's `voice-agent-builder` skill.
 
 ### 3 · Find the calls
 
-- Call `cloudtalk_search_calls` with `voice_agent_id` set to the **numeric id**, `date_from`, `date_to`, `status: "answered"` and `limit: 200`. Page 1 carries the total in `pagination.items_count`; later pages report it as null, so keep the page 1 figure. Follow `next_page` for at most two more pages (600 calls). Beyond that, the sample comes from the newest 600: say so, or offer a shorter period.
+- Call `cloudtalk_search_calls` with `voice_agent_id` set to the **numeric id**, `date_from`, `date_to`, `status: "answered"` and `limit: 100`. Page 1 carries the total in `pagination.items_count`; later pages report it as null, so keep the page 1 figure. Follow `next_page` for at most five more pages (600 calls). Beyond that, the sample comes from the newest 600: say so, or offer a shorter period.
 - Call it once more with the same filters plus `sentiment: "negative"` and `limit: 100`: the calls the platform already judged negative.
-- Each row has `call_id`, `started_at`, `talking_time`, `total_time`, the contact and `external_number`. Use `talking_time` for the 30 second line: a call under 30 seconds has no transcript or insights, so count it and don't read it. A row with no `talking_time` stays in the pool; reading it tells you.
+- Each row has `call_id`, `started_at`, the contact and `external_number`, and its `agent` is this AI Voice Agent itself. Rows from a `voice_agent_id` search carry no call length (`talking_time` and `total_time` are null), so short calls can't be dropped before reading: a call too short to hold a conversation comes back without insights, or with a summary that shows a voicemail, a phone menu or no conversation, and is replaced (step 4).
+- Set aside calls the account marks as tests (a tag such as "Test call" or "AI TEST", or a contact whose name says it is a test), and say how many, so the user can ask to include them.
 - No calls: say so, and check the period and the agent with the user. An inbound agent with no calls may not be routed to any number, which is set in the Dashboard only.
 
 > **✓ Gate:**
 > - [ ] answered calls in the period, from page 1
-> - [ ] how many ended under 30 seconds, or "unknown" when the rows carry no duration
+> - [ ] call length noted as unknown: these rows carry none
 > - [ ] the negative list, and the pool of everything else
 
 ### 4 · Read a sample
@@ -84,8 +85,8 @@ Why these numbers: a cause needs two calls of proof, and the chance of seeing a 
 More calls catch rarer failures but cost time and the account's shared request budget (see Budget). Say in the coverage line which rare failures the sample could miss.
 
 - **Pick:** calls the user named, first. Then negative calls, up to a third of the sample, then fill from the pool, evenly spaced over it (every *n*-th call), so every day of the period counts, not only the newest.
-- **Insights:** for each, `cloudtalk_get_call_insights` with `include: ["summary", "sentiment", "smart_notes"]`, in batches of at most 10, in parallel only where the app allows it. A field that comes back `null` has no insight. One that comes back with `reason: "rate_limited"` or `reason: "error"` is a failed read, not an empty one. A call with no insights doesn't count toward the sample: replace it with the next pick, up to 40% more insight reads than the sample.
-- **No insights in the first 10:** when the first 10 reads have none, stop reading, so the rest of the request budget isn't spent on empty reads. Say once that none of the calls read so far has a transcript or insights: they may not be analysed yet, or Conversation Intelligence isn't on the plan. Don't say the agent has no analysed calls at all. Offer what still works: the user listens to a call they pick (`cloudtalk_get_call_recording` with `action: "play"`; not available when CloudTalk is connected with an API key, so then they listen to it in the dashboard), or the `voice-agent-checkup` skill checks the setup without calls.
+- **Insights:** for each, `cloudtalk_get_call_insights` with `include: ["summary", "sentiment", "smart_notes"]`, in batches of at most 10, in parallel only where the app allows it. A field that comes back `null` has no insight. One that comes back with `reason: "rate_limited"` or `reason: "error"` is a failed read, not an empty one. A call with no insights, or whose summary shows a voicemail, a phone menu or no conversation, doesn't count toward the sample: replace it with the next pick, up to 40% more insight reads than the sample. Count those reads.
+- **No insights in the first 10:** when the first 10 reads have none, stop reading, so the rest of the request budget isn't spent on empty reads. Say once that none of the calls read so far has insights: they may not be analysed yet, or Conversation Intelligence isn't on the plan. Don't say the agent has no analysed calls at all. Offer what still works: the user listens to a call they pick (`cloudtalk_get_call_recording` with `action: "play"`; not available when CloudTalk is connected with an API key, so then they listen to it in the dashboard), or the `voice-agent-checkup` skill checks the setup without calls.
 - **Transcripts:** `cloudtalk_get_call_transcript` with `limit: 300`, for about one call in four of the sample, at most 20: two thirds where the insights suggest a failure, the rest from calls that look fine, because repeating itself and making things up rarely reach a summary. Insights are short; transcripts are long, so this cap is what keeps a 100-call run readable. Read a second page (`offset` set to `pagination.next_offset`) only when the end of the call decides a flag. `reason: "no_transcript"` is an answer, not an error: don't retry it, and use that call's summary instead, marked as a summary.
 - Tell the AI Voice Agent from the caller with the transcript's speaker map: `callers` gives each speaker's `type` and `localIdentifier`, and each segment's `caller` points to one of them.
 
@@ -113,7 +114,7 @@ Check every call you read for seven failures. A flag needs evidence in that call
 - **Made something up** is the flag to be most careful with. When a linked knowledge base could hold the fact, mark it **unverified** and ask the user, rather than calling it made up.
 - **Missed a handoff** comes in three kinds; note which. The transfer skill was off or had no rule for this case (a setup gap). It was on and the agent didn't use it (a wording gap). Or the agent tried and the transfer failed: the target may be wrong, and nothing checks a target until a live call uses it.
 - On an outbound agent, a call that reached voicemail is not a failure unless the agent kept talking to it or never ended the call.
-- Calls under 30 seconds can't be read. Report their count as possible early hang-ups, with no cause. When they are a large share of the calls, say so in the top line and suggest a test call to hear the opening.
+- Reads that held no conversation (no insights, or a voicemail or no conversation in the summary) are possible early hang-ups. Report their count, with no cause. When they are a large share of the calls, say so in the top line and suggest a test call to hear the opening.
 
 ### 6 · Group by cause, and map each cause to the setup
 
@@ -191,7 +192,7 @@ Then offer to **keep the caller cards**, in this chat or in a document the user 
 
 In the user's language, in this order:
 
-1. **Top line:** the agent's name and direction, the period (in the user's timezone when known, plus the UTC times queried), and what was read: answered calls in the period, how many ended under 30 seconds, how many were sampled and how they were picked, how many transcripts were read. Name any **shared or asked too much** flag here, and the result of any earlier caller cards re-run (step 2).
+1. **Top line:** the agent's name and direction, the period (in the user's timezone when known, plus the UTC times queried), and what was read: answered calls in the period, how many reads held no conversation, how many were sampled and how they were picked, how many transcripts were read. Name any **shared or asked too much** flag here, and the result of any earlier caller cards re-run (step 2).
 2. **What went wrong:** one line per flag with its count, for example "Missed a handoff: 7 of 50 calls". These are counts in a sample, not a score for every call.
 3. **Causes**, ranked, one block each:
    - **Cause:** one plain sentence.
@@ -201,7 +202,7 @@ In the user's language, in this order:
    - **Caller card:** who calls, what they want, and what a pass looks like (step 6).
 4. **Seen once:** one line each.
 5. **Proposed changes:** a numbered list to pick from, one per cause, plus any question about missing facts or transfer targets, in the same message.
-6. **Not covered:** calls not sampled, calls under 30 seconds, calls with no insights or transcript, knowledge base content that couldn't be checked, and the part of the period left out when there were more than 600 calls.
+6. **Not covered:** calls not sampled, reads that held no conversation, calls with no insights or transcript, knowledge base content that couldn't be checked, and the part of the period left out when there were more than 600 calls.
 
 After a save: the save's name, what changed, the link and the undo offer (step 8), then the two ways to check it and the offer to keep the caller cards (step 9).
 

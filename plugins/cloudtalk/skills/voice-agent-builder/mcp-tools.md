@@ -1,8 +1,8 @@
-# VoiceAgent v2 — connected mode (CloudTalk MCP tools)
+# AI Voice Agent v2 — connected mode (CloudTalk MCP tools)
 
 > Semantics last verified against the MCP server source: **2026-10-27**, for production and for the release in which every write acts on its first call.
 
-The connected-mode reference: the 20 voice agent tools the CloudTalk MCP exposes for reading real IDs, saving configs, and placing test calls — plus the write-safety rules and what still needs the Dashboard.
+The connected-mode reference: the 20 AI Voice Agent tools the CloudTalk MCP exposes for reading real IDs, saving configs, and placing test calls — plus the write-safety rules and what still needs the Dashboard.
 
 **Connected mode** is this skill working against your CloudTalk account directly, through the CloudTalk
 MCP. The plugin connects by CloudTalk sign-in (OAuth) at `https://mcp.cloudtalk.io`, which carries every
@@ -25,7 +25,7 @@ the dashboard's Expert Mode and copy IDs from the Dashboard
 
 | Tool | Purpose | Key caveat |
 |---|---|---|
-| `cloudtalk_list_voice_agents` | List the company's VoiceAgents (id, name, direction) | **Pages** (see *Reading lists*) and cached a few minutes — a just-created agent can be missing; see *Write safety* |
+| `cloudtalk_list_voice_agents` | List the company's AI Voice Agents (id, name, direction) | **Pages** (see *Reading lists*) and cached a few minutes — a just-created agent can be missing; see *Write safety* |
 | `cloudtalk_get_voice_agent` | Fetch one agent's **complete config document** | The mandatory first step of every update — and the way to read a real, working `voice` ID. It does **not** pre-validate the 24-hex shape, so a numeric id fails upstream rather than at dispatch (`trigger_aiva_call` does check) |
 | `cloudtalk_create_voice_agent` | Create an agent from a config | Write; the result carries the new `id`, a `dashboard_url`, and possibly `error_codes` (*Write safety*) |
 | `cloudtalk_update_voice_agent` | Save a config to an existing agent (`voice_agent_id`) | Write — **merges** the fields you pass onto a fresh read (collections replaced wholesale); `apply_optimized_settings: true` applies the platform's optimized list; see Write safety |
@@ -55,12 +55,12 @@ Read-only — useful for verifying behavior after a test call.
 | `cloudtalk_health_check` | Confirm the MCP is reachable and see which company/user the sign-in or key resolved to | Run it first when a tool fails: it separates an auth/tenant problem from a data problem. Makes **no** API call of its own, so it proves the credential was accepted, not that an upstream is healthy. **Check the echoed company id is the account you meant** (silently: never show a company id, user id or tool name to the user) — and the **`role_id`**: a non-admin key can still `cloudtalk_list_voice_agents`, but fails the other config reads (`get_voice_agent`, `list_knowledge_bases`, `list_voice_agent_tools`) **and every write** with an authorization error, which is the first thing to check when one list works and nothing else does. |
 | `cloudtalk_list_agents` | Human agents: id, name, email, **extension**, availability | Both halves of an `agent` transfer pair come from here. Still prefer groups as targets (behavioral §3.4) |
 | `cloudtalk_list_groups` | Ring groups — the preferred transfer targets | Returns **id + name only**. The `groupExtension` half is **not** in this response — take it from the Dashboard, the user, or the agent's current config |
-| `cloudtalk_list_numbers` | Company numbers: id, country/area code, name, E.164, per-channel support flags | Resolves outbound-number IDs **and** SMS senders (`sms_supported: true`). `country_code` here is the **numeric calling code** (`421`), not the ISO-2 code `cloudtalk_search_calls` wants |
-| `cloudtalk_list_contact_tags` | Contact tags in the account | An always-on account lookup — no VoiceAgent config field references a contact tag. **Pages** |
+| `cloudtalk_list_numbers` | Company numbers: id, country/area code, name, E.164, per-channel support flags | Resolves outbound-number IDs **and** SMS senders (`sms_supported: true`). Read one number with `id`, or a short page (`limit: 20`) when any voice-capable number will do: the default page of 200 is about 60K characters, too big for one reply. `country_code` here is the **numeric calling code** (`421`), not the ISO-2 code `cloudtalk_search_calls` wants |
+| `cloudtalk_list_contact_tags` | Contact tags in the account | An always-on account lookup — no AI Voice Agent config field references a contact tag. **Pages** |
 
 ## Reading lists
 
-- **The AI Voice Agent list reads page.** The three voice-agent-domain lists — VoiceAgents, knowledge bases,
+- **The AI Voice Agent list reads page.** The three voice-agent-domain lists — AI Voice Agents, knowledge bases,
   custom tools — take a `limit` (**default 50**, ceiling **200**) and return `pagination.next_page`
   when more rows exist. Check any list result for that field before treating it as complete.
 - **The account reads page on different numbers.** Agents, groups, numbers and contact tags default to
@@ -68,13 +68,13 @@ Read-only — useful for verifying behavior after a test call.
 - **`limit` trims the response, not the upstream cost.** The page is fetched either way, so a small
   `limit` saves you context, not rate budget — narrow with a filter when the budget is what's tight.
 - **Follow `next_page` before concluding something doesn't exist.** Real accounts hold more than 50
-  VoiceAgents, so "not in the list" from page one means nothing — page through, or filter.
+  AI Voice Agents, so "not in the list" from page one means nothing — page through.
 - The call reads page differently: `cloudtalk_get_call_transcript` uses `limit`/`offset`, and
   `cloudtalk_search_calls` has a **bounded** pagination depth (narrow the filter instead of walking).
 
 ## Two ids, one name
 
-A VoiceAgent has **two** identifiers. The read and every write carry both, under different key names:
+An AI Voice Agent has **two** identifiers. The read and every write carry both, under different key names:
 
 | Id | Shape | In `cloudtalk_get_voice_agent` | In a write's result | Used by |
 |---|---|---|---|---|
@@ -120,9 +120,9 @@ called. Only the get and write responses carry the numeric one: `voice_agent.voi
   save that change first, then apply. Use it only when the user asks to take the platform's picks — it
   moves the agent's behaviour version.
 - **The create demands the full set of required scalars.** `agentName`, `direction`,
-  `defaultOutboundNumberId`, `language`, `maxCallDuration`, `temperature`, `voice`, `stability`,
-  `similarity`, `startSpeakingFirst` and `goalPrompt`. A partial create payload comes back as *missing
-  required*.
+  `defaultOutboundNumberId`, `language`, `maxCallDuration`, `temperature`, `voice`,
+  `optimizeStreamingLatency`, `stability`, `similarity`, `startSpeakingFirst` and `goalPrompt`. A partial
+  create payload comes back as *missing required*.
 - **On a full-document save (Expert Mode, or the create), omission is not neutral, and not uniform** —
   one habit covers all three cases: send back the document `cloudtalk_get_voice_agent` gave you, modified.
   (The connected update is the exception: it merges, so there you send only the change, as above.)
@@ -150,12 +150,12 @@ called. Only the get and write responses carry the numeric one: `voice_agent.voi
   an older server's result doesn't (only its preview lists `changed_fields`). Report `changed_fields`
   only when the result carries them; otherwise list the changes you described before the save.
 - **Read what a successful write returns.** Three writes carry a **`dashboard_url`** — create and update
-  VoiceAgent, and create knowledge base: hand that link to the user instead of describing where to
+  AI Voice Agent, and create knowledge base: hand that link to the user instead of describing where to
   click. The tool and assignment writes and `cloudtalk_trigger_aiva_call` return none, so don't promise a
-  link there. A VoiceAgent write can also carry **`voice_agent.error_codes[]`** *on a save that
+  link there. An AI Voice Agent write can also carry **`voice_agent.error_codes[]`** *on a save that
   succeeded*: a stored-but-degraded reference (an unusable voice, a number the company can't send from).
   Surface those in plain language — **saved is not clean**.
-- **Propagation lag is minutes, not seconds.** The list reads are cached (VoiceAgents and KBs a few
+- **Propagation lag is minutes, not seconds.** The list reads are cached (AI Voice Agents and KBs a few
   minutes, numbers and groups longer) and a create **does not** clear that cache — so **wire the id the
   write itself returned** instead of re-listing to find it. A missing row right after a create is not a
   failed write. (Custom tools are the exception: tool creates, tool updates, and assign/unassign all
@@ -193,8 +193,8 @@ dashes or parentheses. Nothing else goes with the call, so `{{variables}}` meant
 keep it when reporting back. To find the call afterwards, `cloudtalk_search_calls` filtered by the
 agent's **numeric** `voice_agent_id` (*Two ids, one name*), then transcript/insights.
 
-Ask the user to stay on a test call for **at least 30 seconds**. A shorter call has no transcript or
-insights: `cloudtalk_get_call_transcript` answers `reason: "no_transcript"`, which is an answer, not a
+Ask the user to stay on a test call for **at least 30 seconds**. A shorter call usually gets no
+transcript: `cloudtalk_get_call_transcript` answers `reason: "no_transcript"`, which is an answer, not a
 reason to retry. Say so once and ask the user what they heard. *Older servers:* the first
 `cloudtalk_trigger_aiva_call` answers `status: "confirmation_required"` and dials nothing; show its
 preview and call again with `"confirm": true` once the user agrees. A `queued` result is queued, not

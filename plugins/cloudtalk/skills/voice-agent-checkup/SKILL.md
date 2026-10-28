@@ -39,7 +39,7 @@ They ship beside this skill in `../voice-agent-builder/`. Read the section a che
 | `behavioral-guidance.md` | What performs: instructions (§2), transfers (§3.4), hangups and call length (§4), direction rules (§6), knowledge (§7), model and speech (§7a-bis to §7c), the §8 self-check. |
 | `schema.md` | Field meanings and dependency rules (§2, §3), languages per provider (§4.3), provider, model and `optimizedSettings` (§5), skills (§6), scenarios (§7). |
 | `referenced-resources.md` | What each knowledge base, tool, transfer target, number and SMS sender needs to work, and where the user fixes it. |
-| `mcp-tools.md` | The two voice agent ids, paged lists, what has no tool. |
+| `mcp-tools.md` | The two AI Voice Agent ids, paged lists, what has no tool. |
 | `variables.md` | Any `{{variable}}` in the greeting, instructions or an SMS. |
 | `practice-call.md` | The practice call in chat (step 6): how to play the agent, the plain-words score, and the label it carries. |
 
@@ -53,8 +53,9 @@ They ship beside this skill in `../voice-agent-builder/`. Read the section a che
   Admin. Never ask for an API key, password or sign-in code.
 - **Connected:** `cloudtalk_list_voice_agents` with `limit: 200`; follow `pagination.next_page` before
   saying an agent doesn't exist. A row's `voice_agent_id` is the 24-character config id.
-- Match the agent the user named. None named, or several fit: show names and direction, and ask. For "all
-  my agents", check at most 5 per run. An error saying AI Voice Agents aren't on the plan: say so once and
+- Match the agent the user named, or a word in its name. Several fit: show only those, with direction, and
+  ask. None named: with 10 or fewer agents, show names and direction and ask; with more, ask for the
+  agent's name, or a word in it, without listing them all. For "all my agents", check at most 5 per run. An error saying AI Voice Agents aren't on the plan: say so once and
   stop.
 
 > **✓ Gate:** one agent picked, its 24-character id in hand (or a pasted config) · at most 5 this run.
@@ -65,18 +66,24 @@ Reads run straight away. `cloudtalk_get_voice_agent` with `voice_agent_id` set t
 returns the raw config document under `voice_agent`; every check reads it. Note `voice_agent.voiceAgentId`,
 the numeric id: only the call search in step 6 takes it. Then, in parallel where the app allows:
 
-- `cloudtalk_list_knowledge_bases` with `limit: 200`, when `knowledgeBaseIds` is not empty.
+- `cloudtalk_list_knowledge_bases` with `limit: 100`, when `knowledgeBaseIds` is not empty, following
+  `pagination.next_page` until every linked id is found.
 - `cloudtalk_list_voice_agent_tools` with `voice_agent_id` (the 24-character id) and `limit: 200`: this
   agent's tools.
-- `cloudtalk_list_numbers`: each number's `id`, `caller_id_e164`, `voice_supported`, `sms_supported`.
+- The numbers the setup names, not the whole list: `cloudtalk_list_numbers` with `id` set to
+  `failoverOutboundNumberId`, and to `defaultOutboundNumberId` when it isn't `1`, one read each; an empty
+  result means the company doesn't own that number. For an SMS `senderNumber` (an E.164 number, not an
+  id), `cloudtalk_list_numbers` with `country_code` set to its numeric calling code and `limit: 100`,
+  following `pagination.next_page` until a row's `caller_id_e164` matches. Each read gives
+  `caller_id_e164`, `voice_supported` and `sms_supported`.
 - Only for a switched-on transfer to a person or group: `cloudtalk_list_agents` with `id` set to the target
   (returns the extension), or `cloudtalk_list_groups` (id and name only).
 
-Follow `pagination.next_page` on every list. Agent list works but the agent read fails with an
+Follow `pagination.next_page` on a list until you have what you need. Agent list works but the agent read fails with an
 authorization error: the user isn't signed in as a CloudTalk Admin; say so and stop. Rate-limit error: wait
 a minute if the app can, then continue; if it can't, stop and ask the user to say "continue". Never retry in a loop. Several agents: read the account lists once and reuse them.
 
-> **✓ Gate:** config document in hand · both ids noted · every list read to its last page, or the gap
+> **✓ Gate:** config document in hand · both ids noted · every list read until it gave what this agent needs, or the gap
 > noted for the coverage line.
 
 ### 3 · Check ten areas
@@ -119,9 +126,9 @@ Grade every finding:
    - Must fix: a linked knowledge base missing from the list or not `ACTIVE` (if `SYNCHRONIZING`, the fix is
      to check again in a few minutes); any knowledge base on a `deepgram` agent, which can't use it.
    - Should fix: a topic the instructions say the agent handles (prices, hours, policies) with no source in
-     the instructions, a custom skill or an active knowledge base (judge from each one's name, description
-     and text); `answerQuestions` on with nothing to answer from; over about 500 words of facts in the
-     instructions.
+     the instructions, a custom skill or an active knowledge base (judge from each one's name, type and
+     description, since the list doesn't return its content); `answerQuestions` on with nothing to answer
+     from; over about 500 words of facts in the instructions.
    - Worth knowing: a website (`URL`) knowledge base reads one page only.
 5. **Custom tools** (scenarios with `action: "toolCall"`; behavioral §2.3)
    - Must fix: a scenario whose `toolReferenceId` isn't among this agent's tools.
@@ -129,11 +136,13 @@ Grade every finding:
      (with an example), what to do when it fails, and to confirm before anything irreversible.
 6. **Numbers** (`defaultOutboundNumberId`, `failoverOutboundNumberId`, SMS `senderNumber`; schema §3,
    referenced-resources)
-   - `1` is Automatic and needs a failover. Any other value must be an `id` in the numbers list.
-   - Must fix, outbound: Automatic with no failover; a number not in the list or with
+   - `1` is Automatic and needs a failover. Any other value must be a number the company owns: the read
+     by `id` in step 2 finds it.
+   - Must fix, outbound: Automatic with no failover; a number that read doesn't find, or one with
      `voice_supported: false`. Either direction: an SMS sender that isn't an owned number with
      `sms_supported: true`, when the agent tells callers it will text them.
-   - Should fix, inbound: Automatic with no failover, or a number not in the list (the next save fails).
+   - Should fix, inbound: Automatic with no failover, or a number that read doesn't find (the next save
+     fails).
    - Which number reaches an inbound agent can't be read here: checklist, never verdict.
 7. **Languages and provider** (`language`, `secondaryLanguages`, `provider`, `llm`; schema §4.3, §5,
    behavioral §7a-bis, §7b)
@@ -212,8 +221,8 @@ List them; run only what the user asks for. None of the practice kinds dials any
 - **Real call, inbound:** nothing to trigger. The user calls the number that routes to the agent.
 - **Listen for** three to five moments from this agent's job and findings: the greeting names the
   business, one question at a time, the handoff or callback when asked for a person, an answer from its
-  knowledge, the agent ending the call. Stay on at least 30 seconds: shorter calls have no transcript or
-  insights.
+  knowledge, the agent ending the call. Stay on at least 30 seconds: shorter calls usually get no
+  transcript.
 - **After the call:** `cloudtalk_search_calls` with `voice_agent_id` set to the numeric id, `date_from` a
   few minutes before the call (`YYYY-MM-DD HH:MM:SS`, UTC), `limit: 5`; a just-ended call can take a minute
   to appear. Then `cloudtalk_get_call_transcript`. A call under 30 seconds, or one not analysed yet, answers

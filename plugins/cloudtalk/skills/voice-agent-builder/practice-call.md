@@ -14,17 +14,18 @@ a fix on a caller card before saving it.
   setup the user pasted. A proposed change that isn't saved yet can be practised too: say so plainly
   (*"This plays the version with the shorter greeting. It isn't saved yet."*).
 - **Knowledge.** When knowledge bases are linked and CloudTalk is connected, read
-  `cloudtalk_list_knowledge_bases` once and keep each linked one's name, description and, for a custom one,
-  its text. That is all the agent may answer from beyond its setup. A web page or file knowledge base's
-  content can't be read here: asked about it, the agent says it will check, and the score says knowledge
-  answers weren't tested.
+  `cloudtalk_list_knowledge_bases` with `limit: 100`, following `pagination.next_page` until every linked
+  one is found, and keep each linked one's name, type and description. The list doesn't return a
+  knowledge base's content (`value` is empty for a custom or file one and, for a web page one, holds its
+  address), so none of it can be read here: asked about it, the agent says it will check, and the score
+  says knowledge answers weren't tested.
 - **Call details.** A `{{variable}}` nobody gives a value for is spoken as a gap, exactly as on a real call
   (`variables.md`). When the instructions use call details (a name, an appointment time), ask once whether
   the user wants to give sample values.
 - **Tell the user, in two lines,** who they are calling, what you will play, and how to stop: *"Say 'end
   call' any time."* With a caller card (section 4), offer it as their brief: who calls and what they want.
 
-Cost: one read for the setup and at most one for knowledge. The call itself makes no requests.
+Cost: one read for the setup and one or two for knowledge. The call itself makes no requests.
 
 ## 2 · Play the agent, strictly from the setup
 

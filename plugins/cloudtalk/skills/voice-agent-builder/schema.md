@@ -1,4 +1,4 @@
-# VoiceAgent v2 — Expert Mode schema (structural reference)
+# AI Voice Agent v2 — Expert Mode schema (structural reference)
 
 > **What this is:** the structural reference for the **v2 request body**
 > (`VoiceAgentV2ConfigurationRequest`) — the canonical importable/exportable JSON. Human view of
@@ -40,7 +40,9 @@ The legacy v1 wizard fields (`voiceAgentPrompt`, `extractionPrompt`, `transferEn
 > `cloudtalk_update_voice_agent`, or the dashboard's **Optimized settings** notice where it is enabled. The
 > API would also take the latest on a replace; never writing it yourself is this plugin's rule.
 > `id` / `voiceAgentId` / `createdAt` / `updatedAt` are response-only. They appear on GET/export but are
-> ignored on import — do not author them.
+> ignored on import — do not author them. So is `hashes`: fingerprints the server computes over the config
+> and returns on a read. `deepgramSettings` comes back on a read too: a stored Deepgram-only settings
+> object, empty today and kept when omitted (like `elevenLabsSettings`). The generator omits both.
 >
 > The platform's **diagnostics are response-only too**: `warnings`, `errorCodes` and `optimizedSettings`
 > (§5) ride along on a read or a write result — and a **successful** save can still carry `errorCodes`
@@ -62,7 +64,7 @@ The legacy v1 wizard fields (`voiceAgentPrompt`, `extractionPrompt`, `transferEn
 | `maxCallDuration` | generate | int | ✅ | minutes; **hard cap** — call is cut off when reached; no hard API cap, but keep it **≤ 120** (a value above that draws a recommendation warning, not a save refusal) | Required; the dashboard fills **30** if omitted (no 240 default). Set generous headroom, not a tight fit; ~20–30 min inbound, ~10–15 min outbound (behavioral §4.4). |
 | `temperature` | generate | float | ✅ | `0.0`–`1.0` | LLM sampling temperature. Baseline `0.5`; highly structured/deterministic flows may go lower (~`0.1`–`0.3`) (§7a-bis). |
 | `voice` | generate | string | ✅ | a voice ID in the library (§4.4) | Built-in premade set is global (self-contained). |
-| `optimizeStreamingLatency` | generate | int | ❌ | `0`–`4` | ElevenLabs latency tuning; **optional (not API-required), and the API applies no default**. Omitted from a full document (Expert-Mode paste, create) = **reset to `0`**, not preserved, so always emit it deliberately there; the connected update keeps the stored value when it's omitted. Baseline `2`, never `4` (§7a-bis). Unlike `elevenLabsSettings` (omit-to-let-provider-default), this is not backfilled. |
+| `optimizeStreamingLatency` | generate | int | ✅ | `0`–`4` | ElevenLabs latency tuning. **The CloudTalk connection refuses a create without it**; the API itself doesn't demand the key and applies no default. Omitted from a full document (Expert-Mode paste, create) = **reset to `0`**, not preserved, so always emit it; the connected update keeps the stored value when it's omitted. Baseline `2`, never `4` (§7a-bis). Unlike `elevenLabsSettings` (omit-to-let-provider-default), this is not backfilled. |
 | `stability` | generate | float | ✅ | `0.0`–`1.0` | Voice stability. **Required and passed straight through to ElevenLabs — the API applies no default and does NOT backfill it**; omitting it fails the save. Baseline `0.3` (§7a-bis). |
 | `similarity` | generate | float | ✅ | `0.0`–`1.0` | Voice similarity boost. **Required and passed straight through to ElevenLabs — the API applies no default and does NOT backfill it**; omitting it fails the save. Baseline `0.7` (§7a-bis). |
 | `provider` | generate | string | ❌ (emit it) | `"elevenlabs"` \| `"deepgram"` | The agent's speech provider. Filled at creation, kept on every save; omitted = keep the stored one (§5). |
@@ -85,9 +87,12 @@ The legacy v1 wizard fields (`voiceAgentPrompt`, `extractionPrompt`, `transferEn
 > to empty/0. Net: the generator omits all three — the editor and the platform own them.
 
 > **Retired names — never emit:** `providerOverride` / `llmOverride` are deprecated request **aliases** of
-> `provider` / `llm` — still accepted, never returned, and an alias **wins** over the plain field when both
-> are sent. `hasOverrides` and `upgradeAvailable` no longer exist: accepted and ignored, never returned.
-> Fixing a pasted config that carries them: rename the aliases, drop the other two.
+> `provider` / `llm` — still accepted, and an alias **wins** over the plain field when both are sent. A read
+> of an agent that still carries a pinned override returns them until its next save folds the value into
+> `provider` / `llm`, so a config copied from a read can carry them: set `provider` / `llm` to the alias's value, then drop
+> the alias (with `apply_optimized_settings` the connected update refuses an alias outright). `hasOverrides` and `upgradeAvailable` no longer exist: accepted and ignored, never returned.
+> Fixing a pasted config that carries them: move each alias's value to `provider` / `llm` and drop the
+> alias; drop the other two.
 
 > **Do NOT include (response-only):** `minorVersion`, the response-only fields and the platform's
 > diagnostics — `warnings`, `errorCodes`, `optimizedSettings` (§1, §5) — and the export tags `companyId` /
@@ -511,7 +516,7 @@ skills. **`action` tells the agent how to behave when it *can't* answer a questi
 - `enabled: true` ⇒ `integrationId`, `calendarId`, `eventName` required; `durationMinutes > 0`.
 - **`durationMinutes`** — any positive duration (e.g. `15` or `30` minutes); set whatever the booked
   service needs.
-- **`serviceDescription`** — a description of the service, made available to the VoiceAgent LLM so it knows
+- **`serviceDescription`** — a description of the service, made available to the AI Voice Agent's LLM so it knows
   what it is booking and can communicate it to the contact.
 - **`calendarEventDescription`** — the description written onto the scheduled calendar event itself (may be
   customer-facing).

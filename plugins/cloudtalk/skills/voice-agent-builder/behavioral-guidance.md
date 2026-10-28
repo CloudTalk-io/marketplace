@@ -1,4 +1,4 @@
-# VoiceAgent v2 — behavioral guidance (what performs well)
+# AI Voice Agent v2 — behavioral guidance (what performs well)
 
 > Companion to [`schema.md`](./schema.md). The schema tells you what is **valid**; this doc tells
 > you what **performs well**. A config can pass every validation rule and still talk over callers,
@@ -485,7 +485,7 @@ Run a generated config against this before presenting it:
 | 19 | No IVR-navigation or silence-timer instructions (not supported) |
 | 20 | Numeric settings per §7a-bis (esp. `optimizeStreamingLatency` ≠ 4; `temperature` 0.5 baseline — ~0.1–0.3 for highly structured flows, never above 0.7; `turnEagerness: patient` for data collection) |
 | 21 | Custom-tool prompts follow when/params(+format example)/usage/error-handling; confirmation before irreversible actions |
-| 22 | **Self-contained unless a `reference` was explicitly requested**; outbound number completed — `defaultOutboundNumberId` defaults to `1` (Automatic, as the dashboard seeds it) with a real owned `failoverOutboundNumberId` in both directions, or a real owned `defaultOutboundNumberId` set directly (reused, fetched, or asked). Never guessed, never `2`, never `null`; a bare `1` with no failover `400`s (`generator-contract.md`) |
+| 22 | **Self-contained unless a `reference` was explicitly requested**; outbound number completed — `defaultOutboundNumberId` defaults to `1` (Automatic, as the dashboard seeds it) with a real owned `failoverOutboundNumberId` in both directions, or a real owned `defaultOutboundNumberId` set directly (reused, fetched, or asked). Never guessed (a guessed `2` included), never `null`; a bare `1` with no failover `400`s (`generator-contract.md`) |
 | 23 | `greeting` names the **real business** — **ask** for the name (it is ground truth, never coined from the use case); a clearly-marked `[placeholder]` is allowed **only** when the user explicitly wants a template. Reads like a person would say it — never a nameless/awkward opener (§6) |
 | 24 | **Prose coherence:** every prose field (`greeting`, `goalPrompt`, skills, replies) re-read: grammatical, complete, no garbled or truncated text |
 | 25 | `extractData` properties **presented to the user with a one-line rationale** and open to edit — not silently embedded (§3.1) |

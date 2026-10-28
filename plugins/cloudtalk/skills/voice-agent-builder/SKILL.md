@@ -1,22 +1,22 @@
 ---
 name: voice-agent-builder
 description: >-
-  Build, fix, or check a CloudTalk AI Voice Agent: its VoiceAgent v2 "Expert Mode" configuration. Connected
+  Build, fix, or check a CloudTalk AI Voice Agent: its v2 "Expert Mode" configuration. Connected
   to CloudTalk, it creates, reads and saves the agent directly against your real account (numbers,
   knowledge bases, tools, transfer targets; every save needs your approval, and a change to an existing agent can be undone); offline, it
   returns the JSON you paste into the
   dashboard's Advanced/code tab. Use whenever the user wants to create or edit ANY inbound
   or outbound AI voice/phone agent for CloudTalk, for any use case or industry (reception, qualification,
   support, booking, surveys, reminders, notifications, lead capture and more; these are just examples, not
-  the limit), or asks for a VoiceAgent config, a goalPrompt/greeting/scenarios/skills, or pastes an existing
+  the limit), or asks for an AI Voice Agent config, a goalPrompt/greeting/scenarios/skills, or pastes an existing
   config to review, edit, or reuse. Produces a behaviorally-sound, save-ready config that reuses the
   agent's existing setup, and runs a structural + behavioral validator first.
 license: Apache-2.0
 ---
 
-# Build an AI Voice Agent (VoiceAgent v2 Expert Mode)
+# Build an AI Voice Agent (v2 Expert Mode)
 
-Turn a use case — plus a few facts only the user can supply — into a **save-ready VoiceAgent v2** JSON
+Turn a use case — plus a few facts only the user can supply — into a **save-ready AI Voice Agent v2** JSON
 config.
 
 **Two modes, one contract.** If the CloudTalk MCP tools (`cloudtalk_*`) are available, you are
@@ -106,11 +106,12 @@ say so and offer the nearest supported path, never fake it:
 > - [ ] the **outbound number** completed: `defaultOutboundNumberId` defaults to `1` (Automatic, as the
 >       dashboard seeds it) — complete it with a real owned `failoverOutboundNumberId` in both directions, or
 >       set a real owned `defaultOutboundNumberId` directly (reuse the agent's real ID fetched or pasted, pick
->       one from `cloudtalk_list_numbers`, or ask). Never `2`, never fabricated, never `null`, never a bare
+>       one from `cloudtalk_list_numbers`, or ask). Never a guessed `2` (it is a number's id, not "Random";
+>       a real owned `2` from the agent or the number list stays), never fabricated, never `null`, never a bare
 >       `1`; offline, the user completes the failover/number in the dashboard. **Inbound: never ask about
 >       it.** Callers never hear it, but the save needs it. Connected, keep the agent's own values when they're complete (a real number, or `1` with a
 >       real failover), else use
->       Automatic (`1`) with the first number in `cloudtalk_list_numbers` that has `voice_supported: true`
+>       Automatic (`1`) with the first number in `cloudtalk_list_numbers` (`limit: 20`) that has `voice_supported: true`
 >       as the failover, and explain it once: *"It needs a backup phone number on file even though it only
 >       answers calls. I used the one ending 123; callers never hear it."* Offline, reuse the pasted values
 >       when complete, else it is a setup step in the status line
@@ -151,7 +152,7 @@ Emit only `generate` fields + the outbound number → nothing else to wire. Hand
 - end the call → a `hangup` scenario (the **only** way to grant `end_call`)
 - outbound number → defaults to `1` (Automatic, as the dashboard seeds it) + a real owned
   `failoverOutboundNumberId` in both directions, or a real owned `defaultOutboundNumberId` set directly
-  (reuse/fetch/ask); never guess, never `2`, never `null`, never a bare `1`
+  (reuse/fetch/ask); never guess (a guessed `2` included), never `null`, never a bare `1`
 
 **From a web page** (connected; "answer questions from our FAQ page"). Five steps, no loops:
 
@@ -225,8 +226,9 @@ handoff. Until then they keep promising a callback."*
 **Switching a draft transfer on** (the user comes back with the target): read the agent fresh (offline: ask
 for its current config), then in **one** save set `enabled: true`, fill the rule's real pair (`groupId`
 from `cloudtalk_list_groups` plus the extension the user gave, or an `agent` pair from
-`cloudtalk_list_agents`), or, when the draft has `rules: []`, add one rule with a `condition`, its
-`destination` and the full pair, and rewrite every `goalPrompt` line that refuses or replaces a handoff (the
+`cloudtalk_list_agents`) and set its `destination` to match (`"group"` or `"agent"`, dropping the other
+kind's keys), or, when the draft has `rules: []`, add one rule with a `condition`, its `destination` and
+the full pair, and rewrite every `goalPrompt` line that refuses or replaces a handoff (the
 callback task step, a "can't put callers through" guardrail) so the agent offers the handoff and keeps the
 callback only for when the transfer fails. A switched-on transfer whose instructions still refuse handoffs
 never transfers anyone.
@@ -357,7 +359,7 @@ The write's structured result replaces the paste-and-see smoke test.
   `failoverOutboundNumberId` is **required in BOTH directions** and must be a real owned ID — the save `400`s
   without it and nothing self-heals (never `null`); reuse the agent's failover (fetched or pasted), fetch one
   (`cloudtalk_list_numbers`), or the user completes it in the dashboard. Setting a real owned
-  `defaultOutboundNumberId` directly is the alternative. **Never guess, never `2`, never copy a number from an
+  `defaultOutboundNumberId` directly is the alternative. **Never guess (a guessed `2` included), never copy a number from an
   example; do not hand over a bare `1` (a config that will 400).** For an inbound agent, don't ask the user
   about it: use the save-safe default from step 1 and explain it once.
 - **Never invent a company resource ID, and never leave a placeholder ID in the JSON** — fetch it, reuse a

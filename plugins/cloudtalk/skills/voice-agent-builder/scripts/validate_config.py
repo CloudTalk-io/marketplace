@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-validate_config.py — structural + dependency validator for VoiceAgent v2 (Expert Mode) configs.
+validate_config.py — structural + dependency validator for AI Voice Agent v2 (Expert Mode) configs.
 
 Validates the JSON body pasted into the dashboard's Advanced/code tab to edit an agent — the platform's
 Expert-Mode save; the same body is valid on create. It is the programmatic companion to
@@ -17,7 +17,7 @@ Usage:
     python scripts/validate_config.py <file> --strict    # exit non-zero on warnings too
 
 Exit codes: 0 clean (ordinary behavioral warnings allowed); 1 errors OR a blocking warning — the
-save-refusing wiring (outbound-leftover-default, outbound-automatic-no-failover, transfer-no-rules) or a
+save-refusing wiring (outbound-automatic-no-failover, transfer-no-rules) or a
 config with no enabled hangup scenario (no-hangup, the non-negotiable end_call rule); the severity of
 those stays WARN in the report; 2 unreadable/unparseable input.
 
@@ -149,7 +149,7 @@ EXTRA_TOPLEVEL_KEYS = {"skills"}
 # fields.json `forbidden` rows the platform EMITS rather than accepts. Like the system-managed keys they
 # ride along on a read, so an echoed export is a note (INFO), not an unknown-field error. (`upgradeSummary`
 # is NOT here — no such field exists.)
-RESPONSE_ONLY_DIAGNOSTIC_KEYS = {"warnings", "errorCodes", "optimizedSettings"}
+RESPONSE_ONLY_DIAGNOSTIC_KEYS = {"warnings", "errorCodes", "optimizedSettings", "hashes"}
 
 # schema.md §2 — retired request names the API still accepts, so they are not unknown keys, but they are
 # out of the field set. key -> the field it is an alias of (the alias wins when both are sent), or None for
@@ -170,9 +170,12 @@ HEX_SENTINEL_RE = re.compile(r"^0{18,23}[0-9a-fA-F]{1,6}$")     # 24-hex startin
 SKILL_SUBKEY_RE = re.compile(r"^skills\.(?P<skill>[A-Za-z]+)(?:\[\])?\.(?P<key>[A-Za-z][A-Za-z0-9]*)$")
 
 # WARN codes where the backend refuses the save outright.
-SAVE_REFUSED_CODES = {"outbound-leftover-default", "outbound-automatic-no-failover",
-                      "transfer-no-rules"}
-# The gate for "nothing else to wire" and for the non-zero exit: the save-refusing wiring above, plus
+SAVE_REFUSED_CODES = {"outbound-automatic-no-failover", "transfer-no-rules"}
+# WARN codes that don't block the save on their own but keep "nothing else to wire" false until the user
+# confirms: a number id of 2 saves only when the company really owns number 2.
+CONFIRM_FIRST_CODES = {"outbound-leftover-default"}
+# The gate for the non-zero exit and for "nothing else to wire" (CONFIRM_FIRST_CODES also holds that back):
+# the save-refusing wiring above, plus
 # `no-hangup` — that one saves fine, but the runtime then tells the agent it cannot end a call, which is
 # never a config worth pasting. Its severity stays WARN in the report; only this gate treats it as fatal.
 SAVE_BLOCKING_CODES = SAVE_REFUSED_CODES | {"no-hangup"}
@@ -445,7 +448,9 @@ def validate(cfg, fields, rep):
             if alias_of:
                 rep.warn("retired-alias", key,
                          "Retired alias of `%s` — rename the key to `%s`. Still accepted, and it wins over "
-                         "`%s` when both are sent (schema §2)." % (alias_of, alias_of, alias_of))
+                         "`%s` when both are sent. A read of an agent that still carries a pinned override "
+                         "returns it: move its value to `%s`, then drop the alias (schema §2)."
+                         % (alias_of, alias_of, alias_of, alias_of))
                 allowed = toplevel.get(alias_of, {}).get("enum")
                 if allowed and cfg[key] is not None and cfg[key] not in allowed:
                     rep.err("bad-enum", key, "Value %r not in %s (schema §2)." % (cfg[key], allowed))
@@ -468,6 +473,11 @@ def validate(cfg, fields, rep):
                          "System-managed field — the platform owns it: on Expert-Mode save the editor sets it "
                          "from the loaded agent, and the server defaults it on create. Harmless in an export; "
                          "the generator omits it (schema §2).")
+            elif key == "deepgramSettings":
+                rep.info("not-authored", key,
+                         "Deepgram-only provider settings, empty today: a stored field the platform keeps when "
+                         "you leave it out, so echoing a read's value changes nothing. The generator omits it "
+                         "(schema §1).")
             elif key in RESPONSE_ONLY_DIAGNOSTIC_KEYS:
                 rep.info("response-only", key,
                          "Server-emitted, response-only — the platform writes this key, you don't: it reports "
@@ -556,9 +566,10 @@ def validate(cfg, fields, rep):
             if don == 2:
                 rep.warn("outbound-leftover-default", "defaultOutboundNumberId",
                          "defaultOutboundNumberId is 2, which is NOT a backend \"Random\" selector — only 1 is "
-                         "magic. 2 is a literal phone-number ID your company almost certainly doesn't own, so "
-                         "the save is refused by name (\"outbound number 2 does not exist or does not belong to "
-                         "the company\"). Set a real owned number id (cloudtalk_list_numbers or the dashboard) "
+                         "magic. 2 is a literal phone-number ID your company rarely owns; when it doesn't, the save is "
+                         "refused by name (\"outbound number 2 does not exist or does not belong to the "
+                         "company\"). Set a real owned number id (cloudtalk_list_numbers or the dashboard), "
+                         "or keep 2 when the agent's read or the number list shows it really is your number "
                          "(referenced-resources.md#environment).")
             rep.environment("defaultOutboundNumberId", "phoneNumber",
                             "Specific outbound number ID — must be a real number your company owns; obtain it "
@@ -1391,7 +1402,7 @@ def print_human(rep, src_label):
     glyph = report_glyphs()
     bullet = glyph["bullet"]
     issues = sorted(rep.issues, key=lambda i: (order[i.level], i.where))
-    print("VoiceAgent v2 config validation — %s" % src_label)
+    print("AI Voice Agent v2 config validation — %s" % src_label)
     print("=" * 64)
     if not issues:
         print("No structural or behavioral issues found.")
@@ -1406,6 +1417,7 @@ def print_human(rep, src_label):
             print("      %s" % what)
     save_refused = any(i.code in SAVE_REFUSED_CODES for i in rep.issues)
     save_blocked = any(i.code in SAVE_BLOCKING_CODES for i in rep.issues)
+    needs_confirm = any(i.code in CONFIRM_FIRST_CODES for i in rep.issues)
     pending = [r for r in rep.references if r[3]]
     supplied = [r for r in rep.references if not r[3]]
     if supplied:
@@ -1418,9 +1430,12 @@ def print_human(rep, src_label):
         for field_path, kind, what, _ in pending:
             print("  %s [%s] %s" % (bullet, kind, field_path))
             print("      %s" % what)
-    elif not save_blocked:
+    elif not save_blocked and not needs_confirm:
         print("Nothing else to wire %s — reuses your existing setup; no new resources to create."
               % glyph["ok"])
+    if needs_confirm and not save_blocked:
+        print("%s Confirm the outbound number above is your company's before saving (the warning says how)."
+              % glyph["WARN"])
     # Independent of any resource list: a blocking warning must always be said out loud.
     if save_refused:
         print("%s The warning above blocks the save — fix it before pasting (the message names the way out)."
@@ -1445,7 +1460,7 @@ def print_human(rep, src_label):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Validate a VoiceAgent v2 (Expert Mode) config.")
+    parser = argparse.ArgumentParser(description="Validate an AI Voice Agent v2 (Expert Mode) config.")
     parser.add_argument("config", help="Path to the config JSON/JSONC, or - for stdin.")
     parser.add_argument("--json", action="store_true", help="Emit a machine-readable JSON report.")
     parser.add_argument("--strict", action="store_true", help="Exit non-zero if there are warnings too.")
@@ -1478,11 +1493,14 @@ def main(argv=None):
 
     if args.json:
         save_blocking = any(i.code in SAVE_BLOCKING_CODES for i in rep.issues)
+        confirm_first = any(i.code in CONFIRM_FIRST_CODES for i in rep.issues)
         out = {
             "errors": rep.n_errors,
             "warnings": rep.n_warnings,
             "saveBlocking": save_blocking,
-            "nothingElseToWire": not any(r[3] for r in rep.references) and not save_blocking,
+            "confirmFirst": confirm_first,
+            "nothingElseToWire": not any(r[3] for r in rep.references) and not save_blocking
+                                 and not confirm_first,
             "issues": [i.as_dict() for i in rep.issues],
             "references": [{"field": f, "resourceKind": k, "howToWire": w, "pending": p}
                            for f, k, w, p in rep.references],

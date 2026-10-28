@@ -42,7 +42,7 @@ On first use, sign in with CloudTalk as an **Admin** and approve the access. The
 create or paste. CloudTalk's AI connection needs the Essential plan or higher; AI Voice Agents,
 Conversation Intelligence and Sales Dialer unlock the matching tools.
 
-Developers in Claude Code who prefer a company API key can add the voice agent server themselves; see
+Developers in Claude Code who prefer a company API key can add the AI Voice Agent server themselves; see
 [Advanced: connect with an API key](../../README.md#advanced-connect-with-an-api-key) in the repo README.
 
 ## ChatGPT

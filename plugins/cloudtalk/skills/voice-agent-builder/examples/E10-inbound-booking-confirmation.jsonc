@@ -27,7 +27,7 @@
 //   POST-BOOKING, empty until a booking actually succeeds — `start`, `start_pretty`, `end`, `event_id`,
 //     `caller_name`, `reason`. Only ever use these inside a `booking_confirmed` context (this SMS);
 //     anywhere else they render as an empty string, silently (variables.md).
-// NO LINK VARIABLE EXISTS: AIVA cannot produce a booking, calendar, or reschedule link, so the message
+// NO LINK VARIABLE EXISTS: an AI Voice Agent cannot produce a booking, calendar, or reschedule link, so the message
 // below carries no URL at all. If the user wants one, it must be a static address they supply verbatim
 // (behavioral §6).
 {

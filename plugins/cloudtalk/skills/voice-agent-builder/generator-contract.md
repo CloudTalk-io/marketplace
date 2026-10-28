@@ -1,4 +1,4 @@
-# VoiceAgent v2 — generator contract
+# AI Voice Agent v2 — generator contract
 
 > **Audience:** the config-generation skill (LLM). **This doc owns the *emit* mechanics**: per-tier
 > policy, intent-gating, the reference decision tree (reuse / fetch / substitute / ask / omit), and the
@@ -96,8 +96,9 @@ is the alternative. **Never guess `2`, never send `failoverOutboundNumberId: nul
 config that will 400.**
 
 **Inbound: don't ask the user about this number.** Callers never hear it, but the save needs it. Keep the
-agent's own values; else, connected, use Automatic (`1`) with the first number in `cloudtalk_list_numbers`
-that has `voice_supported: true` as the failover, and explain it once in plain words (`SKILL.md` step 1).
+agent's own values when they're complete (a real number, or `1` with a real failover); else, connected,
+use Automatic (`1`) with the first number in `cloudtalk_list_numbers` (`limit: 20`) that has
+`voice_supported: true` as the failover, and explain it once in plain words (`SKILL.md` step 1).
 Offline with no paste, it is a setup step in the status line, not a question. Ask only for an outbound
 agent, which really calls from it.
 
@@ -108,7 +109,7 @@ agent, which really calls from it.
 | `generate` | Author it. This is the bulk of every config. |
 | `environment` | **Complete the outbound number — the FE-faithful path is Automatic (`1`) + a real owned failover.** `defaultOutboundNumberId` **defaults to `1` (Automatic), exactly as the dashboard seeds it** and cannot be omitted. With `1`, `failoverOutboundNumberId` is **required in BOTH directions** and must be a real owned id — the save `400`s without it, nothing self-heals, and `null` is never valid; reuse the agent's failover when editing, fetch it (`cloudtalk_list_numbers`), or the user completes it in the dashboard. Setting a real owned `defaultOutboundNumberId` directly is the alternative (omit the failover key only then). Only `1` is magic — **every other value, including `2`, is a literal phone-number ID the company must own** (there is no "Random"), and an unowned one is a hard `400` by name at save. |
 | `reference` | **Off by default.** Emit only on explicit user intent, and then follow the **reference decision tree** below: substitute, ask for the real ID, or omit + instruct. **Never put a placeholder/sentinel ID in the body.** |
-| `forbidden` | Never emit. Two groups: (a) server-stamped/response-only — `version`/`minorVersion`, `id`/`voiceAgentId`/timestamps, the server-emitted diagnostics `warnings`/`errorCodes`/`optimizedSettings`, `companyId`/`environmentName`, the server-managed booking fields, `firstMessage`; (b) system-managed — `presetType`, `status`, `lastConfigurationStep` (the Expert-Mode editor sets these from the loaded agent; the platform defaults `status` to enabled on create). The retired `providerOverride`/`llmOverride`/`hasOverrides`/`upgradeAvailable` are not fields any more: never emit them. |
+| `forbidden` | Never emit. Two groups: (a) server-stamped/response-only — `version`/`minorVersion`, `id`/`voiceAgentId`/timestamps, the server-emitted diagnostics `warnings`/`errorCodes`/`optimizedSettings`, the server-computed `hashes`, `companyId`/`environmentName`, the server-managed booking fields, `firstMessage`; (b) system-managed — `presetType`, `status`, `lastConfigurationStep` (the Expert-Mode editor sets these from the loaded agent; the platform defaults `status` to enabled on create). `deepgramSettings` is a stored Deepgram-only object, empty today and kept when omitted: leave it out too. The retired `providerOverride`/`llmOverride`/`hasOverrides`/`upgradeAvailable` are not fields any more: never emit them. |
 
 **Always emit `enabled`** — on every scenario, every guardrail, and every skill object the body contains.
 It is a required plain bool with no default anywhere in the stack: omit it and the import fails
@@ -345,7 +346,7 @@ fresh read for the undo. *After the save*, report
 - **what was written and where** — the agent's name and the save's name, plus what changed in the
   dashboard's words (from the result's `changed_fields` *when it carries them*; an older server's result
   doesn't, so then your before/after list), and the
-  **`dashboard_url`** *when the write returned one*: the VoiceAgent create/update and a KB create do,
+  **`dashboard_url`** *when the write returned one*: the AI Voice Agent create/update and a KB create do,
   the tool and assignment writes and `cloudtalk_trigger_aiva_call` do not — hand over the link where
   there is one rather than describing the navigation, and don't promise it where there isn't;
 - **the platform's own diagnostics** — a **successful** write can still carry
@@ -356,7 +357,7 @@ fresh read for the undo. *After the save*, report
   `cloudtalk_trigger_aiva_call` to a number they name), then `cloudtalk_search_calls` filtered by the
   agent's **numeric** `voice_agent_id` to find the call, then `cloudtalk_get_call_transcript` /
   `cloudtalk_get_call_insights` to see what actually happened. Ask the user to stay on the call for **at
-  least 30 seconds**: a shorter call has no transcript or insights (`reason: "no_transcript"`), which is an
+  least 30 seconds**: a shorter call usually gets no transcript (`reason: "no_transcript"`), which is an
   answer, not a reason to retry. Say so once and ask what they heard;
 - **"Undo this change"**, offered after every save: one approved save that writes back the earlier values
   of exactly the changed fields from the kept read, after a fresh read shows they haven't changed since
@@ -387,7 +388,10 @@ unchanged. Return:
    (default or failover) is in place. `validate_config.py --json` draws the same line: `nothingElseToWire` follows the
    `pending` references, not the ones you merely echo back — and a sibling `saveBlocking` boolean states
    outright whether a save-refusing finding is present, so nothing has to re-derive that from the issue
-   list.
+   list. A `defaultOutboundNumberId` of `2` sets a third boolean, `confirmFirst`: it saves when the company
+   really owns number 2, so it blocks nothing, but `nothingElseToWire` stays false until that is confirmed.
+   A `2` read back from the agent or found with `cloudtalk_list_numbers` is confirmed: keep the clean
+   headline and say you carried it over.
 3. **A short setup checklist — only when step 2 flags something.** One line per action, specific, with
    the dashboard path, pointing at [`referenced-resources.md`](./referenced-resources.md): e.g. create
    a knowledge base and add its ID; for the switched-off transfer, the user names the team and its

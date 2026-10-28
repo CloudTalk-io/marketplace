@@ -1,6 +1,6 @@
-# VoiceAgent v2 — Expert Mode configuration corpus
+# AI Voice Agent v2 — Expert Mode configuration corpus
 
-The reference set for generating and hand-authoring **VoiceAgent v2 (Expert Mode)** JSON configs — used
+The reference set for generating and hand-authoring **AI Voice Agent v2 (Expert Mode)** JSON configs — used
 **offline** (paste the JSON into the dashboard's Advanced/code tab to edit an agent) or **connected**
 (the CloudTalk MCP reads and writes the agent directly against your account; the app asks you to approve
 every write).
