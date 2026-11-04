@@ -25,6 +25,7 @@ People don't know their account's internal ids. Never show a company id, user id
 - Claude app: open Customize, then Plugins, open CloudTalk, go to its Connectors tab and choose Connect.
 - Claude Code: run `/mcp`, pick the CloudTalk entry (`plugin:cloudtalk:cloudtalk`) and choose Authenticate.
 - ChatGPT: open CloudTalk in ChatGPT's app settings and connect it.
+- Grok: open Settings, then Plugins, find CloudTalk and sign in.
 
 Then add: "Sign in with CloudTalk as an Admin. CloudTalk's AI connection needs the Essential plan or higher." End with: "Say done once you've signed in, and I'll pick up from here." If CloudTalk still fails to connect after sign-in, the reasons are the ones under "It fails" below.
 
