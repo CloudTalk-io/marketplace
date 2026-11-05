@@ -54,11 +54,12 @@ This folder holds the ChatGPT plugin package. Each assistant reads its own manif
 |---|---|
 | `.claude-plugin/plugin.json` | Claude: plugin identity and the MCP server (sign-in) |
 | `.chatgpt-plugin/plugin.json` | ChatGPT: identity, listing, starter prompts, review test cases, translations (`extensions.com.openai`) |
-| `mcp.json` | ChatGPT: the MCP server. Sign-in is discovered from the server (Client ID Metadata Document) |
-| `.grok-plugin/plugin.json` | Grok: plugin identity, the MCP server, `skills/` and the Grok-only skill (see [Grok](#grok)) |
+| `mcp.json` | ChatGPT and Cursor: the MCP server. Sign-in is discovered from the server (Client ID Metadata Document) |
+| `.grok-plugin/plugin.json` | Grok: plugin identity, the MCP server, `skills/` and the digest skill (see [Grok and Cursor](#grok-and-cursor)) |
+| `.cursor-plugin/plugin.json` | Cursor: plugin identity, logo, `skills/` and the digest skill; the MCP server comes from `mcp.json` |
 | `skills/`, `assets/` | All three |
 | `claude-skills/` | Claude only (`voice-agent-simulator` needs subagents) |
-| `grok-skills/` | Grok only (`missed-call-digest`, listed by path in `.grok-plugin/plugin.json`) |
+| `grok-skills/` | Grok and Cursor (`missed-call-digest`, listed in `.grok-plugin/plugin.json` and `.cursor-plugin/plugin.json`) |
 
 The ChatGPT manifest lives in `.chatgpt-plugin/`, not at the folder's root: Grok reads a root
 `plugin.json` before its own manifest, so a ChatGPT one there would hide the Grok skills and connection.
@@ -79,16 +80,24 @@ server and enter the reviewer credentials in the portal. Credentials never go in
 (`review.demo_recording_url`), the country list (`publication.countries`), a reviewer account on a
 demo company, and a run of the five test cases against it.
 
-## Grok
+## Grok and Cursor
 
-The same folder is also the Grok plugin, for Grok Bot, Grok Build and Cursor. Grok reads the first
+The same folder is also the Grok plugin (Grok Bot, Grok Build) and the Cursor plugin. Grok reads the first
 manifest it finds: a root `plugin.json`, then `.grok-plugin/plugin.json`, then
 `.claude-plugin/plugin.json`. So the folder has no root `plugin.json`, and Grok reads
 `.grok-plugin/plugin.json`: the plugin identity, the MCP server and the skills. Its `skills` list
 replaces Grok's default `skills/` folder, so it names both `./skills/` and
-`./grok-skills/missed-call-digest`, and leaves out `claude-skills/`. CI fails if any of this breaks. The
-digest is Grok only because Grok Bot runs in Slack, where delivery and picks from the thread belong; in
-Claude and ChatGPT, scheduled runs keep the list in the app. Sign-in works the same way as in ChatGPT, with a Client ID Metadata Document.
+`./grok-skills/missed-call-digest`, and leaves out `claude-skills/`.
+
+Cursor doesn't read `.grok-plugin/`: it reads `.cursor-plugin/plugin.json`, whose `skills` field also
+replaces the default folder, so it lists `./skills/` and `./grok-skills/`. With no `mcpServers` there,
+Cursor takes the connection from `mcp.json`. `.cursor-plugin/marketplace.json` at the repo root points
+Cursor to this folder. Grok Bots run in Cursor's cloud, and xAI's docs don't say which manifest Grok Bot
+reads, so both manifests carry the same skills. CI fails if either manifest breaks.
+
+The digest is in Grok and Cursor, not Claude or ChatGPT, because Grok Bot runs in Slack, where delivery
+and picks from the thread belong; where the app can't schedule or has no Slack or email connector, the
+digest says so and offers the in-app list. In Claude and ChatGPT, scheduled runs keep the list in the app. Sign-in works the same way as in ChatGPT, with a Client ID Metadata Document.
 
 **Grok Bot and Cursor:** submit through xAI's marketplace form with this repo's URL, a short description,
 testing instructions and a square logo on a solid background, then pick both Grok Bot and Cursor.

@@ -95,6 +95,43 @@ jobs:
           print("\n".join(bad) or f"Grok manifest OK: {count} skills, MCP {url}")
           sys.exit(1 if bad else 0)
           PY
+      - name: Cursor reads its manifest, with every skill and the CloudTalk connection
+        # Cursor reads .cursor-plugin/plugin.json (or a root Agent Plugins plugin.json), not
+        # .grok-plugin/. A "skills" field replaces the default skills/ folder, and with no
+        # "mcpServers" Cursor reads mcp.json at the plugin root (cursor.com/docs/reference/plugins).
+        working-directory: plugins/cloudtalk
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, re, sys
+          bad = []
+          m = json.load(open(".cursor-plugin/plugin.json"))
+          if not re.fullmatch(r"[a-z0-9]([a-z0-9.-]*[a-z0-9])?", m.get("name", "")):
+              bad.append("name must be lowercase kebab-case")
+          entries = m.get("skills", [])
+          if not isinstance(entries, list):
+              entries = [entries]
+          paths = {pathlib.Path(e).as_posix() for e in entries}
+          for need in ("skills", "grok-skills"):
+              if need not in paths:
+                  bad.append(f'"skills" must list ./{need}/')
+          count = 0
+          for e in entries:
+              if e.startswith("/") or ".." in pathlib.Path(e).parts:
+                  bad.append(f"{e}: paths must be relative, without ..")
+              found = sorted(pathlib.Path(e).glob("*/SKILL.md"))
+              if not found:
+                  bad.append(f"{e}: no skill folder with a SKILL.md")
+              count += len(found)
+          if "mcpServers" in m:
+              bad.append("mcpServers would override mcp.json; keep the connection in mcp.json")
+          url = json.load(open("mcp.json")).get("mcpServers", {}).get("cloudtalk", {}).get("url")
+          if url != "https://mcp.cloudtalk.io":
+              bad.append("mcp.json has no CloudTalk MCP server")
+          if not pathlib.Path(m.get("logo", "")).is_file():
+              bad.append("logo file is missing")
+          print("\n".join(bad) or f"Cursor manifest OK: {count} skills, MCP {url}")
+          sys.exit(1 if bad else 0)
+          PY
 
   plugin-validate:
     runs-on: ubuntu-latest

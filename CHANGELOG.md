@@ -18,12 +18,13 @@ marketplace (Check for updates, or Sync automatically).
 - **Saved settings.** The teams or lines whose missed calls count and whose texts are checked can be saved
   into a scheduled run. `missed-call-follow-up`'s scheduled runs keep their list in the app, and never send
   on their own.
-- **Grok.** `.grok-plugin/plugin.json` makes the folder a Grok plugin, for Grok Bot, Grok Build and
-  Cursor, with all the shared skills and the CloudTalk connection. `get-started` explains how to sign in
-  from Grok.
+- **Grok and Cursor.** `.grok-plugin/plugin.json` makes the folder a Grok plugin, for Grok Bot and Grok
+  Build, and `.cursor-plugin/plugin.json` a Cursor plugin, each with all the shared skills, the digest
+  and the CloudTalk connection. `.cursor-plugin/marketplace.json` at the repo root points Cursor to it.
+  `get-started` explains how to sign in from Grok.
 - **ChatGPT manifest moved to `.chatgpt-plugin/plugin.json`.** Grok reads a root `plugin.json` before its
   own manifest. The ChatGPT upload ZIP is unchanged: the build puts the manifest back at its root.
-- **New Grok-only skill `missed-call-digest`** (in `grok-skills/`, listed only in the Grok manifest). It
+- **New skill `missed-call-digest`, for Grok and Cursor only** (in `grok-skills/`, listed only in their manifests). It
   delivers the missed-call list on a schedule to the user's own Slack DM or email, or to a shared channel
   or another address after a warning about what it shows. Only the person who set up the schedule can pick
   from the thread, each pick is re-checked against calls and opt-outs since the list was made, and each

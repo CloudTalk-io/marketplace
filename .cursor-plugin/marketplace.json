@@ -1,0 +1,13 @@
+{
+  "name": "cloudtalk",
+  "owner": {
+    "name": "CloudTalk"
+  },
+  "plugins": [
+    {
+      "name": "cloudtalk",
+      "source": "./plugins/cloudtalk",
+      "description": "Official CloudTalk plugin: follow up missed calls and unanswered texts, find open loops after calls, coach your team, and build and check AI Voice Agents, through CloudTalk's hosted OAuth MCP server."
+    }
+  ]
+}

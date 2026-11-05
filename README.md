@@ -6,7 +6,7 @@ system: AI agents answer first, humans close.
 ## The CloudTalk plugin
 
 [**CloudTalk**](./plugins/cloudtalk) (`cloudtalk`) runs every call from your AI assistant. It signs in to
-your CloudTalk account and ships eight skills, plus one for Grok only. It used to be **CloudTalk VoiceAgent Builder**
+your CloudTalk account and ships eight skills, plus one for Grok and Cursor only. It used to be **CloudTalk VoiceAgent Builder**
 (`voice-agent-config-generator`); see [Upgrading](#upgrading-from-cloudtalk-voiceagent-builder).
 
 | Skill | What it does |
@@ -14,14 +14,14 @@ your CloudTalk account and ships eight skills, plus one for Grok only. It used t
 | [`get-started`](./plugins/cloudtalk/skills/get-started/SKILL.md) | Checks the connection, finds what your account has, and offers up to three first tasks that work on it. |
 | [`conversation-insights`](./plugins/cloudtalk/skills/conversation-insights/SKILL.md) | Turns recent conversations into open loops, and says who should close each one: a person or an AI Voice Agent. |
 | [`missed-call-follow-up`](./plugins/cloudtalk/skills/missed-call-follow-up/SKILL.md) | Finds today's missed callers and unanswered texts nobody has reached yet, names an owner, flags anyone past your response time, drafts a short text back to each, and sends only what you approve. Can run on a schedule where the app can, with the list kept in the app. |
-| [`missed-call-digest`](./plugins/cloudtalk/grok-skills/missed-call-digest/SKILL.md) | Delivers the missed-call list on a schedule to your Slack DM or email, and takes your picks from the Slack thread. Grok only. |
+| [`missed-call-digest`](./plugins/cloudtalk/grok-skills/missed-call-digest/SKILL.md) | Delivers the missed-call list on a schedule to your Slack DM or email, and takes your picks from the Slack thread. Grok and Cursor only. |
 | [`call-coach`](./plugins/cloudtalk/skills/call-coach/SKILL.md) | Coaches your team and your AI Voice Agents from real calls. |
 | [`voice-agent-builder`](./plugins/cloudtalk/skills/voice-agent-builder) | Generates, fixes and validates **AI Voice Agent v2 (Expert Mode)** configurations for any inbound or outbound use case, and runs a structural and behavioral validator before every hand-back. Works offline too. |
 | [`voice-agent-checkup`](./plugins/cloudtalk/skills/voice-agent-checkup/SKILL.md) | Checks whether an AI Voice Agent is ready to go live: a verdict, the fix to make first, the tests to run and a go-live checklist. Changes nothing, except a test call to your own phone when you ask. |
 | [`voice-agent-replay`](./plugins/cloudtalk/skills/voice-agent-replay/SKILL.md) | Improves a live AI Voice Agent from its real calls: failures grouped by cause, two calls of proof each, and the setup change that fixes each one. |
 | [`voice-agent-simulator`](./plugins/cloudtalk/claude-skills/voice-agent-simulator/README.md) | Roleplays a caller persona against a configuration and scores the transcript with an automated judge, so you can test an agent before it takes real calls. Claude only. |
 
-The same folder is also the ChatGPT and Grok plugin package; see its [README](./plugins/cloudtalk/README.md).
+The same folder is also the ChatGPT, Grok and Cursor plugin package; see its [README](./plugins/cloudtalk/README.md).
 
 ## Install
 
@@ -136,11 +136,13 @@ marketplace/
         │   └── plugin.json     ← Claude manifest: the CloudTalk connection (sign-in)
         ├── .chatgpt-plugin/
         │   └── plugin.json     ← ChatGPT manifest (listing, starter prompts, review cases), zipped to the root
-        ├── mcp.json            ← ChatGPT MCP connection
+        ├── mcp.json            ← ChatGPT and Cursor MCP connection
         ├── .grok-plugin/
-        │   └── plugin.json     ← Grok manifest: the CloudTalk connection (sign-in), skills/ and the Grok-only skill
+        │   └── plugin.json     ← Grok manifest: the CloudTalk connection (sign-in), skills/ and the digest skill
+        ├── .cursor-plugin/
+        │   └── plugin.json     ← Cursor manifest: skills/ and the digest skill (connection from mcp.json)
         ├── assets/icon.png
-        ├── skills/             ← skills for Claude, ChatGPT and Grok
+        ├── skills/             ← skills for Claude, ChatGPT, Grok and Cursor
         │   ├── get-started/
         │   ├── conversation-insights/
         │   ├── missed-call-follow-up/
@@ -150,7 +152,7 @@ marketplace/
         │   └── voice-agent-replay/
         ├── claude-skills/      ← skills for Claude only
         │   └── voice-agent-simulator/
-        └── grok-skills/        ← skills for Grok only, listed in the Grok manifest
+        └── grok-skills/        ← skills for Grok and Cursor only, listed in their manifests
             └── missed-call-digest/
 ```
 
