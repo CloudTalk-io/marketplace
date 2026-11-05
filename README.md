@@ -13,7 +13,8 @@ your CloudTalk account and ships eight skills. It used to be **CloudTalk VoiceAg
 |---|---|
 | [`get-started`](./plugins/cloudtalk/skills/get-started/SKILL.md) | Checks the connection, finds what your account has, and offers up to three first tasks that work on it. |
 | [`conversation-insights`](./plugins/cloudtalk/skills/conversation-insights/SKILL.md) | Turns recent conversations into open loops, and says who should close each one: a person or an AI Voice Agent. |
-| [`missed-call-follow-up`](./plugins/cloudtalk/skills/missed-call-follow-up/SKILL.md) | Finds today's missed callers and unanswered texts nobody has reached yet, names an owner, flags anyone past your response time, drafts a short text back to each, and sends only what you approve. Can run on a schedule, delivered to Slack or email. |
+| [`missed-call-follow-up`](./plugins/cloudtalk/skills/missed-call-follow-up/SKILL.md) | Finds today's missed callers and unanswered texts nobody has reached yet, names an owner, flags anyone past your response time, drafts a short text back to each, and sends only what you approve. Can run on a schedule where the app can, with the list kept in the app. |
+| [`missed-call-digest`](./plugins/cloudtalk/grok-skills/missed-call-digest/SKILL.md) | Delivers the missed-call list on a schedule to your Slack DM or email, and takes your picks from the Slack thread. Grok only. |
 | [`call-coach`](./plugins/cloudtalk/skills/call-coach/SKILL.md) | Coaches your team and your AI Voice Agents from real calls. |
 | [`voice-agent-builder`](./plugins/cloudtalk/skills/voice-agent-builder) | Generates, fixes and validates **AI Voice Agent v2 (Expert Mode)** configurations for any inbound or outbound use case, and runs a structural and behavioral validator before every hand-back. Works offline too. |
 | [`voice-agent-checkup`](./plugins/cloudtalk/skills/voice-agent-checkup/SKILL.md) | Checks whether an AI Voice Agent is ready to go live: a verdict, the fix to make first, the tests to run and a go-live checklist. Changes nothing, except a test call to your own phone when you ask. |
@@ -146,8 +147,10 @@ marketplace/
         │   ├── voice-agent-builder/   ← SKILL.md, bundled refs, examples, validator
         │   ├── voice-agent-checkup/
         │   └── voice-agent-replay/
-        └── claude-skills/      ← skills for Claude only
-            └── voice-agent-simulator/
+        ├── claude-skills/      ← skills for Claude only
+        │   └── voice-agent-simulator/
+        └── grok-skills/        ← skills for Grok only, listed in the Grok manifest
+            └── missed-call-digest/
 ```
 
 ## Contributing & license

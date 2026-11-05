@@ -111,7 +111,7 @@ reviewer can check it against this list.
 10. **Runs in Claude, ChatGPT and Grok.** A skill in `skills/` works without Python, subagents or host-specific
     features: it may use them where the app has them only with a stated fallback that works without
     them (as the builder's by-hand check does); a skill that can't work without them lives in
-    `claude-skills/`. Every skill in `skills/` has `agents/openai.yaml`. Skills
+    `claude-skills/` (Claude only) or `grok-skills/` (Grok only, listed by path in `.grok-plugin/plugin.json`). Every skill in `skills/` has `agents/openai.yaml`. Skills
     talk to people in plain words: no company ids, user ids or tool names in what the user reads. A call
     id is the one exception: shown as evidence ("call ref"), next to the call's date and time, so the
     user can find the call.

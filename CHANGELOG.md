@@ -15,13 +15,15 @@ marketplace (Check for updates, or Sync automatically).
   rest of the number is identical. Hang-ups under 3 seconds go to a "likely noise" count. Each entry names
   an owner. An optional response time marks callers as overdue and ranks them right after callers waiting
   on a person; on scheduled runs, entries still open from earlier runs come back until someone reaches them.
-- **Scheduled digests.** Saved settings choose the teams or lines whose missed calls count and whose texts
-  are checked. The list stays in the chat unless the user names a destination: their own Slack DM or email,
-  or a shared channel or another address after a warning about what it shows. Only the person who set up the schedule can pick from the thread, and each
-  send still goes through the app's approval prompt, or that person's "yes" where the app has none. A
-  scheduled run never sends on its own.
+- **Saved settings.** The teams or lines whose missed calls count and whose texts are checked can be saved
+  into a scheduled run. Scheduled runs keep their list in the app, and never send on their own.
 - **Grok.** `.grok-plugin/plugin.json` makes the folder a Grok plugin, for Grok Bot, Grok Build and
   Cursor. `get-started` explains how to sign in from Grok.
+- **New Grok-only skill `missed-call-digest`** (in `grok-skills/`, listed only in the Grok manifest). It
+  delivers the missed-call list on a schedule to the user's own Slack DM or email, or to a shared channel
+  or another address after a warning about what it shows. Only the person who set up the schedule can pick
+  from the thread, each pick is re-checked against calls and opt-outs since the list was made, and each
+  send still goes through the app's approval prompt, or that person's "yes" where the app has none.
 
 ## 0.3.0 — 2026-10-27
 

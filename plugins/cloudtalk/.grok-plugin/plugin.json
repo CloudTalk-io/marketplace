@@ -16,6 +16,9 @@
     "cloudtalk missed calls",
     "cloudtalk voice agent"
   ],
+  "skills": [
+    "./grok-skills/missed-call-digest"
+  ],
   "mcpServers": {
     "cloudtalk": {
       "type": "http",
