@@ -5,6 +5,19 @@ dated entry below, made whenever the config schema or the generation guidance ma
 Claude Code installs a release when the manifest version changes; the Claude app picks it up from the
 marketplace (Check for updates, or Sync automatically).
 
+## Unreleased
+
+- **`missed-call-follow-up` covers texts and response times.** It lists inbound texts nobody answered and
+  drops callers the team already texted back, by reading the SMS inboxes of up to 8 texting agents. It
+  also drops callers that CloudTalk marks as resolved by a later call, and matches the same caller across
+  country codes (the last 9 digits). Hang-ups under 3 seconds go to a "likely noise" count. Each entry
+  names an owner. An optional response time marks callers as overdue and ranks them first.
+- **Scheduled digests.** Saved settings choose the lines or teams that count, and deliver each scheduled
+  run to a Slack channel or an email address. Replying in the thread picks who gets a text or a call, and
+  nothing goes out until it is confirmed there. A scheduled run still never sends on its own.
+- **Grok.** `.grok-plugin/plugin.json` makes the folder a Grok plugin, for Grok Bot, Grok Build and
+  Cursor. `get-started` explains how to sign in from Grok.
+
 ## 0.3.0 — 2026-10-27
 
 - **CloudTalk VoiceAgent Builder is now CloudTalk (`cloudtalk@cloudtalk`).** One plugin for the whole phone

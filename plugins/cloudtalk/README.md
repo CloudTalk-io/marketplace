@@ -70,3 +70,43 @@ server and enter the reviewer credentials in the portal. Credentials never go in
 **Still needed before the first ChatGPT submission:** a demo recording URL
 (`review.demo_recording_url`), the country list (`publication.countries`), a reviewer account on a
 demo company, and a run of the five test cases against it.
+
+## Grok
+
+The same folder is also the Grok plugin, for Grok Bot, Grok Build and Cursor. Grok reads
+`.grok-plugin/plugin.json` first: the plugin identity and the MCP server. It loads `skills/` and leaves
+out `claude-skills/`. Sign-in works the same way as in ChatGPT, with a Client ID Metadata Document:
+ct-auth must list the client's host in `OIDC_MCP_CIMD_ALLOWED_HOSTS`. Grok's connectors use `grok.com`;
+Grok Bot and Cursor use `cursor.com`.
+
+**Grok Bot and Cursor:** submit through xAI's marketplace form with this repo's URL, a short description,
+testing instructions and a square logo on a solid background, then pick both Grok Bot and Cursor.
+
+**Grok Build:** open a pull request to [xai-org/plugin-marketplace](https://github.com/xai-org/plugin-marketplace)
+that adds this entry to `.grok-plugin/marketplace.json`. Pin `sha` to the released commit on `main`, then
+regenerate the index as its CONTRIBUTING describes.
+
+```json
+{
+  "name": "cloudtalk",
+  "description": "Official CloudTalk plugin for Grok. Follow up missed calls and unanswered texts the same day, find open loops after calls, coach your team, and build and check AI Voice Agents, through CloudTalk's hosted OAuth MCP server.",
+  "category": "productivity",
+  "source": {
+    "source": "url",
+    "url": "https://github.com/CloudTalk-io/marketplace.git",
+    "sha": "<40-character commit on main>",
+    "path": "plugins/cloudtalk"
+  },
+  "homepage": "https://www.cloudtalk.io/",
+  "keywords": ["cloudtalk", "cloudtalk mcp", "cloudtalk phone", "cloudtalk missed calls"],
+  "domains": ["cloudtalk.io", "mcp.cloudtalk.io", "help.cloudtalk.io"]
+}
+```
+
+**Grok Bot template, "Missed Call Follow-Up by CloudTalk":** publish it after the plugin is approved, with
+this prompt and a weekday schedule the customer picks:
+
+> Use CloudTalk's missed-call-follow-up skill. On the first run, ask me which lines or teams count,
+> my response time, my business name and hours, and where to deliver (a Slack channel or an email
+> address), and save them. On every scheduled run, cover the time since the last run, then deliver
+> the list there. Never text or call anyone unless I approve it in the thread.
