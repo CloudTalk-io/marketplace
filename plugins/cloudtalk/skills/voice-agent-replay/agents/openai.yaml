@@ -1,0 +1,11 @@
+interface:
+  display_name: "AI Voice Agent replay"
+  short_description: "Find where your AI Voice Agent fails, and fix it"
+  default_prompt: "Use $voice-agent-replay to review last week's calls of our AI Voice Agent and show me what to fix in its setup."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "cloudtalk"
+      description: "CloudTalk phone system"
+      transport: "streamable_http"
+      url: "https://mcp.cloudtalk.io"

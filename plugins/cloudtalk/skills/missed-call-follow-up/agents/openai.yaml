@@ -1,0 +1,11 @@
+interface:
+  display_name: "Missed call follow-up"
+  short_description: "Text back today's missed callers, after approval"
+  default_prompt: "Use $missed-call-follow-up to find today's missed callers we haven't reached yet and draft a text back to each."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "cloudtalk"
+      description: "CloudTalk phone system"
+      transport: "streamable_http"
+      url: "https://mcp.cloudtalk.io"

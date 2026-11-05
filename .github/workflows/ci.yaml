@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: plugins/voice-agent-config-generator/skills/voice-agent-config-generator
+        working-directory: plugins/cloudtalk/skills/voice-agent-builder
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
