@@ -54,7 +54,8 @@ The same folder is the ChatGPT plugin package. Each assistant reads its own mani
 | `.claude-plugin/plugin.json` | Claude: plugin identity and the MCP server (sign-in) |
 | `plugin.json` | ChatGPT: identity, listing, starter prompts, review test cases, translations (`extensions.com.openai`) |
 | `mcp.json` | ChatGPT: the MCP server. Sign-in is discovered from the server (Client ID Metadata Document) |
-| `skills/`, `assets/` | Both |
+| `.grok-plugin/plugin.json` | Grok: plugin identity and the MCP server (see [Grok](#grok)) |
+| `skills/`, `assets/` | All three |
 | `claude-skills/` | Claude only (`voice-agent-simulator` needs subagents) |
 
 Build the upload ZIP from this folder:
@@ -75,12 +76,12 @@ demo company, and a run of the five test cases against it.
 
 The same folder is also the Grok plugin, for Grok Bot, Grok Build and Cursor. Grok reads
 `.grok-plugin/plugin.json` first: the plugin identity and the MCP server. It loads `skills/` and leaves
-out `claude-skills/`. Sign-in works the same way as in ChatGPT, with a Client ID Metadata Document:
-ct-auth must list the client's host in `OIDC_MCP_CIMD_ALLOWED_HOSTS`. Grok's connectors use `grok.com`;
-Grok Bot and Cursor use `cursor.com`.
+out `claude-skills/`. Sign-in works the same way as in ChatGPT, with a Client ID Metadata Document.
 
 **Grok Bot and Cursor:** submit through xAI's marketplace form with this repo's URL, a short description,
 testing instructions and a square logo on a solid background, then pick both Grok Bot and Cursor.
+Submit only after CloudTalk sign-in accepts Grok Bot and Cursor in production; check by signing in from
+both first.
 
 **Grok Build:** open a pull request to [xai-org/plugin-marketplace](https://github.com/xai-org/plugin-marketplace)
 that adds this entry to `.grok-plugin/marketplace.json`. Pin `sha` to the released commit on `main`, then
@@ -98,7 +99,7 @@ regenerate the index as its CONTRIBUTING describes.
     "path": "plugins/cloudtalk"
   },
   "homepage": "https://www.cloudtalk.io/",
-  "keywords": ["cloudtalk", "cloudtalk mcp", "cloudtalk phone", "cloudtalk missed calls"],
+  "keywords": ["cloudtalk", "cloudtalk mcp", "cloudtalk phone", "cloudtalk missed calls", "cloudtalk voice agent"],
   "domains": ["cloudtalk.io", "mcp.cloudtalk.io", "help.cloudtalk.io"]
 }
 ```

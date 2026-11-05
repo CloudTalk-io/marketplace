@@ -1,6 +1,6 @@
 {
   "name": "cloudtalk",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Run every call from Grok. CloudTalk is the agent-first phone system: AI agents answer first, humans close. Follows up missed calls and unanswered texts the same day, finds open loops after your calls, coaches your team and AI Voice Agents, and builds, checks and improves AI Voice Agents. Signs in with CloudTalk (OAuth), no API key.",
   "author": {
     "name": "CloudTalk",

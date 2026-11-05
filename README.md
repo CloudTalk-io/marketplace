@@ -20,7 +20,7 @@ your CloudTalk account and ships eight skills. It used to be **CloudTalk VoiceAg
 | [`voice-agent-replay`](./plugins/cloudtalk/skills/voice-agent-replay/SKILL.md) | Improves a live AI Voice Agent from its real calls: failures grouped by cause, two calls of proof each, and the setup change that fixes each one. |
 | [`voice-agent-simulator`](./plugins/cloudtalk/claude-skills/voice-agent-simulator/README.md) | Roleplays a caller persona against a configuration and scores the transcript with an automated judge, so you can test an agent before it takes real calls. Claude only. |
 
-The same folder is also the ChatGPT plugin package; see its [README](./plugins/cloudtalk/README.md).
+The same folder is also the ChatGPT and Grok plugin package; see its [README](./plugins/cloudtalk/README.md).
 
 ## Install
 
@@ -135,8 +135,10 @@ marketplace/
         │   └── plugin.json     ← Claude manifest: the CloudTalk connection (sign-in)
         ├── plugin.json         ← ChatGPT manifest (listing, starter prompts, review cases)
         ├── mcp.json            ← ChatGPT MCP connection
+        ├── .grok-plugin/
+        │   └── plugin.json     ← Grok manifest: the CloudTalk connection (sign-in)
         ├── assets/icon.png
-        ├── skills/             ← skills for Claude and ChatGPT
+        ├── skills/             ← skills for Claude, ChatGPT and Grok
         │   ├── get-started/
         │   ├── conversation-insights/
         │   ├── missed-call-follow-up/

@@ -1,20 +1,24 @@
 # Changelog
 
-Each release bumps a semver (in both plugin manifests and `.claude-plugin/marketplace.json`) with a
+Each release bumps a semver (in all three plugin manifests and `.claude-plugin/marketplace.json`) with a
 dated entry below, made whenever the config schema or the generation guidance materially changes.
 Claude Code installs a release when the manifest version changes; the Claude app picks it up from the
 marketplace (Check for updates, or Sync automatically).
 
-## Unreleased
+## 0.3.1 — 2026-11-05
 
 - **`missed-call-follow-up` covers texts and response times.** It lists inbound texts nobody answered and
-  drops callers the team already texted back, by reading the SMS inboxes of up to 8 texting agents. It
-  also drops callers that CloudTalk marks as resolved by a later call, and matches the same caller across
-  country codes (the last 9 digits). Hang-ups under 3 seconds go to a "likely noise" count. Each entry
-  names an owner. An optional response time marks callers as overdue and ranks them first.
-- **Scheduled digests.** Saved settings choose the lines or teams that count, and deliver each scheduled
-  run to a Slack channel or an email address. Replying in the thread picks who gets a text or a call, and
-  nothing goes out until it is confirmed there. A scheduled run still never sends on its own.
+  drops callers the team already texted back, by reading the SMS inbox of the signed-in user, or of up to
+  8 texting agents the user picks. It also uses CloudTalk's callback mark to find a later call that reached a
+  caller, and matches the same caller across country codes when the rest of the number is identical.
+  Hang-ups under 3 seconds go to a "likely noise" count. With a response time saved, callers still open
+  from earlier runs come back until someone reaches them. Each entry names an owner. An optional response time marks
+  callers as overdue and ranks them right after callers waiting on a person.
+- **Scheduled digests.** Saved settings choose the teams or lines whose missed calls count and whose texts
+  are checked, and deliver each scheduled run to the user's Slack DM or email (a shared channel or another
+  address only after asking). Only the person who set up the schedule can pick from the thread, and each
+  send still goes through the app's approval prompt, or that person's "yes" where the app has none. A
+  scheduled run never sends on its own.
 - **Grok.** `.grok-plugin/plugin.json` makes the folder a Grok plugin, for Grok Bot, Grok Build and
   Cursor. `get-started` explains how to sign in from Grok.
 

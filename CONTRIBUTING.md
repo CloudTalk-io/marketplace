@@ -67,7 +67,7 @@ Example: `feat(schema): add backgroundSound to the ElevenLabs settings`
   tests in the same PR, and keep the bundled `examples/` passing the validator — `test_validate.py`
   validates every one of them, so a broken example fails the suite.
 - Material schema or guidance changes: bump the semver in the plugin's `.claude-plugin/plugin.json`,
-  its ChatGPT `plugin.json` and `.claude-plugin/marketplace.json`, and add a matching dated entry to [CHANGELOG.md](./CHANGELOG.md):
+  its ChatGPT `plugin.json`, its Grok `.grok-plugin/plugin.json` and `.claude-plugin/marketplace.json`, and add a matching dated entry to [CHANGELOG.md](./CHANGELOG.md):
   the version plus the changelog is how consumers track what changed.
 
 ## Writing a skill
