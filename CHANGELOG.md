@@ -7,16 +7,17 @@ marketplace (Check for updates, or Sync automatically).
 
 ## 0.3.1 — 2026-11-05
 
-- **`missed-call-follow-up` covers texts and response times.** It lists inbound texts nobody answered and
-  drops callers the team already texted back, by reading the SMS inbox of the signed-in user, or of up to
-  8 texting agents the user picks. It also uses CloudTalk's callback mark to find a later call that reached a
-  caller, and matches the same caller across country codes when the rest of the number is identical.
-  Hang-ups under 3 seconds go to a "likely noise" count. With a response time saved, callers still open
-  from earlier runs come back until someone reaches them. Each entry names an owner. An optional response time marks
-  callers as overdue and ranks them right after callers waiting on a person.
+- **`missed-call-follow-up` covers texts and response times.** It lists inbound texts nobody answered,
+  shows callers someone already texted, and never contacts a number that texted STOP or the like, by
+  reading the SMS inbox of the signed-in user, or of up to 8 texting agents the user picks. A text never
+  counts as reaching someone: only a person speaking with them does. It also uses CloudTalk's callback mark
+  to find a later call that reached a caller, and matches the same caller across country codes when the
+  rest of the number is identical. Hang-ups under 3 seconds go to a "likely noise" count. Each entry names
+  an owner. An optional response time marks callers as overdue and ranks them right after callers waiting
+  on a person; on scheduled runs, entries still open from earlier runs come back until someone reaches them.
 - **Scheduled digests.** Saved settings choose the teams or lines whose missed calls count and whose texts
-  are checked, and deliver each scheduled run to the user's Slack DM or email (a shared channel or another
-  address only after asking). Only the person who set up the schedule can pick from the thread, and each
+  are checked. The list stays in the chat unless the user names a destination: their own Slack DM or email,
+  or a shared channel or another address after a warning about what it shows. Only the person who set up the schedule can pick from the thread, and each
   send still goes through the app's approval prompt, or that person's "yes" where the app has none. A
   scheduled run never sends on its own.
 - **Grok.** `.grok-plugin/plugin.json` makes the folder a Grok plugin, for Grok Bot, Grok Build and

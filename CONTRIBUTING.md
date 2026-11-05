@@ -108,7 +108,7 @@ reviewer can check it against this list.
    masked otherwise.
 9. **Non-negotiables last.** A short list of rules that hold whatever else happens, each one a rule the
    skill has actually broken or could plausibly break.
-10. **Runs in Claude and ChatGPT.** A skill in `skills/` works without Python, subagents or host-specific
+10. **Runs in Claude, ChatGPT and Grok.** A skill in `skills/` works without Python, subagents or host-specific
     features: it may use them where the app has them only with a stated fallback that works without
     them (as the builder's by-hand check does); a skill that can't work without them lives in
     `claude-skills/`. Every skill in `skills/` has `agents/openai.yaml`. Skills

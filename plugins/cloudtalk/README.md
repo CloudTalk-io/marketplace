@@ -108,6 +108,7 @@ regenerate the index as its CONTRIBUTING describes.
 this prompt and a weekday schedule the customer picks:
 
 > Use CloudTalk's missed-call-follow-up skill. On the first run, ask me which lines or teams count,
-> my response time, my business name and hours, and where to deliver (a Slack channel or an email
-> address), and save them. On every scheduled run, cover the time since the last run, then deliver
-> the list there. Never text or call anyone unless I approve it in the thread.
+> whose texts count, my response time, my business name and hours, and where to deliver (my own
+> Slack DM or email), and save them. On every scheduled run, cover the time since the last run plus
+> anything still open, then deliver the list there. Never text or call anyone unless I approve it in
+> the thread.
