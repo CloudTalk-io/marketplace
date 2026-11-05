@@ -17,6 +17,7 @@
     "cloudtalk voice agent"
   ],
   "skills": [
+    "./skills/",
     "./grok-skills/missed-call-digest"
   ],
   "mcpServers": {

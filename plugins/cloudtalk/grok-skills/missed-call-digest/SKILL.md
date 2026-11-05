@@ -20,6 +20,8 @@ Run `missed-call-follow-up` steps 1 to 6 once now and show the list in the chat,
 
 Say what a run will take in requests and minutes (`missed-call-follow-up`, Budget). Then create the scheduled task with all of it in the task: the settings, business name, hours, timezone, delivery, the skip list, the owner (their name and their Slack or email identity), and when the setup run's list ended, which is where the first scheduled run starts. A run must never need to ask. The person who creates the task is its **owner**.
 
+If the app holds outgoing posts as drafts for approval, say so: each list arrives once the user approves its post, unless they let the app post without approval. Where email from a scheduled run always waits as a draft, suggest Slack.
+
 The app can't schedule tasks: say so plainly, and offer `missed-call-follow-up` by hand instead. It can schedule but has no Slack or email connector: say so, and offer `missed-call-follow-up`'s scheduled runs with the list kept in the app. Never promise a schedule, a reminder or a delivery the app can't make.
 
 ## 2. Each scheduled run

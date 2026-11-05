@@ -53,18 +53,23 @@ The same folder is the ChatGPT plugin package. Each assistant reads its own mani
 | File | Read by |
 |---|---|
 | `.claude-plugin/plugin.json` | Claude: plugin identity and the MCP server (sign-in) |
-| `plugin.json` | ChatGPT: identity, listing, starter prompts, review test cases, translations (`extensions.com.openai`) |
+| `.chatgpt-plugin/plugin.json` | ChatGPT: identity, listing, starter prompts, review test cases, translations (`extensions.com.openai`) |
 | `mcp.json` | ChatGPT: the MCP server. Sign-in is discovered from the server (Client ID Metadata Document) |
-| `.grok-plugin/plugin.json` | Grok: plugin identity, the MCP server and the Grok-only skill (see [Grok](#grok)) |
+| `.grok-plugin/plugin.json` | Grok: plugin identity, the MCP server, `skills/` and the Grok-only skill (see [Grok](#grok)) |
 | `skills/`, `assets/` | All three |
 | `claude-skills/` | Claude only (`voice-agent-simulator` needs subagents) |
 | `grok-skills/` | Grok only (`missed-call-digest`, listed by path in `.grok-plugin/plugin.json`) |
 
-Build the upload ZIP from this folder:
+The ChatGPT manifest lives in `.chatgpt-plugin/`, not at the folder's root: Grok reads a root
+`plugin.json` before its own manifest, so a ChatGPT one there would hide the Grok skills and connection.
+Build the upload ZIP from this folder; the last command puts the manifest at the ZIP's root, where
+ChatGPT expects it:
 
 ```bash
 cd plugins/cloudtalk
-zip -r ../../cloudtalk-chatgpt.zip plugin.json mcp.json skills assets -x '*/__pycache__/*'
+rm -f ../../cloudtalk-chatgpt.zip
+zip -r ../../cloudtalk-chatgpt.zip mcp.json skills assets -x '*/__pycache__/*'
+zip -j ../../cloudtalk-chatgpt.zip .chatgpt-plugin/plugin.json
 ```
 
 Upload it at [platform.openai.com/plugins](https://platform.openai.com/plugins), then connect the MCP
@@ -76,9 +81,12 @@ demo company, and a run of the five test cases against it.
 
 ## Grok
 
-The same folder is also the Grok plugin, for Grok Bot, Grok Build and Cursor. Grok reads
-`.grok-plugin/plugin.json` first: the plugin identity, the MCP server and the Grok-only skill. It loads `skills/`, plus
-`grok-skills/missed-call-digest` because the manifest lists it, and leaves out `claude-skills/`. The
+The same folder is also the Grok plugin, for Grok Bot, Grok Build and Cursor. Grok reads the first
+manifest it finds: a root `plugin.json`, then `.grok-plugin/plugin.json`, then
+`.claude-plugin/plugin.json`. So the folder has no root `plugin.json`, and Grok reads
+`.grok-plugin/plugin.json`: the plugin identity, the MCP server and the skills. Its `skills` list
+replaces Grok's default `skills/` folder, so it names both `./skills/` and
+`./grok-skills/missed-call-digest`, and leaves out `claude-skills/`. CI fails if any of this breaks. The
 digest is Grok only because Grok Bot runs in Slack, where delivery and picks from the thread belong; in
 Claude and ChatGPT, scheduled runs keep the list in the app. Sign-in works the same way as in ChatGPT, with a Client ID Metadata Document.
 
@@ -108,8 +116,22 @@ regenerate the index as its CONTRIBUTING describes.
 }
 ```
 
-**Grok Bot template, "Missed Call Follow-Up by CloudTalk":** publish it after the plugin is approved, with
-this prompt and a weekday schedule the customer picks:
+**Grok Bot template, "Missed Call Follow-Up by CloudTalk":** a Grok Bot template is a shared Bot, not a
+prompt. After the plugin is approved, set up a Bot on the demo company with the CloudTalk plugin and a
+weekday routine, then share it as a template (Share, then Create a copy). A template carries the Bot's
+skills and plugins but no secrets, so each customer signs in to CloudTalk themselves. xAI's docs don't
+say whether routines carry over; check on a copy, and if they don't, the digest's first run sets up
+the schedule. Before publishing, check on that copy:
+
+- **Drafts.** A Bot drafts outgoing Slack messages and emails for approval by default, so each list waits
+  until the owner approves the post. The owner can turn drafts off for their Bot. The digest still never
+  texts or calls anyone on its own.
+- **Email.** Email from a routine always waits as a draft, so suggest Slack for a list that arrives on its
+  own.
+- **Thread replies.** When a routine replies in a Slack thread, the Bot follows that thread and answers
+  replies without an @mention; check that "send 2" reaches it and that the owner can approve the send.
+
+The routine's instruction:
 
 > Use CloudTalk's missed-call-digest skill. On the first run, ask me which lines or teams count,
 > whose texts count, my response time, my business name and hours, and where to deliver (my own

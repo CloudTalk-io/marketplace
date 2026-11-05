@@ -134,10 +134,11 @@ marketplace/
     └── cloudtalk/
         ├── .claude-plugin/
         │   └── plugin.json     ← Claude manifest: the CloudTalk connection (sign-in)
-        ├── plugin.json         ← ChatGPT manifest (listing, starter prompts, review cases)
+        ├── .chatgpt-plugin/
+        │   └── plugin.json     ← ChatGPT manifest (listing, starter prompts, review cases), zipped to the root
         ├── mcp.json            ← ChatGPT MCP connection
         ├── .grok-plugin/
-        │   └── plugin.json     ← Grok manifest: the CloudTalk connection (sign-in) and the Grok-only skill
+        │   └── plugin.json     ← Grok manifest: the CloudTalk connection (sign-in), skills/ and the Grok-only skill
         ├── assets/icon.png
         ├── skills/             ← skills for Claude, ChatGPT and Grok
         │   ├── get-started/

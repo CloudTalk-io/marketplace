@@ -26,8 +26,8 @@ claude plugin validate ./plugins/cloudtalk
 
 CI runs on every pull request (and on pushes to `main`): the validator test suite — which also validates
 every bundled example — and the docs-sync check, both **blocking**; `pre-commit` over the whole repo,
-also blocking, so run the hooks locally too, not only on staged files; a check that every skill the Grok
-manifest lists exists, blocking; and `claude plugin validate .` at the repo root, currently **advisory**.
+also blocking, so run the hooks locally too, not only on staged files; a check that Grok reads its own manifest,
+with every skill and the CloudTalk connection, blocking; and `claude plugin validate .` at the repo root, currently **advisory**.
 
 ```bash
 pre-commit run --all-files
@@ -67,7 +67,7 @@ Example: `feat(schema): add backgroundSound to the ElevenLabs settings`
   tests in the same PR, and keep the bundled `examples/` passing the validator — `test_validate.py`
   validates every one of them, so a broken example fails the suite.
 - Material schema or guidance changes: bump the semver in the plugin's `.claude-plugin/plugin.json`,
-  its ChatGPT `plugin.json`, its Grok `.grok-plugin/plugin.json` and `.claude-plugin/marketplace.json`, and add a matching dated entry to [CHANGELOG.md](./CHANGELOG.md):
+  its ChatGPT `.chatgpt-plugin/plugin.json`, its Grok `.grok-plugin/plugin.json` and `.claude-plugin/marketplace.json`, and add a matching dated entry to [CHANGELOG.md](./CHANGELOG.md):
   the version plus the changelog is how consumers track what changed.
 
 ## Writing a skill
@@ -111,7 +111,7 @@ reviewer can check it against this list.
 10. **Runs in Claude, ChatGPT and Grok.** A skill in `skills/` works without Python, subagents or host-specific
     features: it may use them where the app has them only with a stated fallback that works without
     them (as the builder's by-hand check does); a skill that can't work without them lives in
-    `claude-skills/` (Claude only) or `grok-skills/` (Grok only, listed by path in `.grok-plugin/plugin.json`). Every skill in `skills/` has `agents/openai.yaml`. Skills
+    `claude-skills/` (Claude only) or `grok-skills/` (Grok only, listed by path in `.grok-plugin/plugin.json`, whose `skills` list also names `./skills/`). Every skill in `skills/` has `agents/openai.yaml`. Skills
     talk to people in plain words: no company ids, user ids or tool names in what the user reads. A call
     id is the one exception: shown as evidence ("call ref"), next to the call's date and time, so the
     user can find the call.
