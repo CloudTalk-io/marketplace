@@ -55,7 +55,7 @@ The same folder is the ChatGPT plugin package. Each assistant reads its own mani
 | `.claude-plugin/plugin.json` | Claude: plugin identity and the MCP server (sign-in) |
 | `plugin.json` | ChatGPT: identity, listing, starter prompts, review test cases, translations (`extensions.com.openai`) |
 | `mcp.json` | ChatGPT: the MCP server. Sign-in is discovered from the server (Client ID Metadata Document) |
-| `.grok-plugin/plugin.json` | Grok: plugin identity and the MCP server (see [Grok](#grok)) |
+| `.grok-plugin/plugin.json` | Grok: plugin identity, the MCP server and the Grok-only skill (see [Grok](#grok)) |
 | `skills/`, `assets/` | All three |
 | `claude-skills/` | Claude only (`voice-agent-simulator` needs subagents) |
 | `grok-skills/` | Grok only (`missed-call-digest`, listed by path in `.grok-plugin/plugin.json`) |
@@ -77,7 +77,7 @@ demo company, and a run of the five test cases against it.
 ## Grok
 
 The same folder is also the Grok plugin, for Grok Bot, Grok Build and Cursor. Grok reads
-`.grok-plugin/plugin.json` first: the plugin identity and the MCP server. It loads `skills/`, plus
+`.grok-plugin/plugin.json` first: the plugin identity, the MCP server and the Grok-only skill. It loads `skills/`, plus
 `grok-skills/missed-call-digest` because the manifest lists it, and leaves out `claude-skills/`. The
 digest is Grok only because Grok Bot runs in Slack, where delivery and picks from the thread belong; in
 Claude and ChatGPT, scheduled runs keep the list in the app. Sign-in works the same way as in ChatGPT, with a Client ID Metadata Document.
@@ -115,4 +115,4 @@ this prompt and a weekday schedule the customer picks:
 > whose texts count, my response time, my business name and hours, and where to deliver (my own
 > Slack DM or email), and save them. On every scheduled run, cover the time since the last run plus
 > anything still open, then deliver the list there. Never text or call anyone unless I approve it in
-> the thread.
+> the thread, or in the chat when the list comes by email.

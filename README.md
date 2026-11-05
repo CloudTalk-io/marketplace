@@ -6,7 +6,7 @@ system: AI agents answer first, humans close.
 ## The CloudTalk plugin
 
 [**CloudTalk**](./plugins/cloudtalk) (`cloudtalk`) runs every call from your AI assistant. It signs in to
-your CloudTalk account and ships eight skills. It used to be **CloudTalk VoiceAgent Builder**
+your CloudTalk account and ships eight skills, plus one for Grok only. It used to be **CloudTalk VoiceAgent Builder**
 (`voice-agent-config-generator`); see [Upgrading](#upgrading-from-cloudtalk-voiceagent-builder).
 
 | Skill | What it does |
@@ -137,7 +137,7 @@ marketplace/
         ├── plugin.json         ← ChatGPT manifest (listing, starter prompts, review cases)
         ├── mcp.json            ← ChatGPT MCP connection
         ├── .grok-plugin/
-        │   └── plugin.json     ← Grok manifest: the CloudTalk connection (sign-in)
+        │   └── plugin.json     ← Grok manifest: the CloudTalk connection (sign-in) and the Grok-only skill
         ├── assets/icon.png
         ├── skills/             ← skills for Claude, ChatGPT and Grok
         │   ├── get-started/

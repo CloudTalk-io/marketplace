@@ -16,7 +16,8 @@ marketplace (Check for updates, or Sync automatically).
   an owner. An optional response time marks callers as overdue and ranks them right after callers waiting
   on a person; on scheduled runs, entries still open from earlier runs come back until someone reaches them.
 - **Saved settings.** The teams or lines whose missed calls count and whose texts are checked can be saved
-  into a scheduled run. Scheduled runs keep their list in the app, and never send on their own.
+  into a scheduled run. `missed-call-follow-up`'s scheduled runs keep their list in the app, and never send
+  on their own.
 - **Grok.** `.grok-plugin/plugin.json` makes the folder a Grok plugin, for Grok Bot, Grok Build and
   Cursor. `get-started` explains how to sign in from Grok.
 - **New Grok-only skill `missed-call-digest`** (in `grok-skills/`, listed only in the Grok manifest). It

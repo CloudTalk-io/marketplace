@@ -26,8 +26,8 @@ claude plugin validate ./plugins/cloudtalk
 
 CI runs on every pull request (and on pushes to `main`): the validator test suite — which also validates
 every bundled example — and the docs-sync check, both **blocking**; `pre-commit` over the whole repo,
-also blocking, so run the hooks locally too, not only on staged files; and `claude plugin validate .` at
-the repo root, currently **advisory**.
+also blocking, so run the hooks locally too, not only on staged files; a check that every skill the Grok
+manifest lists exists, blocking; and `claude plugin validate .` at the repo root, currently **advisory**.
 
 ```bash
 pre-commit run --all-files
