@@ -48,7 +48,7 @@ Developers in Claude Code who prefer a company API key can add the AI Voice Agen
 
 ## ChatGPT
 
-The same folder is the ChatGPT plugin package. Each assistant reads its own manifest:
+This folder holds the ChatGPT plugin package. Each assistant reads its own manifest:
 
 | File | Read by |
 |---|---|

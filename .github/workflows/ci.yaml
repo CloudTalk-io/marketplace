@@ -79,19 +79,19 @@ jobs:
                   bad.append(f"{d}: frontmatter name is not {d.name}")
               if not desc or len(desc.group(1)) > 1024:
                   bad.append(f"{d}: description missing or over 1024 characters")
+          # Grok walks each listed folder all the way down, so check every SKILL.md it would load.
           count = 0
           for e in entries:
-              d = pathlib.Path(e)
-              if (d / "SKILL.md").is_file():
-                  check(d); count += 1
-              elif d.is_dir() and any(d.glob("*/SKILL.md")):
-                  for s in sorted(d.glob("*/SKILL.md")):
-                      check(s.parent); count += 1
-              else:
+              found = sorted(pathlib.Path(e).rglob("SKILL.md"))
+              if not found:
                   bad.append(f"{e}: no SKILL.md")
-          url = m.get("mcpServers", {}).get("cloudtalk", {}).get("url")
-          if url != "https://mcp.cloudtalk.io" and not pathlib.Path(".mcp.json").is_file():
-              bad.append("the Grok manifest has no CloudTalk MCP server")
+              for s in found:
+                  check(s.parent); count += 1
+          servers = m.get("mcpServers")
+          server = servers.get("cloudtalk") if isinstance(servers, dict) else None
+          url = server.get("url") if isinstance(server, dict) else None
+          if url != "https://mcp.cloudtalk.io":
+              bad.append("the Grok manifest has no inline CloudTalk MCP server")
           print("\n".join(bad) or f"Grok manifest OK: {count} skills, MCP {url}")
           sys.exit(1 if bad else 0)
           PY
