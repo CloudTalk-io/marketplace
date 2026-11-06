@@ -1,9 +1,34 @@
 # Changelog
 
-Each release bumps a semver (in both plugin manifests and `.claude-plugin/marketplace.json`) with a
+Each release bumps a semver (in all three plugin manifests and `.claude-plugin/marketplace.json`) with a
 dated entry below, made whenever the config schema or the generation guidance materially changes.
 Claude Code installs a release when the manifest version changes; the Claude app picks it up from the
 marketplace (Check for updates, or Sync automatically).
+
+## 0.3.1 — 2026-11-05
+
+- **`missed-call-follow-up` covers texts and response times.** It lists inbound texts nobody answered,
+  shows callers someone already texted, and never contacts a number that texted STOP or the like, by
+  reading the SMS inbox of the signed-in user, or of up to 8 texting agents the user picks. A text never
+  counts as reaching someone: only a person speaking with them does. It also uses CloudTalk's callback mark
+  to find a later call that reached a caller, and matches the same caller across country codes when the
+  rest of the number is identical. Hang-ups under 3 seconds go to a "likely noise" count. Each entry names
+  an owner. An optional response time marks callers as overdue and ranks them right after callers waiting
+  on a person; on scheduled runs, entries still open from earlier runs come back until someone reaches them.
+- **Saved settings.** The teams or lines whose missed calls count and whose texts are checked can be saved
+  into a scheduled run. `missed-call-follow-up`'s scheduled runs keep their list in the app, and never send
+  on their own.
+- **Grok and Cursor.** `.grok-plugin/plugin.json` makes the folder a Grok plugin, for Grok Bot and Grok
+  Build, and `.cursor-plugin/plugin.json` a Cursor plugin, each with all the shared skills, the digest
+  and the CloudTalk connection. `.cursor-plugin/marketplace.json` at the repo root points Cursor to it.
+  `get-started` explains how to sign in from Grok.
+- **ChatGPT manifest moved to `.chatgpt-plugin/plugin.json`.** Grok reads a root `plugin.json` before its
+  own manifest. The ChatGPT upload ZIP is unchanged: the build puts the manifest back at its root.
+- **New skill `missed-call-digest`, for Grok and Cursor only** (in `grok-skills/`, listed only in their manifests). It
+  delivers the missed-call list on a schedule to the user's own Slack DM or email, or to a shared channel
+  or another address after a warning about what it shows. Only the person who set up the schedule can pick
+  from the thread, each pick is re-checked against calls and opt-outs since the list was made, and each
+  send still goes through the app's approval prompt, or that person's "yes" where the app has none.
 
 ## 0.3.0 — 2026-10-27
 

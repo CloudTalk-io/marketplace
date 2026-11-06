@@ -25,6 +25,7 @@ People don't know their account's internal ids. Never show a company id, user id
 - Claude app: open Customize, then Plugins, open CloudTalk, go to its Connectors tab and choose Connect.
 - Claude Code: run `/mcp`, pick the CloudTalk entry (`plugin:cloudtalk:cloudtalk`) and choose Authenticate.
 - ChatGPT: open CloudTalk in ChatGPT's app settings and connect it.
+- Grok: open CloudTalk in Grok's plugin settings and sign in.
 
 Then add: "Sign in with CloudTalk as an Admin. CloudTalk's AI connection needs the Essential plan or higher." End with: "Say done once you've signed in, and I'll pick up from here." If CloudTalk still fails to connect after sign-in, the reasons are the ones under "It fails" below.
 
@@ -98,7 +99,7 @@ Write `<agent name>` as the agent's real name when the account has one AI Voice 
 
 ### How to run them
 
-- **Missed calls:** the same rules as the `missed-call-follow-up` skill, as a list only: draft no texts, and ask nothing about the business until the user wants to text someone.
+- **Missed calls:** a short version of the `missed-call-follow-up` skill, as a list only: draft no texts, and ask nothing about the business until the user wants to text someone.
   1. Period: yesterday, midnight to midnight in the user's timezone (see Dates and answers).
   2. `cloudtalk_search_calls` with `status: "missed"`, `direction: "incoming"`, the period and `limit: 100`. Incoming only: an outgoing call nobody answered is not a missed caller. Group the rows by `external_number`, compared digit for digit (ignore spaces, brackets and a leading +). For each caller keep the number of tries, the latest missed time and the contact name, if any. A row with no number is a hidden number: count it, don't list it. A missed row with talk time (`talking_time` above 0) is usually a caller who spoke with an AI Voice Agent before a handoff nobody picked up: mark them "spoke with an AI Voice Agent first". If `pagination.next_page` is set, say the list covers the latest 100 missed calls.
   3. Drop callers already reached. `cloudtalk_search_calls` with `status: "answered"`, no direction, from the earliest missed call to now, `limit: 100`. A caller is reached only when an answered call in either direction after their latest miss has a person on it (an `agent` on the row): drop them and count them. Keep two kinds on the list: a caller whose later answered call shows no person (no `agent` on the row; mark them "answered without a person, may still be waiting"), and a caller whose callback from us lasted under 30 seconds (mark "we tried to call back"). A call only an AI Voice Agent handled isn't in these rows at all, so a caller who spoke only to one after their miss stays on the list as missed. If page 1's `pagination.items_count` is over 100, check instead each caller you look up in step 5, before the lookup: `cloudtalk_search_calls` with `public_external` set to their number, `status: "answered"`, `date_from` their latest miss and `limit: 5`; a row with a person on it means reached. Then one search with `status: "missed"`, `direction: "outgoing"` over the same window: a caller someone tried to call back stays on the list, with the time of that try. For callers who spoke with an AI Voice Agent, offer the `missed-call-follow-up` skill, which reads what the agent promised them.
@@ -133,7 +134,7 @@ Write `<agent name>` as the agent's real name when the account has one AI Voice 
 After the first task, suggest the one skill that fits what the user did next:
 
 - `conversation-insights`: what's still open after this week's calls, and who should close it.
-- `missed-call-follow-up`: make sure no missed caller waits, twice a day.
+- `missed-call-follow-up`: make sure no missed caller or unanswered text waits, during the day.
 - `call-coach`: coaching for the team and the AI Voice Agents.
 - `voice-agent-builder`: build or fix an AI Voice Agent, and save it after approval.
 - `voice-agent-checkup`: is an AI Voice Agent ready to go live?

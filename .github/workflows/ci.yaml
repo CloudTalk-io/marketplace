@@ -47,6 +47,92 @@ jobs:
         # contributor having installed the git hook locally.
         run: pipx run pre-commit run --all-files --show-diff-on-failure
 
+  grok-manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Grok reads the Grok manifest, with every skill and the CloudTalk connection
+        # Nothing else reads .grok-plugin/plugin.json. Grok takes the first manifest it finds, in
+        # this order: plugin.json, .grok-plugin/plugin.json, .claude-plugin/plugin.json (grok-build
+        # plugins/manifest.rs). A "skills" list replaces the default skills/ folder, and xAI's
+        # indexer silently drops an entry whose folder holds no SKILL.md.
+        working-directory: plugins/cloudtalk
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, re, sys
+          bad = []
+          order = ["plugin.json", ".grok-plugin/plugin.json", ".claude-plugin/plugin.json"]
+          first = next((p for p in order if pathlib.Path(p).is_file()), None)
+          if first != ".grok-plugin/plugin.json":
+              bad.append(f"Grok would read {first}, not .grok-plugin/plugin.json")
+          m = json.load(open(".grok-plugin/plugin.json"))
+          entries = m.get("skills", [])
+          if not isinstance(entries, list):
+              entries = [entries]
+          if "skills" not in {pathlib.Path(e).as_posix() for e in entries}:
+              bad.append('"skills" must list ./skills/, or Grok loads no shared skill')
+          def check(d):
+              t = (d / "SKILL.md").read_text(encoding="utf-8")
+              name = re.search(r"^name: (.+)$", t, re.M)
+              desc = re.search(r"^description: (.+)$", t, re.M)
+              if not name or name.group(1).strip() != d.name:
+                  bad.append(f"{d}: frontmatter name is not {d.name}")
+              if not desc or len(desc.group(1)) > 1024:
+                  bad.append(f"{d}: description missing or over 1024 characters")
+          # Grok walks each listed folder all the way down, so check every SKILL.md it would load.
+          count = 0
+          for e in entries:
+              found = sorted(pathlib.Path(e).rglob("SKILL.md"))
+              if not found:
+                  bad.append(f"{e}: no SKILL.md")
+              for s in found:
+                  check(s.parent); count += 1
+          servers = m.get("mcpServers")
+          server = servers.get("cloudtalk") if isinstance(servers, dict) else None
+          url = server.get("url") if isinstance(server, dict) else None
+          if url != "https://mcp.cloudtalk.io":
+              bad.append("the Grok manifest has no inline CloudTalk MCP server")
+          print("\n".join(bad) or f"Grok manifest OK: {count} skills, MCP {url}")
+          sys.exit(1 if bad else 0)
+          PY
+      - name: Cursor reads its manifest, with every skill and the CloudTalk connection
+        # Cursor reads .cursor-plugin/plugin.json (or a root Agent Plugins plugin.json), not
+        # .grok-plugin/. A "skills" field replaces the default skills/ folder, and with no
+        # "mcpServers" Cursor reads mcp.json at the plugin root (cursor.com/docs/reference/plugins).
+        working-directory: plugins/cloudtalk
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, re, sys
+          bad = []
+          m = json.load(open(".cursor-plugin/plugin.json"))
+          if not re.fullmatch(r"[a-z0-9]([a-z0-9.-]*[a-z0-9])?", m.get("name", "")):
+              bad.append("name must be lowercase kebab-case")
+          entries = m.get("skills", [])
+          if not isinstance(entries, list):
+              entries = [entries]
+          paths = {pathlib.Path(e).as_posix() for e in entries}
+          for need in ("skills", "grok-skills"):
+              if need not in paths:
+                  bad.append(f'"skills" must list ./{need}/')
+          count = 0
+          for e in entries:
+              if e.startswith("/") or ".." in pathlib.Path(e).parts:
+                  bad.append(f"{e}: paths must be relative, without ..")
+              found = sorted(pathlib.Path(e).glob("*/SKILL.md"))
+              if not found:
+                  bad.append(f"{e}: no skill folder with a SKILL.md")
+              count += len(found)
+          if "mcpServers" in m:
+              bad.append("mcpServers would override mcp.json; keep the connection in mcp.json")
+          url = json.load(open("mcp.json")).get("mcpServers", {}).get("cloudtalk", {}).get("url")
+          if url != "https://mcp.cloudtalk.io":
+              bad.append("mcp.json has no CloudTalk MCP server")
+          if not pathlib.Path(m.get("logo", "")).is_file():
+              bad.append("logo file is missing")
+          print("\n".join(bad) or f"Cursor manifest OK: {count} skills, MCP {url}")
+          sys.exit(1 if bad else 0)
+          PY
+
   plugin-validate:
     runs-on: ubuntu-latest
     steps:

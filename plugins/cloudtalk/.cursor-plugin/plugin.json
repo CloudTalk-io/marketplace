@@ -1,0 +1,24 @@
+{
+  "name": "cloudtalk",
+  "version": "0.3.1",
+  "description": "Run every call from your AI assistant. CloudTalk is the agent-first phone system: AI agents answer first, humans close. Follows up missed calls and unanswered texts the same day, finds open loops after your calls, coaches your team and AI Voice Agents, and builds, checks and improves AI Voice Agents. Signs in with CloudTalk (OAuth), no API key.",
+  "author": {
+    "name": "CloudTalk",
+    "url": "https://www.cloudtalk.io/"
+  },
+  "homepage": "https://www.cloudtalk.io/",
+  "repository": "https://github.com/CloudTalk-io/marketplace",
+  "license": "Apache-2.0",
+  "keywords": [
+    "cloudtalk",
+    "cloudtalk mcp",
+    "cloudtalk phone",
+    "cloudtalk missed calls",
+    "cloudtalk voice agent"
+  ],
+  "logo": "./assets/icon.png",
+  "skills": [
+    "./skills/",
+    "./grok-skills/"
+  ]
+}
