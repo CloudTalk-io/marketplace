@@ -468,7 +468,7 @@ quoted question.
 
 ### 6.4 `custom`
 ```jsonc
-[ { "enabled": true, "name": "verifyIdentity", "prompt": "Verify the caller via DOB + last 4 digits." } ]
+[ { "enabled": true, "name": "verifyIdentity", "prompt": "Verify the caller via their account number + the last 4 digits of their phone number." } ]
 ```
 All three fields required per entry. Self-contained.
 

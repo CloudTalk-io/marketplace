@@ -26,7 +26,7 @@ the examples doing real work set Haiku 4.5.
 | `E2-outbound-confirmation-de.jsonc` | Appointment confirmation, German | outbound | ElevenLabs (`de`); complex via scenarios → Haiku 4.5 |
 | `E3-inbound-qualification-cfd.jsonc` | Lead qualification → CFD routing (**explicit-Call-Flow exception**) | inbound | ElevenLabs (`en`); trivial-tier, Haiku 4.5 over the Qwen pick |
 | `E4-inbound-support.jsonc` | Support intake on Deepgram by choice, no transfer; **`toolCall` scenario + `extractData` webhook**, `tone`/`verbosity` on a Deepgram agent | inbound | Deepgram (chosen on plain `en`) → Haiku 4.5 |
-| `E5-inbound-multilingual.jsonc` | Multilingual appointment-request intake | inbound | ElevenLabs (required: multilingual) → Haiku 4.5 |
+| `E5-inbound-multilingual.jsonc` | Multilingual table-reservation request intake | inbound | ElevenLabs (required: multilingual) → Haiku 4.5 |
 | `E6-inbound-frontdesk-enus.jsonc` | US-English front desk; callback instead of a handoff | inbound | Deepgram (`en-US` — Deepgram-exclusive) → Haiku 4.5 |
 | `E7-inbound-afterhours-message.jsonc` | After-hours message taker (`takeMessage`) | inbound | ElevenLabs (`en`); trivial-tier, Haiku 4.5 over the Qwen pick |
 | `E8-inbound-frontdesk-identity.jsonc` | Hotel front desk; **`tone`/`verbosity` + `elevenLabsSettings` showcase** | inbound | ElevenLabs (`en`); complex via prompt length → Haiku 4.5 |
@@ -60,7 +60,7 @@ handoff as a **disabled group draft** the user finishes in the dashboard:
   which are provider-agnostic and so work here despite
   Deepgram ignoring `elevenLabsSettings`.
 - **E6** — a front desk that answers what it knows and takes details for a callback, with no transfer skill.
-- **E5** — a multilingual agent that **takes the appointment request** and hands it to the studio, so it
+- **E5** — a multilingual agent that **takes the reservation request** and hands it to the restaurant, so it
   stays self-contained. **E10** is the other half of that choice: booking straight into a connected
   calendar, which costs a calendar integration. E5's three hangup scenarios carry an **empty `reply`** by
   design — the closings live in the `goalPrompt` and each scenario fires after the goodbye (behavioral
