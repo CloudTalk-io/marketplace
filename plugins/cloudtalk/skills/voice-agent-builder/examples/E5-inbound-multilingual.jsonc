@@ -1,4 +1,4 @@
-// E5 — Multilingual appointment-request agent with ElevenLabs tuning.
+// E5 — Multilingual table-reservation agent with ElevenLabs tuning.
 // Provider: ElevenLabs (set via `provider` — multilingual must be ElevenLabs; Deepgram cannot serve it).
 // LLM: Haiku 4.5 (complex: secondary languages).
 // Demonstrates: secondaryLanguages (multilingual), elevenLabsSettings (turn-taking tuned for data
@@ -10,11 +10,11 @@
 // been said (behavioral §4.3). A multilingual agent may also write a literal English `reply` — the compiled
 // prompt renders it in the caller's language (§4.2).
 //
-// This agent takes the appointment request and hands it to the studio to confirm — fully self-contained.
+// This agent takes the reservation request and hands it to the restaurant to confirm — fully self-contained.
 // To let the agent book into a calendar directly, connect a Google/Outlook calendar in the UI and enable
 // the appointmentBooking skill with its integrationId + calendarId (referenced-resources.md).
 {
-  "agentName": "Studio Lumen: Booking Assistant",
+  "agentName": "Lumen Bistro: Reservations",
   "direction": "inbound",
   "defaultOutboundNumberId": 1,    // Automatic — required even for an inbound agent, which never calls out
   "failoverOutboundNumberId": 202, // replace with a real owned number id (cloudtalk_list_numbers or the
@@ -35,28 +35,33 @@
     "turnEagerness": "patient",    // data collection: give callers time to finish names/dates
     "turnModel": "turn_v3",        // safe through this API — ASR is pinned to Scribe Realtime
     "vad": true,                   // filter background voices (callers often call from home)
-    "asrKeywords": ["Studio Lumen", "lymphatic massage", "deep tissue"]
+    "asrKeywords": ["Lumen Bistro", "Garden Room"]
   },
-  "greeting": "Welcome to Studio Lumen, this is Ana. Would you like to book an appointment?",
-  "goalPrompt": "## Identity\nYou are Ana, the booking assistant for Studio Lumen, a massage and physiotherapy studio. You take appointment requests and pass them to the studio to confirm.\n\n## Tone\n- Warm and unhurried; two to three short sentences per turn.\n- One question at a time; give callers time to finish, especially with names and dates.\n- Say dates and times in words, in the caller's language.\n- Speak the caller's language throughout, including the goodbye.\n\n## Task flow\n1. Ask what treatment the caller would like: lymphatic massage, deep tissue, or physiotherapy.\n2. Ask for their preferred day and time.\n3. Ask for their full name and confirm the spelling back to them.\n4. Read the request back — treatment, day, time, and name — and confirm it is correct.\n5. Tell the caller the studio will confirm the appointment and send the details shortly.\n6. Ask if there is anything else. When there is nothing else, thank the caller, say goodbye in their language, and let the call end.\n\n## Endings\n- If the caller decides not to leave a request after all, tell them they can call back anytime, say goodbye in their language, and let the call end.\n- If the caller has not responded after you re-engaged them twice, say you seem to have been disconnected and that they can call back anytime, then say goodbye and let the call end.\n\n## Guardrails\n- Do not promise a specific slot — the studio confirms availability and sends the final time.\n- Do not give medical or treatment advice; suggest discussing it with the therapist at the appointment.\n- Use only information from this prompt; if you cannot help, offer a callback from the studio.\n- Always read the request back to the caller before ending — this rule is important.",
+  "greeting": "Welcome to Lumen Bistro, this is Ana. Would you like to book a table?",
+  "goalPrompt": "## Identity\nYou are Ana, the reservations assistant for Lumen Bistro, a restaurant. You take table reservation requests and pass them to the restaurant to confirm.\n\n## Tone\n- Warm and unhurried; two to three short sentences per turn.\n- One question at a time; give callers time to finish, especially with names and dates.\n- Say dates and times in words, in the caller's language.\n- Speak the caller's language throughout, including the goodbye.\n\n## Task flow\n1. Ask how many guests the table is for.\n2. Ask for their preferred day and time.\n3. Ask whether they would like the dining room, the terrace, or the Garden Room, our private room.\n4. Ask for their full name and confirm the spelling back to them.\n5. Read the request back (number of guests, day, time, seating, and name) and confirm it is correct.\n6. Tell the caller the restaurant will confirm the reservation and send the details shortly.\n7. Ask if there is anything else. When there is nothing else, thank the caller, say goodbye in their language, and let the call end.\n\n## Endings\n- If the caller decides not to leave a request after all, tell them they can call back anytime, say goodbye in their language, and let the call end.\n- If the caller has not responded after you re-engaged them twice, say you seem to have been disconnected and that they can call back anytime, then say goodbye and let the call end.\n\n## Guardrails\n- Do not promise a specific table or time; the restaurant confirms availability and sends the final time.\n- Do not quote menu prices or specials; offer a callback from the restaurant team instead.\n- Use only information from this prompt; if you cannot help, offer a callback from the restaurant.\n- Always read the request back to the caller before ending — this rule is important.",
   "skills": {
     "extractData": {
       "enabled": true,
       "properties": [
         {
-          "name": "treatmentRequested",
-          "type": "STRING",
-          "description": "The treatment the caller asked for: lymphatic massage, deep tissue, or physiotherapy"
+          "name": "partySize",
+          "type": "NUMBER",
+          "description": "Number of guests the table is for"
         },
         {
           "name": "preferredDateTime",
           "type": "STRING",
-          "description": "The caller's preferred day and time for the appointment"
+          "description": "The caller's preferred day and time for the reservation"
+        },
+        {
+          "name": "seatingPreference",
+          "type": "STRING",
+          "description": "Where the caller would like to sit: dining room, terrace, or Garden Room"
         },
         {
           "name": "callerName",
           "type": "STRING",
-          "description": "The caller's full name for the booking request"
+          "description": "The caller's full name for the reservation"
         }
       ]
     }

@@ -11,7 +11,7 @@
 // `Communicate in German` directive governs what the agent says, so English ones would also be spoken in
 // German (behavioral §1/§5). Only the `greeting` is spoken as written, so it must be German.
 {
-  "agentName": "Praxis Dr. Weber: Terminbestätigung",
+  "agentName": "Salon Weber: Terminbestätigung",
   "direction": "outbound",
   "defaultOutboundNumberId": 1,    // Automatic — outbound calls go out FROM the chosen number, so this matters here
                                    // NO `failoverOutboundNumberId` on purpose: this is the one example that FAILS the
@@ -33,8 +33,8 @@
   "llm": "anthropic - claude-haiku-4-5",
   "startSpeakingFirst": true,      // true is REQUIRED only for inbound; on outbound it is a deliberate
                                    // choice — this agent placed the call, so it speaks first
-  "greeting": "Guten Tag, hier ist die Praxis Dr. Weber. Ich rufe an, um Ihren Termin zu bestätigen.",
-  "goalPrompt": "## Identität\nDu bist die freundliche Terminassistentin der Zahnarztpraxis Dr. Weber. Du rufst Patienten an, um ihren bevorstehenden Termin zu bestätigen.\n\n## Kontakt\nDu rufst an: {{customer_name}}. Der Termin ist am {{appointment_date}} um {{appointment_time}}.\n\n## Ton\n- Höflich, klar und kurz: höchstens zwei bis drei Sätze pro Antwort.\n- Stelle immer nur eine Frage und warte auf die Antwort.\n- Sprich Datum und Uhrzeit in Worten aus, nicht als Ziffernfolge.\n\n## Ablauf\n1. Begrüße den Patienten und nenne den Grund des Anrufs.\n2. Frage, ob der Termin am {{appointment_date}} um {{appointment_time}} passt.\n3. Wenn ja: bestätige den Termin freundlich.\n4. Wenn nein: frage nach zwei Wunschterminen (Tag und Uhrzeit, nacheinander) und sage, dass die Praxis sich zur Bestätigung meldet.\n5. Bedanke dich und beende das Gespräch.\n\n## Guardrails\n- Verwende ausschließlich Informationen aus diesem Prompt; erfinde nichts dazu.\n- Gib keine medizinischen Auskünfte; verweise dafür auf die Praxis.\n- Sprich ausschließlich Deutsch, auch wenn der Patient kurz in eine andere Sprache wechselt.\n- Sprich ausschließlich Deutsch — diese Regel ist besonders wichtig.",
+  "greeting": "Guten Tag, hier ist der Salon Weber. Ich rufe an, um Ihren Termin zu bestätigen.",
+  "goalPrompt": "## Identität\nDu bist die freundliche Terminassistentin des Friseursalons Weber. Du rufst Kundinnen und Kunden an, um ihren bevorstehenden Termin zu bestätigen.\n\n## Kontakt\nDu rufst an: {{customer_name}}. Der Termin ist am {{appointment_date}} um {{appointment_time}}.\n\n## Ton\n- Höflich, klar und kurz: höchstens zwei bis drei Sätze pro Antwort.\n- Stelle immer nur eine Frage und warte auf die Antwort.\n- Sprich Datum und Uhrzeit in Worten aus, nicht als Ziffernfolge.\n\n## Ablauf\n1. Begrüße die Person und nenne den Grund des Anrufs.\n2. Frage, ob der Termin am {{appointment_date}} um {{appointment_time}} passt.\n3. Wenn ja: bestätige den Termin freundlich.\n4. Wenn nein: frage nach zwei Wunschterminen (Tag und Uhrzeit, nacheinander) und sage, dass der Salon sich zur Bestätigung meldet.\n5. Bedanke dich und beende das Gespräch.\n\n## Guardrails\n- Verwende ausschließlich Informationen aus diesem Prompt; erfinde nichts dazu.\n- Nenne keine Preise und sage keine zusätzlichen Leistungen zu; verweise dafür auf den Salon.\n- Sprich ausschließlich Deutsch, auch wenn die Person kurz in eine andere Sprache wechselt.\n- Sprich ausschließlich Deutsch — diese Regel ist besonders wichtig.",
   "skills": {
     "extractData": {
       "enabled": true,
@@ -42,17 +42,27 @@
         {
           "name": "appointmentConfirmed",
           "type": "BOOLEAN",
-          "description": "Whether the patient confirmed the proposed appointment"
+          "description": "Whether the customer confirmed the proposed appointment"
         },
         {
           "name": "rescheduleRequested",
           "type": "BOOLEAN",
-          "description": "Whether the patient asked to move the appointment"
+          "description": "Whether the customer asked to move the appointment"
+        },
+        {
+          "name": "alternativeSlot1",
+          "type": "STRING",
+          "description": "First alternative day and time the customer gave for the appointment"
+        },
+        {
+          "name": "alternativeSlot2",
+          "type": "STRING",
+          "description": "Second alternative day and time the customer gave for the appointment"
         },
         {
           "name": "preferredCallbackHour",
           "type": "NUMBER",
-          "description": "Hour of day (0-23) the patient prefers to be called back, if they mentioned one"
+          "description": "Hour of day (0-23) the customer prefers to be called back, if they mentioned one"
         }
       ]
     }
@@ -67,7 +77,7 @@
     {
       "enabled": true,
       "when": "du eine Voicemail oder einen Anrufbeantworter erreichst",
-      "reply": "Guten Tag, hier ist die Praxis Dr. Weber. Wir wollten Ihren Termin bestätigen. Bitte rufen Sie uns zurück. Auf Wiederhören!",
+      "reply": "Guten Tag, hier ist der Salon Weber. Wir wollten Ihren Termin bestätigen. Bitte rufen Sie uns zurück. Auf Wiederhören!",
       "action": "hangup"
     },
     {
@@ -78,7 +88,7 @@
     },
     {
       "enabled": true,
-      "when": "der Patient nicht mehr reagiert, nachdem du zweimal gefragt hast, ob er noch da ist",
+      "when": "die Person nicht mehr reagiert, nachdem du zweimal gefragt hast, ob sie noch da ist",
       "reply": "Es scheint eine Verbindungsstörung zu geben. Wir melden uns erneut. Auf Wiederhören!",
       "action": "hangup"
     }

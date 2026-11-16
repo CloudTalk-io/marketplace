@@ -279,7 +279,7 @@ ids, field names or tool names.
 
 1. **Name the save, then show the diff.** A short plain name (*"Shorter greeting, transfer to Sales"*),
    then one before/after line per change, quoting at most 15 words (*Greeting: "Hello, thank you for
-   calling..." becomes "Hi, Bright Smile Dental, how can I help?"*). For a new agent, say what it will do
+   calling..." becomes "Hi, Harbor Lane, how can I help?"*). For a new agent, say what it will do
    instead. Validate first (step 8).
 2. **Keep the fresh read.** The document `cloudtalk_get_voice_agent` returned before this save stays in the
    conversation: it holds the earlier values an undo needs.
