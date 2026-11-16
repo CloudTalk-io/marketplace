@@ -50,9 +50,14 @@
           "description": "Whether the customer asked to move the appointment"
         },
         {
-          "name": "alternativeSlots",
+          "name": "alternativeSlot1",
           "type": "STRING",
-          "description": "The two alternative days and times the customer gave for the appointment"
+          "description": "First alternative day and time the customer gave for the appointment"
+        },
+        {
+          "name": "alternativeSlot2",
+          "type": "STRING",
+          "description": "Second alternative day and time the customer gave for the appointment"
         },
         {
           "name": "preferredCallbackHour",

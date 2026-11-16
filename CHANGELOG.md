@@ -12,9 +12,9 @@ marketplace (Check for updates, or Sync automatically).
   management receptionist that routes urgent repairs (E1), a hair salon confirming appointments in German
   (E2), a restaurant taking table reservations in three languages (E5) and a US heating and air-conditioning
   front desk (E6). Each keeps its role, its provider and LLM, and its validator result. E1 and E6 now take
-  an address, E1 records the viewing it books, E2 records the two alternative times, E5 asks for party
-  size and seating, and E6 gains the business facts it answers from. The skill still builds agents for any
-  business.
+  an address, E1 records the viewing request and the invoice number, E2 records the two alternative
+  times, E5 asks for party size and seating, and E6 gains the business facts it answers from. The skill
+  still builds agents for any business.
 
 ## 0.3.1 — 2026-11-05
 
