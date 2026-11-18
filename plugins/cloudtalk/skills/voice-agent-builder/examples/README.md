@@ -40,8 +40,8 @@ Every example needs a real owned outbound number ID of yours (the placeholder `f
 replace, per Conventions), but no example needs any *other* company resource by default. Where an archetype
 would classically need one, most of these configs invent nothing and take the **substitute-first** path from
 [`generator-contract.md`](../generator-contract.md). Three capabilities have no zero-touch substitute —
-reaching a human, calling a custom tool, and booking into a calendar — so **E4** and **E10** ship the tool
-and calendar wired (each with the values to replace named in its header), while **E9** ships its human
+reaching a human, calling a custom tool, and booking into a calendar — so **E4**, **E10** and **E11** ship the tool,
+calendar or event type wired (each with the values to replace named in its header), while **E9** ships its human
 handoff as a **disabled group draft** the user finishes in the dashboard:
 
 - **E1** — the receptionist's FAQ lives in the `goalPrompt` (a screenful of facts is lower-latency than a
@@ -100,8 +100,8 @@ handoff as a **disabled group draft** the user finishes in the dashboard:
   overwrites it. Replace the calendar `integrationId`/`calendarId` and the SMS `senderNumber`.
 - **E11** — the booking-platform sibling of E10: `appointmentBooking` against a Cal.com or Calendly event
   type, with `eventTypeRef`, `eventTypeName`, `schedulingUrl`, `needsEmail` and `inviteEmailVariable` in place
-  of `calendarId`. Replace the integration and the event-type values with the ones the Dashboard's picker
-  stores.
+  of `calendarId`. Cal.com or Calendly must be enabled for the company before it saves; then replace the
+  integration and the event-type values with the ones the Dashboard's picker stores.
 
 > **Provider coverage:** E4 *chooses* Deepgram on a language the platform would give ElevenLabs; E5 sets
 > ElevenLabs because its multilingual config needs it; E6 lands on Deepgram because `en-US` is

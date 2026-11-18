@@ -182,7 +182,7 @@ SAVE_BLOCKING_CODES = SAVE_REFUSED_CODES | {"no-hangup"}
 
 # The booking skill's event-type link and invite variable (the server's rules: an absolute https URL; a
 # dotted variable name or a contact.custom.<title> reference).
-ABSOLUTE_HTTPS_RE = re.compile(r"^https://[^\s/?#]+\S*$")
+ABSOLUTE_HTTPS_RE = re.compile(r"^https://(?![:/?#@\s])[^\s/?#]+\S*$")
 INVITE_VARIABLE_RE = re.compile(r"^(?:(?i:contact\.custom\.)[^{}\n]+|[a-zA-Z_][a-zA-Z0-9_.]*)$")
 
 # Severity glyphs for the human report. Windows consoles default to cp1252/cp437, where printing one of
@@ -1207,9 +1207,13 @@ def validate_skills(cfg, rep, direction, fields=None):
             val = ab.get(key)
             return val.strip() if isinstance(val, str) else ""
 
+        for k in ("calendarId", "eventTypeRef"):
+            if ab.get(k) is not None and not isinstance(ab[k], str):
+                rep.err("bad-type", "skills.appointmentBooking.%s" % k, "Expected a string (schema §6.6).")
         calendar, event_type = text("calendarId"), text("eventTypeRef")
+        scheduling_url_ok = bool(ABSOLUTE_HTTPS_RE.match(text("schedulingUrl")))
         for k in ("integrationId", "eventName"):
-            if not ab.get(k):
+            if not text(k):
                 rep.at(level, "missing-required", "skills.appointmentBooking.%s" % k,
                        "Required when appointmentBooking is enabled — a switched-off skill missing it is "
                        "unfinished: connect the integration in the dashboard, then switch it on (schema §6.6).")
@@ -1229,7 +1233,7 @@ def validate_skills(cfg, rep, direction, fields=None):
                            "Required with eventTypeRef — the dashboard stores it together with the event "
                            "type (schema §6.6).")
             url = text("schedulingUrl")
-            if url and not ABSOLUTE_HTTPS_RE.match(url):
+            if url and not scheduling_url_ok:
                 rep.at(sem_level, "bad-scheduling-url", "skills.appointmentBooking.schedulingUrl",
                        "Must be an absolute https URL (schema §6.6).")
             if "needsEmail" not in ab or ab.get("needsEmail") is None:
@@ -1276,10 +1280,11 @@ def validate_skills(cfg, rep, direction, fields=None):
             if k in ab:
                 rep.warn("server-managed-field", "skills.appointmentBooking.%s" % k,
                          "Server-managed — do not author; strip before import (schema §6.6).")
-        target_done = bool(event_type and text("eventTypeName") and text("schedulingUrl")
-                           and isinstance(ab.get("needsEmail"), bool)) or bool(calendar and not event_type)
+        target_done = (bool(event_type and not calendar and text("eventTypeName") and scheduling_url_ok
+                            and isinstance(ab.get("needsEmail"), bool))
+                       or bool(calendar and not event_type))
         rep.reference("skills.appointmentBooking.integrationId", "calendarIntegration",
-                      pending=not (ab.get("integrationId") and target_done and ab.get("eventName")),
+                      pending=not (text("integrationId") and target_done and text("eventName")),
                       what="Connect a calendar (Google, Outlook) or booking platform (Cal.com, Calendly) "
                       "integration and use its ID, plus a calendarId within it or the chosen event type "
                       "(referenced-resources.md#appointment-booking).")

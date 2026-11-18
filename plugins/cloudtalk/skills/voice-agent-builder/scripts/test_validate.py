@@ -708,12 +708,22 @@ expect_warn("a switched-off skill's target conflict is a warning",
 for _field in ("eventTypeName", "schedulingUrl", "needsEmail"):
     expect_error("eventTypeRef without %s" % _field,
                  booking(**{k: v for k, v in EVENT_TYPE.items() if k != _field}), "missing-required")
-expect_no_code("a switched-off event-type draft with the fields missing is not an error",
-               booking(enabled=False, eventTypeRef="1234567"), "missing-required")
+for _name, _draft in (("an event-type draft with the fields missing", booking(enabled=False, eventTypeRef="1234567")),
+                      ("a draft with no target at all", booking(enabled=False)),
+                      ("a draft with both targets", booking(enabled=False, calendarId="primary", **EVENT_TYPE))):
+    _cfg = copy.deepcopy(BASE)
+    _draft(_cfg)
+    if error_codes(_cfg):
+        failures.append("switched-off booking skill, %s, must raise no error, got %s" % (_name, error_codes(_cfg)))
 expect_error("schedulingUrl over http", booking(**{**EVENT_TYPE, "schedulingUrl": "http://cal.com/acme"}),
              "bad-scheduling-url")
 expect_error("schedulingUrl that is relative", booking(**{**EVENT_TYPE, "schedulingUrl": "/acme/discovery"}),
              "bad-scheduling-url")
+expect_error("schedulingUrl without a host", booking(**{**EVENT_TYPE, "schedulingUrl": "https://:443/acme"}),
+             "bad-scheduling-url")
+expect_error("calendarId that is not a string", booking(calendarId=5), "bad-type")
+expect_error("eventTypeRef that is not a string", booking(**{**EVENT_TYPE, "eventTypeRef": 1234567}), "bad-type")
+expect_error("whitespace-only eventName", booking(calendarId="primary", eventName="  "), "missing-required")
 expect_error("needsEmail as a string", booking(**{**EVENT_TYPE, "needsEmail": "no"}), "bad-type")
 expect_error("inviteEmailVariable that is not a variable name",
              booking(**EVENT_TYPE, inviteEmailVariable="not a variable"), "bad-invite-variable")

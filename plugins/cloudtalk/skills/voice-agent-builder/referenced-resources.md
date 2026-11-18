@@ -168,10 +168,12 @@ find the resource kind below.
   integration, or an event type of a Cal.com / Calendly integration.
 - **Connected:** **no MCP read exists for calendar integrations** — the connection and its IDs live in the
   Dashboard only. Until the integration exists, the config ships the skill as a **disabled draft**
-  (`enabled: false`) or omits it, and the setup step goes in the chat checklist. A draft keeps every
-  required key **present**: `integrationId` and `calendarId` stay **empty strings**, never absent — an
-  empty value reads as *not chosen yet* and saves cleanly, while dropping a required key is what breaks
-  the import (behavioral §9).
+  (`enabled: false`) or omits it, and the setup step goes in the chat checklist. A calendar draft
+  keeps every required key **present**: `integrationId` and `calendarId` stay **empty strings**, never
+  absent — an empty value reads as *not chosen yet* and saves cleanly, while dropping a required key is what
+  breaks the import (behavioral §9). A booking-platform draft carries `integrationId` (empty until chosen)
+  and **omits** `calendarId` and the event-type fields until the user has picked the event type in the
+  Dashboard.
 - **Dashboard:** connect the calendar in the Integrations area (OAuth), then read the integration's ID and
   the target calendar from it. What CloudTalk accesses in a connected calendar is covered in CloudTalk's
   Help Center documentation on calendar integrations.
