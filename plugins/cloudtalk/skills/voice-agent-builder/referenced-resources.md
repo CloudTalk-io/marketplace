@@ -175,7 +175,9 @@ find the resource kind below.
   and **omits** `calendarId` and the event-type fields until the user has picked the event type in the
   Dashboard.
 - **Dashboard:** connect the calendar in the Integrations area (OAuth), then read the integration's ID and
-  the target calendar from it. What CloudTalk accesses in a connected calendar is covered in CloudTalk's
+  the target calendar from it. For Cal.com or Calendly, connect that platform in the same Integrations area
+  and pick the event type on the AI Voice Agent's Appointment Booking skill: the integration's ID is
+  `integrationId`, and the event-type values come from the saved skill, never typed from memory. What CloudTalk accesses in a connected calendar is covered in CloudTalk's
   Help Center documentation on calendar integrations.
 - **Wire:** use the connected integration's ID in `integrationId` and the target calendar within it in
   `calendarId`; for Cal.com or Calendly use `eventTypeRef` instead (never both), with `eventTypeName`,

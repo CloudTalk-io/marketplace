@@ -721,6 +721,11 @@ expect_error("schedulingUrl that is relative", booking(**{**EVENT_TYPE, "schedul
              "bad-scheduling-url")
 expect_error("schedulingUrl without a host", booking(**{**EVENT_TYPE, "schedulingUrl": "https://:443/acme"}),
              "bad-scheduling-url")
+expect_error("schedulingUrl with user info and no host", booking(**{**EVENT_TYPE, "schedulingUrl": "https://user@:443/acme"}),
+             "bad-scheduling-url")
+expect_error("integrationId that is not a string", booking(calendarId="primary", integrationId=123), "bad-type")
+expect_no_code("a non-string integrationId is present, not missing",
+               booking(calendarId="primary", integrationId=123), "missing-required")
 expect_error("calendarId that is not a string", booking(calendarId=5), "bad-type")
 expect_error("eventTypeRef that is not a string", booking(**{**EVENT_TYPE, "eventTypeRef": 1234567}), "bad-type")
 expect_error("whitespace-only eventName", booking(calendarId="primary", eventName="  "), "missing-required")

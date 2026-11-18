@@ -38,6 +38,7 @@ import json
 import os
 import re
 import sys
+from urllib.parse import urlsplit
 
 # ---------------------------------------------------------------------------
 # Enumerations sourced from schema.md (kept here so the validator is self-contained).
@@ -182,7 +183,17 @@ SAVE_BLOCKING_CODES = SAVE_REFUSED_CODES | {"no-hangup"}
 
 # The booking skill's event-type link and invite variable (the server's rules: an absolute https URL; a
 # dotted variable name or a contact.custom.<title> reference).
-ABSOLUTE_HTTPS_RE = re.compile(r"^https://(?![:/?#@\s])[^\s/?#]+\S*$")
+def is_absolute_https_url(value):
+    """An https URL with a host (the server's rule), not merely one that starts with `https://`."""
+    if not isinstance(value, str) or re.search(r"\s", value):
+        return False
+    try:
+        parts = urlsplit(value)
+        return parts.scheme == "https" and bool(parts.hostname)
+    except ValueError:
+        return False
+
+
 INVITE_VARIABLE_RE = re.compile(r"^(?:(?i:contact\.custom\.)[^{}\n]+|[a-zA-Z_][a-zA-Z0-9_.]*)$")
 
 # Severity glyphs for the human report. Windows consoles default to cp1252/cp437, where printing one of
@@ -1207,13 +1218,13 @@ def validate_skills(cfg, rep, direction, fields=None):
             val = ab.get(key)
             return val.strip() if isinstance(val, str) else ""
 
-        for k in ("calendarId", "eventTypeRef"):
+        for k in ("integrationId", "calendarId", "eventTypeRef", "eventName"):
             if ab.get(k) is not None and not isinstance(ab[k], str):
                 rep.err("bad-type", "skills.appointmentBooking.%s" % k, "Expected a string (schema §6.6).")
         calendar, event_type = text("calendarId"), text("eventTypeRef")
-        scheduling_url_ok = bool(ABSOLUTE_HTTPS_RE.match(text("schedulingUrl")))
+        scheduling_url_ok = is_absolute_https_url(text("schedulingUrl"))
         for k in ("integrationId", "eventName"):
-            if not text(k):
+            if not text(k) and not isinstance(ab.get(k), (int, float, bool, list, dict)):
                 rep.at(level, "missing-required", "skills.appointmentBooking.%s" % k,
                        "Required when appointmentBooking is enabled — a switched-off skill missing it is "
                        "unfinished: connect the integration in the dashboard, then switch it on (schema §6.6).")
