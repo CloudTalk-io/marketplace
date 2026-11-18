@@ -1,0 +1,74 @@
+// E11 — Inbound appointment booking against a booking platform's event type (Cal.com or Calendly).
+// Provider: ElevenLabs ("en" is a plain language; schema §5). Complex (prompt length) → LLM Haiku 4.5,
+// the platform's own pick too. Both are emitted, as in every example.
+//
+// Demonstrates the event-type form of `appointmentBooking` (schema §6.6): instead of a `calendarId`, the
+// skill books an event type of a connected Cal.com or Calendly integration. `eventTypeRef` and `calendarId`
+// are mutually exclusive, and `eventTypeRef` brings `eventTypeName`, an absolute https `schedulingUrl` and
+// `needsEmail` with it. E10 is the calendar sibling.
+//
+// ACCOUNT-SPECIFIC VALUES — swap for real values before saving. The integration and the event type are
+// picked in the Dashboard (no MCP read exists for either); the booking platform must also be enabled for
+// the company, or the save is refused:
+//   skills.appointmentBooking.integrationId  ("6a1b2c3d4e5f60718293a4b6") — the connected Cal.com or
+//                                            Calendly integration
+//   skills.appointmentBooking.eventTypeRef / eventTypeName / schedulingUrl / needsEmail — the event type
+//                                            and the details the picker stores with it
+//   the failoverOutboundNumberId, the business name, greeting, and prompt facts — placeholder copy for a
+//   fictional studio
+//
+// `inviteEmailVariable` names where the platform's invite takes the caller's e-mail from; without it an
+// event type that needs an e-mail books no one. The prompt does not ask for an e-mail: this one reads the
+// matched contact's.
+{
+  "agentName": "Larkspur Studio: Discovery Call Booking",
+  "direction": "inbound",
+  "defaultOutboundNumberId": 1,    // Automatic — required even for an inbound agent, which never calls out
+  "failoverOutboundNumberId": 202, // replace with a real owned number id (cloudtalk_list_numbers or the
+                                   // dashboard) — Automatic requires a real failover in BOTH directions
+  "language": "en",
+  "maxCallDuration": 15,
+  "temperature": 0.5,
+  "voice": "cgSgspJ2msm6clMCkdW9", // Jessica — American, young, female
+  "optimizeStreamingLatency": 2,
+  "stability": 0.3,
+  "similarity": 0.7,
+  "provider": "elevenlabs",
+  "llm": "anthropic - claude-haiku-4-5",
+  "startSpeakingFirst": true,
+  "greeting": "Thanks for calling Larkspur Studio, this is Ines. Would you like to book a discovery call?",
+  "goalPrompt": "## Identity\nYou are Ines, the booking assistant for Larkspur Studio, a small brand and web design studio. You take calls from people who want a discovery call with the studio and you book it while the caller is still on the line.\n\n## Style\n- Warm and brisk: two to three short sentences per turn.\n- Ask exactly one question at a time and wait for the answer.\n- Say days and times in words.\n\n## Response guidelines\n- If you did not catch a detail, say so and ask for that one detail again.\n- Never quote a price or a timeline — the studio covers those on the discovery call.\n- If the caller drifts off topic, answer briefly and come back to the booking.\n\n## Task flow\n1. Ask what the caller wants help with: a brand, a website, or something else.\n2. Ask for the caller's full name for the booking.\n3. Ask which day suits the caller, then offer the free times you can see on that day.\n4. Read the booking back — the day, the time, and the name — and ask the caller to confirm it is right.\n5. Once they confirm, book that slot. Only when the booking succeeds, tell the caller plainly that it is booked; if the slot is no longer free, say so and go back to step 3 to offer another time; if it fails for any other reason, apologise, say plainly that the booking could not be made, and go on to step 6.\n6. Ask whether there is anything else before closing the call.\n7. When there is nothing else, close the call politely and end it. Do the same if the caller stops responding after you have checked twice that they are still there.\n\n## Guardrails\n- Use only the information in this prompt; do not invent services, prices, or opening hours.\n- Book at most one call per conversation.\n- Never promise a particular team member for the discovery call.\n- Always read the booking back to the caller before you book it — this rule is important.",
+  "skills": {
+    "appointmentBooking": {
+      "enabled": true,
+      "integrationId": "6a1b2c3d4e5f60718293a4b6",  // illustrative — your connected Cal.com or Calendly integration
+      "eventTypeRef": "1234567",                    // illustrative — the event type; no calendarId alongside it
+      "eventTypeName": "Discovery call",            // illustrative — stored with the event type
+      "schedulingUrl": "https://cal.com/larkspur/discovery", // illustrative — absolute https link of the event type
+      "needsEmail": true,                           // this event type asks for the invitee's e-mail; `false` is a value too
+      "inviteEmailVariable": "contact.emails",      // where the invite takes the caller's e-mail from
+      "eventName": "Discovery call",                // surfaces as {{appointment.event_name}} from the config
+      "durationMinutes": 30,                        // required, > 0
+      "serviceDescription": "A 30-minute introductory call about the caller's brand or website project."
+      // Server-managed and deliberately absent: integrationType (resolved to cal_com or calendly),
+      // availabilityToolId, bookingToolId, errorCode (schema §6.6).
+    }
+  },
+  "scenarios": [
+    {
+      "enabled": true,
+      "when": "the booking is done or the caller decided not to book, and they have nothing else",
+      "reply": "Thanks for calling Larkspur Studio. We look forward to speaking with you!",
+      "action": "hangup"
+    },
+    {
+      "enabled": true,
+      "when": "the caller has not responded after you re-engaged them twice",
+      "reply": "It sounds like we lost the line. Please call us back anytime. Goodbye!",
+      "action": "hangup"
+    }
+  ],
+  // guardrails are accepted but INERT at runtime — keep the array empty; the always-on rules live in the
+  // goalPrompt `## Guardrails` section instead (behavioral §2.1)
+  "guardrails": []
+}

@@ -1,13 +1,13 @@
-# AI Voice Agent v2 — reference example configs (E1–E10)
+# AI Voice Agent v2 — reference example configs (E1–E11)
 
-Ten archetype configs for the v2 Expert-Mode API, authored per the
+Eleven archetype configs for the v2 Expert-Mode API, authored per the
 [corpus](../README.md). Each is schema-valid ([`schema.md`](../schema.md)) and passes the
 [behavioral](../behavioral-guidance.md) §8 self-check — schema-only, no non-schema keys, nothing to strip.
 Every non-E2 example carries `defaultOutboundNumberId: 1` (Automatic) — the dashboard's create-time
 default — **with a placeholder `failoverOutboundNumberId`** you complete with a **real owned number ID**
 before saving; Automatic requires a real failover in both directions, so completing that failover (or
 setting a real `defaultOutboundNumberId` instead) is the one wiring step every file leaves you.
-**E4, E9 and E10** carry further account-specific values to swap for your own (see the notes below). They
+**E4, E9, E10 and E11** carry further account-specific values to swap for your own (see the notes below). They
 double as few-shot material and as executable documentation.
 
 Every example emits `provider` and `llm` (`schema.md` §5): a save keeps the agent's stored values when
@@ -32,6 +32,7 @@ the examples doing real work set Haiku 4.5.
 | `E8-inbound-frontdesk-identity.jsonc` | Hotel front desk; **`tone`/`verbosity` + `elevenLabsSettings` showcase** | inbound | ElevenLabs (`en`); complex via prompt length → Haiku 4.5 |
 | `E9-inbound-support-transfer-sms.jsonc` | Support line; **group transfer as a disabled draft (id/extension omitted) + `sendSms`** (the default scaffold), a `## Known facts` variables section, a switched-off scenario | inbound | ElevenLabs (`en`); complex via scenarios → Haiku 4.5 |
 | `E10-inbound-booking-confirmation.jsonc` | Appointment booking; **`appointmentBooking` + `booking_confirmed` → `sendSms`** with `{{appointment.*}}` | inbound | ElevenLabs (`en`); complex via scenarios → Haiku 4.5 |
+| `E11-inbound-booking-event-type.jsonc` | Appointment booking against a **Cal.com / Calendly event type** (`eventTypeRef`, no `calendarId`) | inbound | ElevenLabs (`en`); complex via prompt length → Haiku 4.5 |
 
 ## Self-contained — references handled without new resources
 
@@ -39,8 +40,8 @@ Every example needs a real owned outbound number ID of yours (the placeholder `f
 replace, per Conventions), but no example needs any *other* company resource by default. Where an archetype
 would classically need one, most of these configs invent nothing and take the **substitute-first** path from
 [`generator-contract.md`](../generator-contract.md). Three capabilities have no zero-touch substitute —
-reaching a human, calling a custom tool, and booking into a calendar — so **E4** and **E10** ship the tool
-and calendar wired (each with the values to replace named in its header), while **E9** ships its human
+reaching a human, calling a custom tool, and booking into a calendar — so **E4**, **E10** and **E11** ship the tool,
+calendar or event type wired (each with the values to replace named in its header), while **E9** ships its human
 handoff as a **disabled group draft** the user finishes in the dashboard:
 
 - **E1** — the receptionist's FAQ lives in the `goalPrompt` (a screenful of facts is lower-latency than a
@@ -97,6 +98,10 @@ handoff as a **disabled group draft** the user finishes in the dashboard:
   are empty until a booking actually succeeds — and why the message carries no link: there is no
   booking/calendar-link variable to put in one. `when` is omitted on that scenario because the platform
   overwrites it. Replace the calendar `integrationId`/`calendarId` and the SMS `senderNumber`.
+- **E11** — the booking-platform sibling of E10: `appointmentBooking` against a Cal.com or Calendly event
+  type, with `eventTypeRef`, `eventTypeName`, `schedulingUrl`, `needsEmail` and `inviteEmailVariable` in place
+  of `calendarId`. Cal.com or Calendly must be enabled for the company before it saves; then replace the
+  integration and the event-type values with the ones the Dashboard's picker stores.
 
 > **Provider coverage:** E4 *chooses* Deepgram on a language the platform would give ElevenLabs; E5 sets
 > ElevenLabs because its multilingual config needs it; E6 lands on Deepgram because `en-US` is
@@ -106,7 +111,7 @@ handoff as a **disabled group draft** the user finishes in the dashboard:
 
 - **`.jsonc`** — the `//` comments are teaching notes; strip them for a pure-JSON paste. The body has no
   `_requiredResources` and no placeholder resource IDs inside a live reference, but every non-E2 file carries
-  a **placeholder `failoverOutboundNumberId`** to replace, and E4/E9/E10 carry further illustrative values.
+  a **placeholder `failoverOutboundNumberId`** to replace, and E4/E9/E10/E11 carry further illustrative values.
   **Outbound numbers:** completing the outbound number is a **setup step**. Every non-E2 example is
   `defaultOutboundNumberId: 1` (Automatic) — the dashboard's create-time default — with a placeholder
   `failoverOutboundNumberId`; complete it with a real owned number ID (Automatic requires a real failover
@@ -118,6 +123,8 @@ handoff as a **disabled group draft** the user finishes in the dashboard:
     draft with the id/extension **omitted** — finish it in the dashboard rather than substituting an ID here.
   - **E10** — `skills.appointmentBooking.integrationId` + `calendarId` (the connected calendar) and
     `params.senderNumber: "+15555550188"`.
+  - **E11** — `skills.appointmentBooking.integrationId` and the event-type fields (`eventTypeRef`,
+    `eventTypeName`, `schedulingUrl`, `needsEmail`).
   - **E4** — `scenarios[0].toolReferenceId` (the custom tool). Its `skills.extractData.endpoint` ships
     commented out, so there is nothing to replace unless you enable the webhook.
 

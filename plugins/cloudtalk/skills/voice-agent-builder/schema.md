@@ -355,9 +355,9 @@ useful shape — it ships a skill switched-off for the user to finish in the das
 ```
 
 > **Some of these need an already-created company object** (a custom tool, agent/group, or calendar
-> integration) — those are **not** self-contained: a human must create/select the resource and wire its
+> integration or booking platform) — those are **not** self-contained: a human must create/select the resource and wire its
 > ID in the UI. A direct `transferToHuman`/`answerQuestions` transfer needs a real agent/group **id +
-> extension**, and `appointmentBooking` needs a connected calendar. When the real values aren't available,
+> extension**, and `appointmentBooking` needs a connected calendar or booking platform. When the real values aren't available,
 > the shape that still saves is the skill **switched off** — `enabled: false` with `rules: []` — which the
 > dashboard surfaces as *"Requires configuration"* for the user to finish (§6.1). The `authoring` tier per
 > field is in the §2 column and [`fields.json`](./fields.json); **what each referenced object is and how to
@@ -371,7 +371,7 @@ useful shape — it ships a skill switched-off for the user to finish in the das
 | `takeMessage` | Take a message | Takes a message and collects caller details |
 | `extractData` | Extract information | Capture specific data points during the call |
 | `answerQuestions` | Answer Questions | Answer FAQs from your knowledge base |
-| `appointmentBooking` | Appointment Booking | Connect your calendar so the agent can book meetings |
+| `appointmentBooking` | Appointment Booking | Connect your calendar or booking platform so the agent can book meetings |
 | `custom` | Custom | Configure your own skill |
 
 ### 6.1 `transferToHuman`
@@ -501,28 +501,60 @@ skills. **`action` tells the agent how to behave when it *can't* answer a questi
   simpler default — pick `admitUncertainty`/`offerAlternative`, which need no target at all. Picking the
   action: behavioral §3.2.
 
-### 6.6 `appointmentBooking`  — needs a connected calendar integration
+### 6.6 `appointmentBooking`  — needs a connected integration and a calendar or an event type
+Booking runs against a connected integration and books **either** a calendar (Google, Outlook) **or** an
+event type (Cal.com, Calendly) — never both.
+
+A calendar:
 ```jsonc
 {
   "enabled": true,
-  "integrationId": "65f...",            // required — a calendar integration owned by the company
-  "calendarId": "primary",              // required
+  "integrationId": "65f...",            // required — a Google/Outlook integration owned by the company
+  "calendarId": "primary",              // required for a calendar; absent with an event type
   "eventName": "Discovery call",        // required
   "durationMinutes": 30,                // required — > 0
   "serviceDescription": "30-min intro call.",         // optional
   "calendarEventDescription": "Booked by Acme agent"  // optional
 }
 ```
-- `enabled: true` ⇒ `integrationId`, `calendarId`, `eventName` required; `durationMinutes > 0`.
+An event type:
+```jsonc
+{
+  "enabled": true,
+  "integrationId": "65f...",            // required — a Cal.com/Calendly integration owned by the company
+  "eventTypeRef": "123456",             // the event type the agent books; instead of calendarId
+  "eventTypeName": "Discovery call",    // required with eventTypeRef
+  "schedulingUrl": "https://cal.com/acme/discovery",  // required with eventTypeRef — absolute https
+  "needsEmail": true,                   // required with eventTypeRef — `false` is a value
+  "inviteEmailVariable": "contact.emails",            // optional, only with eventTypeRef
+  "eventName": "Discovery call",        // required
+  "durationMinutes": 30                 // required — > 0
+}
+```
+- `enabled: true` ⇒ `integrationId`, `eventName` and a booking target required; `durationMinutes > 0`.
+- **Booking target** — `calendarId` (Google, Outlook) and `eventTypeRef` (Cal.com, Calendly) are always
+  mutually exclusive: both set is refused, switched on or off. Switched on, exactly one is required; a
+  switched-off calendar draft may carry neither. The event-type rules are hard even while switched off: a
+  skill that carries `eventTypeRef`, or whose integration is Cal.com or Calendly, is refused unless it books
+  one complete event type. With `eventTypeRef`, `eventTypeName`, an absolute https `schedulingUrl` and
+  `needsEmail` are required; the dashboard's event-type picker stores the four together, so they are
+  `reference` fields (see [`fields.json`](./fields.json)), copied from a saved agent, never invented.
+- **`inviteEmailVariable`** — a variable name such as `contact.emails` that the platform's invite takes the
+  caller's e-mail from; only with `eventTypeRef`. Absent, an event type that needs an e-mail books no one.
+  The deprecated `inviteEmailSource` (only `"contact"`, the same as `contact.emails`) is accepted on a
+  request but never returned; author `inviteEmailVariable`.
 - **`durationMinutes`** — any positive duration (e.g. `15` or `30` minutes); set whatever the booked
   service needs.
 - **`serviceDescription`** — a description of the service, made available to the AI Voice Agent's LLM so it knows
   what it is booking and can communicate it to the contact.
 - **`calendarEventDescription`** — the description written onto the scheduled calendar event itself (may be
   customer-facing).
-- **Server-managed — do not author:** `integrationType`, `availabilityToolId`, `bookingToolId`,
+- **Server-managed — do not author:** `integrationType` (`google_calendar`, `outlook`, `cal_com` or
+  `calendly`, resolved from the integration), `availabilityToolId`, `bookingToolId`,
   `errorCode`. Strip `errorCode` if present in an export.
-- `integrationId`/`calendarId` are company-scoped — see [referenced-resources](./referenced-resources.md).
+- `integrationId`, `calendarId` and `eventTypeRef` are company-scoped — see [referenced-resources](./referenced-resources.md).
+  A Cal.com or Calendly integration also needs that booking platform enabled for the company, or the save is
+  refused.
 - Booking data is exposed as `{{appointment.*}}` template variables (behavioral §6); to text a confirmation
   after an in-call booking, use a `triggerType: "booking_confirmed"` scenario (§7.1) — there is no
   customer-facing booking/calendar link.
@@ -632,7 +664,7 @@ specific number id must be **real ground truth**:
 
 The same "owned by this company" caveat applies to every
 company-scoped reference (`toolReferenceId`, `agentId`, `groupId`, `knowledgeBaseIds`, `senderNumber`,
-`integrationId`/`calendarId`) — [referenced-resources](./referenced-resources.md) covers each.
+`integrationId`/`calendarId`/`eventTypeRef`) — [referenced-resources](./referenced-resources.md) covers each.
 
 ---
 

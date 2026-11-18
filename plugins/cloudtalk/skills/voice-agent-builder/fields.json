@@ -101,14 +101,20 @@
       { "path": "skills.answerQuestions.transferConfig", "authoring": "reference", "resourceKind": "agent_or_group", "notes": "Same destination rules as transferToHuman.rules: destination is the fixed enum agent|group|call_flow, but the concrete target IDs are FREE-FORM (agent id+extension from list_agents; group id+extension) -- NOT an API-provided option list. Don't emit a wired group target here either (a group's extension can't be read programmatically): scaffold transferToHuman as a disabled draft (a rule with destination \"group\" and the id/extension OMITTED) for the user to finish in the dashboard, or -- simpler -- pick admitUncertainty/offerAlternative, which need no target." }
     ],
     "appointmentBooking": [
-      { "path": "skills.appointmentBooking.enabled", "authoring": "generate", "notes": "Required bool. `enabled: true` needs a real connected calendar integration (integrationId + calendarId, both reference); until those exist ship a DISABLED DRAFT (`enabled: false`) and the dashboard shows the skill as \"Requires configuration\" for the user to finish." },
+      { "path": "skills.appointmentBooking.enabled", "authoring": "generate", "notes": "Required bool. `enabled: true` needs a connected integration (integrationId) and its booking target: a calendar (calendarId; Google, Outlook) or an event type (eventTypeRef; Cal.com, Calendly), all reference. Until those exist ship a DISABLED DRAFT (`enabled: false`) and the dashboard shows the skill as \"Requires configuration\" for the user to finish." },
       { "path": "skills.appointmentBooking.integrationId", "authoring": "reference", "resourceKind": "calendarIntegration" },
-      { "path": "skills.appointmentBooking.calendarId", "authoring": "reference", "resourceKind": "calendar" },
+      { "path": "skills.appointmentBooking.calendarId", "authoring": "reference", "resourceKind": "calendar", "notes": "The calendar of a Google or Outlook integration. Mutually exclusive with eventTypeRef." },
+      { "path": "skills.appointmentBooking.eventTypeRef", "authoring": "reference", "resourceKind": "eventType", "notes": "The Cal.com/Calendly event type the agent books. Mutually exclusive with calendarId; requires eventTypeName, schedulingUrl and needsEmail." },
+      { "path": "skills.appointmentBooking.eventTypeName", "authoring": "reference", "notes": "The event type's display name, stored with eventTypeRef." },
+      { "path": "skills.appointmentBooking.schedulingUrl", "authoring": "reference", "notes": "The event type's absolute https booking link, stored with eventTypeRef." },
+      { "path": "skills.appointmentBooking.needsEmail", "authoring": "reference", "notes": "Whether the event type requires the invitee's e-mail, stored with eventTypeRef." },
+      { "path": "skills.appointmentBooking.inviteEmailVariable", "authoring": "reference", "notes": "The variable the platform's invite takes the caller's e-mail from (e.g. contact.emails); only with eventTypeRef." },
+      { "path": "skills.appointmentBooking.inviteEmailSource", "authoring": "reference", "notes": "Deprecated, request-only alias of inviteEmailVariable (only `contact`); never returned." },
       { "path": "skills.appointmentBooking.eventName", "authoring": "generate" },
       { "path": "skills.appointmentBooking.durationMinutes", "authoring": "generate", "notes": "Any positive duration (e.g. 15 or 30 minutes); whatever the booked service needs." },
       { "path": "skills.appointmentBooking.serviceDescription", "authoring": "generate", "notes": "A description of the service, made available to the AI Voice Agent's LLM so it knows what it is booking and can communicate it to the contact." },
       { "path": "skills.appointmentBooking.calendarEventDescription", "authoring": "generate", "notes": "The description written onto the scheduled calendar event itself (may be customer-facing)." },
-      { "path": "skills.appointmentBooking.integrationType", "authoring": "forbidden", "notes": "Server-resolved (google_calendar|outlook)." },
+      { "path": "skills.appointmentBooking.integrationType", "authoring": "forbidden", "notes": "Server-resolved (google_calendar|outlook|cal_com|calendly); not authored." },
       { "path": "skills.appointmentBooking.availabilityToolId", "authoring": "forbidden", "notes": "Built-in tool ID created server-side." },
       { "path": "skills.appointmentBooking.bookingToolId", "authoring": "forbidden", "notes": "Built-in tool ID created server-side." },
       { "path": "skills.appointmentBooking.errorCode", "authoring": "forbidden", "notes": "Read-only status; strip before importing." }

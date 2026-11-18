@@ -79,7 +79,7 @@ say so and offer the nearest supported path, never fake it:
 | `mcp-tools.md` | Connected mode only — the tool surface, write-safety rules, and what has no tool yet (with workarounds). |
 | `variables.md` | Whenever a `{{variable}}` is in play — what resolves, when, and the silent empty-string trap. |
 | `practice-call.md` | After a save, or whenever the user wants to try the agent: a practice call in chat that any app can run (the user plays the caller), its plain-words score, and the replay's caller cards. |
-| `examples/` (E1–E10) | Few-shots. **E1** (ElevenLabs, switched-off transfer) and **E6** (Deepgram via `en-US`) are the save-ready archetypes; **E3** is the explicit-Call-Flow exception; **E4** adds a `toolCall` scenario and an `extractData` webhook; **E7** adds `takeMessage`; **E8** shows `tone`/`verbosity` + ElevenLabs tuning; **E9** scaffolds a group transfer as a disabled draft (`destination: "group"`, id/extension omitted — completed in the dashboard) + `sendSms`; **E10** is appointment booking + a `booking_confirmed` SMS. Only **E2** exits `1`, deliberately (the both-directions failover gate). |
+| `examples/` (E1–E11) | Few-shots. **E1** (ElevenLabs, switched-off transfer) and **E6** (Deepgram via `en-US`) are the save-ready archetypes; **E3** is the explicit-Call-Flow exception; **E4** adds a `toolCall` scenario and an `extractData` webhook; **E7** adds `takeMessage`; **E8** shows `tone`/`verbosity` + ElevenLabs tuning; **E9** scaffolds a group transfer as a disabled draft (`destination: "group"`, id/extension omitted — completed in the dashboard) + `sendSms`; **E10** is appointment booking + a `booking_confirmed` SMS; **E11** books a Cal.com or Calendly event type (`eventTypeRef` instead of `calendarId`). Only **E2** exits `1`, deliberately (the both-directions failover gate). |
 
 ## Workflow — follow in order
 
@@ -87,7 +87,7 @@ say so and offer the nearest supported path, never fake it:
 
 - **State the job** in one line: who calls (or is called), and the outcome.
 - **Reason about what *this* agent needs to do it well** — don't just tick a static list. An order-taker
-  needs the fields to capture + read-back; a booking agent needs a real calendar (or a "log it, a human
+  needs the fields to capture + read-back; a booking agent needs a real calendar or booking platform event type (or a "log it, a human
   books" fallback); a support agent may need a KB; an outbound agent needs callee context + `{{variables}}`.
 - **Author the Design inputs. Collect the Ground-truth inputs.** Connected, collect by reading: the agent's
   current document, the number list, the group/agent lists. Ask the user about a gap **only if** it is
