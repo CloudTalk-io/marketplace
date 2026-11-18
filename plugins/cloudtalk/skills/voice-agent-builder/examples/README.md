@@ -32,6 +32,7 @@ the examples doing real work set Haiku 4.5.
 | `E8-inbound-frontdesk-identity.jsonc` | Hotel front desk; **`tone`/`verbosity` + `elevenLabsSettings` showcase** | inbound | ElevenLabs (`en`); complex via prompt length → Haiku 4.5 |
 | `E9-inbound-support-transfer-sms.jsonc` | Support line; **group transfer as a disabled draft (id/extension omitted) + `sendSms`** (the default scaffold), a `## Known facts` variables section, a switched-off scenario | inbound | ElevenLabs (`en`); complex via scenarios → Haiku 4.5 |
 | `E10-inbound-booking-confirmation.jsonc` | Appointment booking; **`appointmentBooking` + `booking_confirmed` → `sendSms`** with `{{appointment.*}}` | inbound | ElevenLabs (`en`); complex via scenarios → Haiku 4.5 |
+| `E11-inbound-booking-event-type.jsonc` | Appointment booking against a **Cal.com / Calendly event type** (`eventTypeRef`, no `calendarId`) | inbound | ElevenLabs (`en`); complex via prompt length → Haiku 4.5 |
 
 ## Self-contained — references handled without new resources
 
@@ -97,6 +98,10 @@ handoff as a **disabled group draft** the user finishes in the dashboard:
   are empty until a booking actually succeeds — and why the message carries no link: there is no
   booking/calendar-link variable to put in one. `when` is omitted on that scenario because the platform
   overwrites it. Replace the calendar `integrationId`/`calendarId` and the SMS `senderNumber`.
+- **E11** — the booking-platform sibling of E10: `appointmentBooking` against a Cal.com or Calendly event
+  type, with `eventTypeRef`, `eventTypeName`, `schedulingUrl`, `needsEmail` and `inviteEmailVariable` in place
+  of `calendarId`. Replace the integration and the event-type values with the ones the Dashboard's picker
+  stores.
 
 > **Provider coverage:** E4 *chooses* Deepgram on a language the platform would give ElevenLabs; E5 sets
 > ElevenLabs because its multilingual config needs it; E6 lands on Deepgram because `en-US` is
@@ -118,6 +123,8 @@ handoff as a **disabled group draft** the user finishes in the dashboard:
     draft with the id/extension **omitted** — finish it in the dashboard rather than substituting an ID here.
   - **E10** — `skills.appointmentBooking.integrationId` + `calendarId` (the connected calendar) and
     `params.senderNumber: "+15555550188"`.
+  - **E11** — `skills.appointmentBooking.integrationId` and the event-type fields (`eventTypeRef`,
+    `eventTypeName`, `schedulingUrl`, `needsEmail`).
   - **E4** — `scenarios[0].toolReferenceId` (the custom tool). Its `skills.extractData.endpoint` ships
     commented out, so there is nothing to replace unless you enable the webhook.
 

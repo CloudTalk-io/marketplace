@@ -87,7 +87,7 @@ say so and offer the nearest supported path, never fake it:
 
 - **State the job** in one line: who calls (or is called), and the outcome.
 - **Reason about what *this* agent needs to do it well** — don't just tick a static list. An order-taker
-  needs the fields to capture + read-back; a booking agent needs a real calendar (or a "log it, a human
+  needs the fields to capture + read-back; a booking agent needs a real calendar or booking platform event type (or a "log it, a human
   books" fallback); a support agent may need a KB; an outbound agent needs callee context + `{{variables}}`.
 - **Author the Design inputs. Collect the Ground-truth inputs.** Connected, collect by reading: the agent's
   current document, the number list, the group/agent lists. Ask the user about a gap **only if** it is

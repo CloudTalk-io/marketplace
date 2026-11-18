@@ -177,7 +177,7 @@ called. Only the get and write responses carry the numeric one: `voice_agent.voi
 | Clone an agent | `get` → `create`; decide deliberately whether `knowledgeBaseIds` carry over — and **tool assignments do not copy**: re-assign them |
 | Inbound number routing (which number an agent answers) | Dashboard only |
 | A ring group's **extension** | `cloudtalk_list_groups` gives the id and name only — take `groupExtension` from the Dashboard, the user, or the agent's current config, or ship the transfer skill switched off ([`referenced-resources.md`](./referenced-resources.md)) |
-| Read calendar integrations | No MCP read — `appointmentBooking` stays ask/omit + **disabled draft** until the user wires real IDs from the Dashboard ([`referenced-resources.md`](./referenced-resources.md)) |
+| Read calendar or booking-platform integrations and event types | No MCP read — `appointmentBooking` stays ask/omit + **disabled draft** until the user wires real IDs from the Dashboard ([`referenced-resources.md`](./referenced-resources.md)) |
 
 ## Test calls
 

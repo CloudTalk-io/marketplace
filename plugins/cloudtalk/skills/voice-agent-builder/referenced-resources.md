@@ -162,9 +162,10 @@ find the resource kind below.
   Call Flow** — for a standalone agent it just ends the call — so it is used on request, not as a stand-in
   for a missing target.
 
-### Appointment booking — `appointmentBooking.integrationId` / `calendarId`  *(action: create)*
+### Appointment booking — `appointmentBooking.integrationId` / `calendarId` / `eventTypeRef`  *(action: create)*
 
-- **What:** lets the agent book against a connected Google Calendar / Outlook integration.
+- **What:** lets the agent book against a connected integration: a calendar of a Google Calendar / Outlook
+  integration, or an event type of a Cal.com / Calendly integration.
 - **Connected:** **no MCP read exists for calendar integrations** — the connection and its IDs live in the
   Dashboard only. Until the integration exists, the config ships the skill as a **disabled draft**
   (`enabled: false`) or omits it, and the setup step goes in the chat checklist. A draft keeps every
@@ -175,10 +176,14 @@ find the resource kind below.
   the target calendar from it. What CloudTalk accesses in a connected calendar is covered in CloudTalk's
   Help Center documentation on calendar integrations.
 - **Wire:** use the connected integration's ID in `integrationId` and the target calendar within it in
-  `calendarId`. Leave the server-managed fields (`integrationType`,
+  `calendarId`; for Cal.com or Calendly use `eventTypeRef` instead (never both), with `eventTypeName`,
+  `schedulingUrl` and `needsEmail` as the dashboard's event-type picker stores them, and optionally
+  `inviteEmailVariable`. Cal.com and Calendly also need to be enabled for the company, or the save is
+  refused; the event-type fields have no MCP read, so a draft leaves them out. Leave the server-managed fields (`integrationType`,
   `availabilityToolId`, `bookingToolId`, `errorCode`) **out** — the server fills them on save.
-- **No customer-facing link or invite:** the booked event lands **only** in the company's connected calendar
-  — **no email invite, no attendees, and the event is not added to the customer's calendar.** The runtime
+- **No customer-facing link or invite on a calendar:** the booked event lands **only** in the company's
+  connected calendar — **no email invite, no attendees, and the event is not added to the customer's
+  calendar.** (For an event type, the platform's invite takes the caller's e-mail from `inviteEmailVariable`.) The runtime
   discards the calendar's event link, so there is **no `{{appointment.link}}`-style variable.** To text the
   customer a confirmation, use a `booking_confirmed` `sendSms` scenario with `{{appointment.*}}` details
   (schema §7.1; [`variables.md`](./variables.md)) — not a per-appointment link.
@@ -212,8 +217,8 @@ or wire them; enabling the skill/scenario *is* the activation. They are not `ref
 | `transfer_to_human` | `transferToHuman` enabled, or `answerQuestions.action == "transferToHuman"` | the skill's `rules` / `transferConfig` |
 | `end_call` | a scenario with `action: "hangup"` | the scenario's `when` / `reply` |
 | `send_sms` | a scenario with `action: "sendSms"` | the scenario's `params` |
-| `check_availability` | `appointmentBooking` enabled | the skill's calendar/event fields |
-| `book_appointment` | `appointmentBooking` enabled | the skill's calendar/event fields |
+| `check_availability` | `appointmentBooking` enabled | the skill's calendar or event-type fields |
+| `book_appointment` | `appointmentBooking` enabled | the skill's calendar or event-type fields |
 
 So the config JSON can fully activate `end_call` with **no external resource** — that's the backbone of a
 self-contained agent. `transfer_to_human` is the exception: the *tool* needs nothing, but pointing it at a

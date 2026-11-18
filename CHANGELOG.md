@@ -5,6 +5,17 @@ dated entry below, made whenever the config schema or the generation guidance ma
 Claude Code installs a release when the manifest version changes; the Claude app picks it up from the
 marketplace (Check for updates, or Sync automatically).
 
+## 0.3.3 — 2026-11-18
+
+- **`voice-agent-builder` knows booking platforms.** Appointment booking is no longer calendar-only: switching
+  it on needs an integration and either a calendar (Google, Outlook) or an event type (Cal.com, Calendly).
+  The field registry and schema §6.6 list the event-type fields (`eventTypeRef`, `eventTypeName`,
+  `schedulingUrl`, `needsEmail`, `inviteEmailVariable`, and the deprecated `inviteEmailSource`) with their
+  rules: the event type and `calendarId` are mutually exclusive, and an event type brings its name, an
+  absolute https link and the e-mail requirement. The validator accepts a valid event-type skill and
+  rejects an incomplete or conflicting one. New example E11 books a Cal.com event type next to E10's
+  calendar. A booking platform must also be enabled for the company, or the save is refused.
+
 ## 0.3.2 — 2026-11-15
 
 - **`voice-agent-builder` examples cover businesses outside healthcare.** Four of the ten example agents

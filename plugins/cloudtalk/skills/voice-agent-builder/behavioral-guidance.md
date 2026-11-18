@@ -371,7 +371,9 @@ tier — `referenced-resources.md`). What this **cannot** do:
   runtime. Offer a **static user-provided URL** (the company's public booking page, verbatim) if they want a
   link at all.
 - **No email invite**, and the event is **not added to the customer's calendar** — the booked event lands
-  only in the company's connected calendar (Google Calendar or Outlook), with no attendees.
+  only in the company's connected calendar (Google Calendar or Outlook), with no attendees. This describes a
+  calendar booking; for a Cal.com or Calendly event type the platform's invite takes the caller's e-mail from
+  `inviteEmailVariable`, and still no `{{appointment.*}}` variable carries a link.
 
 ---
 
@@ -592,9 +594,11 @@ available yet, and the dashboard shows the user the one field it still needs. Tw
   a handoff it can't perform; and when it is switched on, the same save rewrites those lines to offer the
   handoff (`SKILL.md` step 6). (Note that `appointmentBooking` below is the opposite case — its `integrationId`
   and `calendarId` are string fields, so an empty string is the right *not-chosen-yet* draft value there.)
-- **`appointmentBooking`** — disabled, with the non-ID fields authored (`eventName`, `durationMinutes`,
-  the descriptions) while `integrationId` and `calendarId` stay **empty strings** until a calendar is
-  connected. Keep required keys **present with an empty value rather than absent**: an empty string reads
+- **`appointmentBooking`** — switching it on needs an integration and either a calendar (Google, Outlook)
+  or an event type (Cal.com, Calendly). Disabled, with the non-ID fields authored (`eventName`,
+  `durationMinutes`, the descriptions) while `integrationId` and `calendarId` stay **empty strings** until
+  a calendar is connected; for a booking platform leave `calendarId` and the event-type fields out until
+  the user has picked the event type in the dashboard. Keep required keys **present with an empty value rather than absent**: an empty string reads
   as *not chosen yet* and saves cleanly, while dropping a required key is what breaks an import (the same
   rule as `enabled` — `generator-contract.md`). On a **switched-off** skill those empty IDs are a noted
   gap, not an error; the moment it is enabled they become required.

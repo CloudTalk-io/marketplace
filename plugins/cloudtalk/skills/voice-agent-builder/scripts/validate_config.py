@@ -180,6 +180,11 @@ CONFIRM_FIRST_CODES = {"outbound-leftover-default"}
 # never a config worth pasting. Its severity stays WARN in the report; only this gate treats it as fatal.
 SAVE_BLOCKING_CODES = SAVE_REFUSED_CODES | {"no-hangup"}
 
+# The booking skill's event-type link and invite variable (the server's rules: an absolute https URL; a
+# dotted variable name or a contact.custom.<title> reference).
+ABSOLUTE_HTTPS_RE = re.compile(r"^https://[^\s/?#]+\S*$")
+INVITE_VARIABLE_RE = re.compile(r"^(?:(?i:contact\.custom\.)[^{}\n]+|[a-zA-Z_][a-zA-Z0-9_.]*)$")
+
 # Severity glyphs for the human report. Windows consoles default to cp1252/cp437, where printing one of
 # these raises UnicodeEncodeError and the whole report is lost — hence the ASCII twin.
 GLYPHS = {"ERROR": "✗", "WARN": "⚠", "INFO": "ℹ", "ok": "✅", "bullet": "•"}
@@ -384,6 +389,7 @@ def flag_sentinels(cfg, rep):
         if isinstance(ab, dict):
             check("skills.appointmentBooking.integrationId", ab.get("integrationId"))
             check("skills.appointmentBooking.calendarId", ab.get("calendarId"))
+            check("skills.appointmentBooking.eventTypeRef", ab.get("eventTypeRef"))
     scenarios = cfg.get("scenarios")
     if isinstance(scenarios, list):
         for i, s in enumerate(scenarios):
@@ -1193,11 +1199,75 @@ def validate_skills(cfg, rep, direction, fields=None):
     if isinstance(ab, dict):
         ab_on = _skill_enabled(ab, "skills.appointmentBooking", rep)
         level = "ERROR" if ab_on else "INFO"
-        for k in ("integrationId", "calendarId", "eventName"):
+        # A switched-off skill's semantic slips are notes for the draft, not refusals: the server reports
+        # them as warnings there.
+        sem_level = "ERROR" if ab_on else "WARN"
+
+        def text(key):
+            val = ab.get(key)
+            return val.strip() if isinstance(val, str) else ""
+
+        calendar, event_type = text("calendarId"), text("eventTypeRef")
+        for k in ("integrationId", "eventName"):
             if not ab.get(k):
                 rep.at(level, "missing-required", "skills.appointmentBooking.%s" % k,
                        "Required when appointmentBooking is enabled — a switched-off skill missing it is "
-                       "unfinished: connect the calendar in the dashboard, then switch it on (schema §6.6).")
+                       "unfinished: connect the integration in the dashboard, then switch it on (schema §6.6).")
+        if calendar and event_type:
+            rep.at(sem_level, "booking-target-conflict", "skills.appointmentBooking",
+                   "calendarId and eventTypeRef are mutually exclusive: a calendar (Google, Outlook) or an "
+                   "event type (Cal.com, Calendly), never both (schema §6.6).")
+        elif not calendar and not event_type:
+            rep.at(level, "missing-required", "skills.appointmentBooking.calendarId",
+                   "Required when appointmentBooking is enabled, unless an event type is booked instead "
+                   "(eventTypeRef, schema §6.6) — a switched-off skill missing both is unfinished: connect "
+                   "the calendar or booking platform in the dashboard, then switch it on.")
+        if event_type:
+            for k in ("eventTypeName", "schedulingUrl"):
+                if not text(k):
+                    rep.at(level, "missing-required", "skills.appointmentBooking.%s" % k,
+                           "Required with eventTypeRef — the dashboard stores it together with the event "
+                           "type (schema §6.6).")
+            url = text("schedulingUrl")
+            if url and not ABSOLUTE_HTTPS_RE.match(url):
+                rep.at(sem_level, "bad-scheduling-url", "skills.appointmentBooking.schedulingUrl",
+                       "Must be an absolute https URL (schema §6.6).")
+            if "needsEmail" not in ab or ab.get("needsEmail") is None:
+                rep.at(level, "missing-required", "skills.appointmentBooking.needsEmail",
+                       "Required with eventTypeRef: true or false, whether the event type asks for the "
+                       "invitee's e-mail — `false` is a value, not an absence (schema §6.6).")
+            elif not isinstance(ab["needsEmail"], bool):
+                rep.err("bad-type", "skills.appointmentBooking.needsEmail",
+                        "Expected true or false (schema §6.6).")
+        elif calendar:
+            for k in ("eventTypeName", "schedulingUrl", "needsEmail"):
+                if ab.get(k) not in (None, ""):
+                    rep.at(sem_level, "event-type-field-without-ref", "skills.appointmentBooking.%s" % k,
+                           "Only valid with eventTypeRef — a calendar booking carries no event-type fields "
+                           "(schema §6.6).")
+        for k in ("inviteEmailVariable", "inviteEmailSource"):
+            if k in ab and not isinstance(ab[k], str):
+                rep.err("bad-type", "skills.appointmentBooking.%s" % k, "Expected a string (schema §6.6).")
+        variable = text("inviteEmailVariable")
+        if variable:
+            bare = variable[2:-2].strip() if variable.startswith("{{") and variable.endswith("}}") else variable
+            if not INVITE_VARIABLE_RE.match(bare) or len(bare) > 200:
+                rep.at(sem_level, "bad-invite-variable", "skills.appointmentBooking.inviteEmailVariable",
+                       "Must be a variable name such as contact.emails (schema §6.6).")
+            elif not event_type:
+                rep.at(sem_level, "invite-without-event-type", "skills.appointmentBooking.inviteEmailVariable",
+                       "Only valid with eventTypeRef (schema §6.6).")
+        legacy = text("inviteEmailSource")
+        if legacy:
+            rep.warn("deprecated-field", "skills.appointmentBooking.inviteEmailSource",
+                     "Deprecated, request-only and never returned — author inviteEmailVariable instead "
+                     "(\"contact\" is contact.emails; schema §6.6).")
+            if legacy != "contact":
+                rep.at(sem_level, "bad-enum", "skills.appointmentBooking.inviteEmailSource",
+                       "Must be \"contact\" (schema §6.6).")
+            elif not event_type:
+                rep.at(sem_level, "invite-without-event-type", "skills.appointmentBooking.inviteEmailSource",
+                       "Only valid with eventTypeRef (schema §6.6).")
         dm = ab.get("durationMinutes")
         if dm is None or not is_num(dm) or dm <= 0:
             rep.at(level, "bad-duration", "skills.appointmentBooking.durationMinutes",
@@ -1206,9 +1276,12 @@ def validate_skills(cfg, rep, direction, fields=None):
             if k in ab:
                 rep.warn("server-managed-field", "skills.appointmentBooking.%s" % k,
                          "Server-managed — do not author; strip before import (schema §6.6).")
+        target_done = bool(event_type and text("eventTypeName") and text("schedulingUrl")
+                           and isinstance(ab.get("needsEmail"), bool)) or bool(calendar and not event_type)
         rep.reference("skills.appointmentBooking.integrationId", "calendarIntegration",
-                      pending=not all(ab.get(k) for k in ("integrationId", "calendarId", "eventName")),
-                      what="Connect a calendar integration (OAuth) and use its ID + a calendarId within it "
+                      pending=not (ab.get("integrationId") and target_done and ab.get("eventName")),
+                      what="Connect a calendar (Google, Outlook) or booking platform (Cal.com, Calendly) "
+                      "integration and use its ID, plus a calendarId within it or the chosen event type "
                       "(referenced-resources.md#appointment-booking).")
 
 

@@ -683,6 +683,51 @@ expect_no_code("appointmentBooking's server-managed keys are documented, not unk
                    "durationMinutes": 30, "integrationType": "google_calendar"}}),
                "unknown-field")
 
+# 19b) appointmentBooking books a calendar OR an event type (schema §6.6): the event-type skill validates,
+# and an incomplete or conflicting one is refused the way the API's targetIssues refuses it.
+def booking(**fields):
+    base = {"enabled": True, "integrationId": "6a1b2c3d4e5f60718293a4b6", "eventName": "Discovery call",
+            "durationMinutes": 30}
+    base.update(fields)
+    return lambda c: c.__setitem__("skills", {"appointmentBooking": base})
+
+
+EVENT_TYPE = {"eventTypeRef": "1234567", "eventTypeName": "Discovery call",
+              "schedulingUrl": "https://cal.com/acme/discovery", "needsEmail": False}
+expect_clean("event-type booking skill, with no calendarId", booking(**EVENT_TYPE))
+expect_clean("event-type booking skill with an invite variable",
+             booking(**EVENT_TYPE, inviteEmailVariable="contact.emails"))
+expect_clean("event-type booking skill with a braced custom invite variable",
+             booking(**EVENT_TYPE, inviteEmailVariable="{{ contact.custom.work email }}"))
+expect_clean("calendar booking skill is unchanged", booking(calendarId="primary"))
+expect_error("enabled booking with neither calendar nor event type", booking(), "missing-required")
+expect_error("calendarId and eventTypeRef together", booking(calendarId="primary", **EVENT_TYPE),
+             "booking-target-conflict")
+expect_warn("a switched-off skill's target conflict is a warning",
+            booking(enabled=False, calendarId="primary", **EVENT_TYPE), "booking-target-conflict")
+for _field in ("eventTypeName", "schedulingUrl", "needsEmail"):
+    expect_error("eventTypeRef without %s" % _field,
+                 booking(**{k: v for k, v in EVENT_TYPE.items() if k != _field}), "missing-required")
+expect_no_code("a switched-off event-type draft with the fields missing is not an error",
+               booking(enabled=False, eventTypeRef="1234567"), "missing-required")
+expect_error("schedulingUrl over http", booking(**{**EVENT_TYPE, "schedulingUrl": "http://cal.com/acme"}),
+             "bad-scheduling-url")
+expect_error("schedulingUrl that is relative", booking(**{**EVENT_TYPE, "schedulingUrl": "/acme/discovery"}),
+             "bad-scheduling-url")
+expect_error("needsEmail as a string", booking(**{**EVENT_TYPE, "needsEmail": "no"}), "bad-type")
+expect_error("inviteEmailVariable that is not a variable name",
+             booking(**EVENT_TYPE, inviteEmailVariable="not a variable"), "bad-invite-variable")
+expect_error("inviteEmailVariable without an event type",
+             booking(calendarId="primary", inviteEmailVariable="contact.emails"), "invite-without-event-type")
+expect_error("legacy inviteEmailSource other than contact",
+             booking(**EVENT_TYPE, inviteEmailSource="agent"), "bad-enum")
+expect_warn("legacy inviteEmailSource is deprecated",
+            booking(**EVENT_TYPE, inviteEmailSource="contact"), "deprecated-field")
+expect_error("an event-type field next to a calendar",
+             booking(calendarId="primary", needsEmail=True), "event-type-field-without-ref")
+expect_error("a placeholder event type id", booking(**{**EVENT_TYPE, "eventTypeRef": "REPLACE_WITH_EVENT_TYPE"}),
+             "sentinel-placeholder")
+
 # 20) A section sent with the wrong JSON type must report, not be skipped by an isinstance guard.
 expect_error("skills as a list", lambda c: c.__setitem__("skills", []), "bad-type")
 expect_error("transferToHuman as a list",
