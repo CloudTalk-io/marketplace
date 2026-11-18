@@ -738,7 +738,10 @@ for _url, _accepted in (("https://:443/acme", True), ("https://user@:443/acme", 
                         ("https://cal.com/x ", True), ("https://cal.com/a b", True),
                         (" https://cal.com/x", False), ("https://ca l.com/x", False),
                         ("https://cal.com/x\n", False), ("https:///x", False), ("https://", False),
-                        ("http://cal.com/x", False)):
+                        ("http://cal.com/x", False),
+                        ("https://cal.com:99999/a", True), ("https://cal.com:/a", True),
+                        ("https://[::1]:443/a", True), ("https://cal.com:abc/a", False),
+                        ("https://cal.com:80:80/a", False)):
     _cfg = copy.deepcopy(BASE)
     booking(**{**EVENT_TYPE, "schedulingUrl": _url})(_cfg)
     _flagged = "bad-scheduling-url" in error_codes(_cfg)
@@ -751,6 +754,17 @@ expect_no_code("a non-string integrationId is present, not missing",
 expect_error("calendarId that is not a string", booking(calendarId=5), "bad-type")
 expect_error("eventTypeRef that is not a string", booking(**{**EVENT_TYPE, "eventTypeRef": 1234567}), "bad-type")
 expect_error("whitespace-only eventName", booking(calendarId="primary", eventName="  "), "missing-required")
+for _key in ("eventTypeName", "schedulingUrl"):
+    expect_error("%s that is not a string" % _key, booking(**{**EVENT_TYPE, _key: 5}), "bad-type")
+    expect_no_code("a non-string %s is present, not missing" % _key, booking(**{**EVENT_TYPE, _key: 5}),
+                   "missing-required")
+_cfg = copy.deepcopy(BASE)
+booking(calendarId="primary", eventName="")(_cfg)
+_rep = V.Report()
+V.validate(_cfg, FIELDS, _rep)
+_msgs = [i.msg for i in _rep.issues if i.where == "skills.appointmentBooking.eventName"]
+if not _msgs or "integration" in _msgs[0]:
+    failures.append("a blank eventName must tell the author to set it, not to connect the integration: %s" % _msgs)
 expect_error("needsEmail as a string", booking(**{**EVENT_TYPE, "needsEmail": "no"}), "bad-type")
 expect_error("inviteEmailVariable that is not a variable name",
              booking(**EVENT_TYPE, inviteEmailVariable="not a variable"), "bad-invite-variable")

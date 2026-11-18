@@ -196,7 +196,11 @@ def is_absolute_https_url(value):
         parts = urlsplit(value)
     except ValueError:
         return False
-    return parts.scheme == "https" and bool(parts.netloc) and not re.search(r"\s", parts.netloc)
+    hostport = parts.netloc.rsplit("@", 1)[-1]
+    after_host = hostport.partition("]")[2] if hostport.startswith("[") else hostport.partition(":")[2]
+    port = after_host[1:] if hostport.startswith("[") and after_host.startswith(":") else after_host
+    return (parts.scheme == "https" and bool(parts.netloc) and not re.search(r"\s", parts.netloc)
+            and re.fullmatch(r"[0-9]*", port) is not None)
 
 
 BOOKING_PLATFORM_TYPES = ("cal_com", "calendly")
@@ -1230,17 +1234,19 @@ def validate_skills(cfg, rep, direction, fields=None):
             val = ab.get(key)
             return val.strip() if isinstance(val, str) else ""
 
-        for k in ("integrationId", "calendarId", "eventTypeRef", "eventName"):
+        for k in ("integrationId", "calendarId", "eventTypeRef", "eventName", "eventTypeName", "schedulingUrl"):
             if ab.get(k) is not None and not isinstance(ab[k], str):
                 rep.err("bad-type", "skills.appointmentBooking.%s" % k, "Expected a string (schema §6.6).")
         calendar, event_type = text("calendarId"), text("eventTypeRef")
         raw_url = ab.get("schedulingUrl") if isinstance(ab.get("schedulingUrl"), str) else ""
         scheduling_url_ok = is_absolute_https_url(raw_url)
-        for k in ("integrationId", "eventName"):
+        for k, hint in (("integrationId", "connect the integration in the dashboard, then switch it on"),
+                        ("eventName", "set the name the agent books under, then switch it on")):
             if not text(k) and not isinstance(ab.get(k), (int, float, bool, list, dict)):
-                rep.at(level_target if k == "integrationId" else level, "missing-required", "skills.appointmentBooking.%s" % k,
+                rep.at(level_target if k == "integrationId" else level, "missing-required",
+                       "skills.appointmentBooking.%s" % k,
                        "Required when appointmentBooking is enabled — a switched-off skill missing it is "
-                       "unfinished: connect the integration in the dashboard, then switch it on (schema §6.6).")
+                       "unfinished: %s (schema §6.6)." % hint)
         if calendar and event_type:
             rep.at(sem_level, "booking-target-conflict", "skills.appointmentBooking",
                    "calendarId and eventTypeRef are mutually exclusive: a calendar (Google, Outlook) or an "
@@ -1252,7 +1258,7 @@ def validate_skills(cfg, rep, direction, fields=None):
                    "the calendar or booking platform in the dashboard, then switch it on.")
         if event_type:
             for k in ("eventTypeName", "schedulingUrl"):
-                if not text(k):
+                if not text(k) and not isinstance(ab.get(k), (int, float, bool, list, dict)):
                     rep.at(level_target, "missing-required", "skills.appointmentBooking.%s" % k,
                            "Required with eventTypeRef — the dashboard stores it together with the event "
                            "type (schema §6.6).")
