@@ -13,7 +13,7 @@ marketplace (Check for updates, or Sync automatically).
   `schedulingUrl`, `needsEmail`, `inviteEmailVariable`, and the deprecated `inviteEmailSource`) with their
   rules: the event type and `calendarId` are mutually exclusive, and an event type brings its name, an
   absolute https link and the e-mail requirement. The validator accepts a valid event-type skill and
-  rejects an incomplete or conflicting one. New example E11 books a Cal.com event type next to E10's
+  rejects an incomplete or conflicting one, switched on or off, as the API does. New example E11 books a Cal.com event type next to E10's
   calendar. A booking platform must also be enabled for the company, or the save is refused.
 
 ## 0.3.2 — 2026-11-15

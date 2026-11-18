@@ -597,11 +597,14 @@ available yet, and the dashboard shows the user the one field it still needs. Tw
 - **`appointmentBooking`** — switching it on needs an integration and either a calendar (Google, Outlook)
   or an event type (Cal.com, Calendly). Disabled, with the non-ID fields authored (`eventName`,
   `durationMinutes`, the descriptions) while `integrationId` and `calendarId` stay **empty strings** until
-  a calendar is connected; for a booking platform leave `calendarId` and the event-type fields out until
-  the user has picked the event type in the dashboard. Keep required keys **present with an empty value rather than absent**: an empty string reads
+  a calendar is connected; for a booking platform leave `integrationId` empty and omit `calendarId` and
+  the event-type fields until the user has connected it and picked the event type in the dashboard (a
+  Cal.com or Calendly `integrationId` without a complete event type is refused even switched off, so never
+  author one half-way). Keep required keys **present with an empty value rather than absent**: an empty string reads
   as *not chosen yet* and saves cleanly, while dropping a required key is what breaks an import (the same
-  rule as `enabled` — `generator-contract.md`). On a **switched-off** skill those empty IDs are a noted
-  gap, not an error; the moment it is enabled they become required.
+  rule as `enabled` — `generator-contract.md`). On a **switched-off calendar** skill those empty IDs are a
+  noted gap, not an error; the moment it is enabled they become required. An event-type skill has no such
+  slack: its target rules are errors whatever `enabled` says.
 
 Draft minimums the platform requires even when disabled: every skill object carries `enabled`;
 `transferToHuman` also needs its `rules` key (`[]`, or a scaffolded rule with the id/extension omitted, is

@@ -703,26 +703,48 @@ expect_clean("calendar booking skill is unchanged", booking(calendarId="primary"
 expect_error("enabled booking with neither calendar nor event type", booking(), "missing-required")
 expect_error("calendarId and eventTypeRef together", booking(calendarId="primary", **EVENT_TYPE),
              "booking-target-conflict")
-expect_warn("a switched-off skill's target conflict is a warning",
-            booking(enabled=False, calendarId="primary", **EVENT_TYPE), "booking-target-conflict")
+expect_error("a switched-off skill's target conflict is still refused",
+             booking(enabled=False, calendarId="primary", **EVENT_TYPE), "booking-target-conflict")
 for _field in ("eventTypeName", "schedulingUrl", "needsEmail"):
     expect_error("eventTypeRef without %s" % _field,
                  booking(**{k: v for k, v in EVENT_TYPE.items() if k != _field}), "missing-required")
-for _name, _draft in (("an event-type draft with the fields missing", booking(enabled=False, eventTypeRef="1234567")),
-                      ("a draft with no target at all", booking(enabled=False)),
-                      ("a draft with both targets", booking(enabled=False, calendarId="primary", **EVENT_TYPE))):
+# The API's target rules are hard for an event-type skill even while it is switched off (bookingSaveInScope).
+for _name, _fields, _code in (
+        ("eventTypeRef with the event-type fields missing", {"eventTypeRef": "1234567"}, "missing-required"),
+        ("an http link", {**EVENT_TYPE, "schedulingUrl": "http://cal.com/acme"}, "bad-scheduling-url"),
+        ("a bad invite variable", {**EVENT_TYPE, "inviteEmailVariable": "not a variable"}, "bad-invite-variable"),
+        ("an invite source other than contact", {**EVENT_TYPE, "inviteEmailSource": "agent"}, "bad-enum"),
+        ("an empty integrationId", {**EVENT_TYPE, "integrationId": ""}, "missing-required"),
+        ("a calendar and an event type", {**EVENT_TYPE, "calendarId": "primary"}, "booking-target-conflict"),
+        ("a Cal.com integration with no eventTypeRef", {"integrationType": "cal_com", "calendarId": "primary"},
+         "missing-required"),
+        ("a Calendly integration with no target", {"integrationType": "calendly"}, "missing-required")):
+    expect_error("switched-off skill with " + _name, booking(enabled=False, **_fields), _code)
+# ...while a switched-off calendar skill is still just a draft.
+for _name, _fields in (("no target at all", {}),
+                       ("a Google calendar and no id", {"integrationType": "google_calendar"}),
+                       ("an event-type field next to a calendar", {"calendarId": "primary", "needsEmail": True})):
     _cfg = copy.deepcopy(BASE)
-    _draft(_cfg)
+    booking(enabled=False, **_fields)(_cfg)
     if error_codes(_cfg):
-        failures.append("switched-off booking skill, %s, must raise no error, got %s" % (_name, error_codes(_cfg)))
+        failures.append("switched-off calendar skill with %s must raise no error, got %s"
+                        % (_name, error_codes(_cfg)))
 expect_error("schedulingUrl over http", booking(**{**EVENT_TYPE, "schedulingUrl": "http://cal.com/acme"}),
              "bad-scheduling-url")
 expect_error("schedulingUrl that is relative", booking(**{**EVENT_TYPE, "schedulingUrl": "/acme/discovery"}),
              "bad-scheduling-url")
-expect_error("schedulingUrl without a host", booking(**{**EVENT_TYPE, "schedulingUrl": "https://:443/acme"}),
-             "bad-scheduling-url")
-expect_error("schedulingUrl with user info and no host", booking(**{**EVENT_TYPE, "schedulingUrl": "https://user@:443/acme"}),
-             "bad-scheduling-url")
+# The link check is the API's isAbsoluteHTTPSURL (url.Parse, scheme https, Host != ""), in both directions.
+for _url, _accepted in (("https://:443/acme", True), ("https://user@:443/acme", True), ("HTTPS://cal.com/x", True),
+                        ("https://cal.com/x ", True), ("https://cal.com/a b", True),
+                        (" https://cal.com/x", False), ("https://ca l.com/x", False),
+                        ("https://cal.com/x\n", False), ("https:///x", False), ("https://", False),
+                        ("http://cal.com/x", False)):
+    _cfg = copy.deepcopy(BASE)
+    booking(**{**EVENT_TYPE, "schedulingUrl": _url})(_cfg)
+    _flagged = "bad-scheduling-url" in error_codes(_cfg)
+    if _flagged == _accepted:
+        failures.append("schedulingUrl %r: the API %s it, the validator %s it"
+                        % (_url, "accepts" if _accepted else "rejects", "refuses" if _flagged else "accepts"))
 expect_error("integrationId that is not a string", booking(calendarId="primary", integrationId=123), "bad-type")
 expect_no_code("a non-string integrationId is present, not missing",
                booking(calendarId="primary", integrationId=123), "missing-required")
@@ -738,8 +760,37 @@ expect_error("legacy inviteEmailSource other than contact",
              booking(**EVENT_TYPE, inviteEmailSource="agent"), "bad-enum")
 expect_warn("legacy inviteEmailSource is deprecated",
             booking(**EVENT_TYPE, inviteEmailSource="contact"), "deprecated-field")
-expect_error("an event-type field next to a calendar",
-             booking(calendarId="primary", needsEmail=True), "event-type-field-without-ref")
+expect_clean("event-type fields next to a calendar are accepted, as the API does",
+             booking(calendarId="primary", eventTypeName="Discovery call", schedulingUrl="/x", needsEmail=True))
+# inviteEmailVariable: the 200-character limit is on the bare name, braces stripped; contact.custom. is
+# case-insensitive and takes any title without braces or newlines.
+expect_clean("an invite variable of exactly 200 characters", booking(**EVENT_TYPE, inviteEmailVariable="a" * 200))
+expect_error("an invite variable of 201 characters", booking(**EVENT_TYPE, inviteEmailVariable="a" * 201),
+             "bad-invite-variable")
+expect_clean("a braced invite variable of 200 characters",
+             booking(**EVENT_TYPE, inviteEmailVariable="{{" + "a" * 200 + "}}"))
+expect_error("a braced invite variable of 201 characters",
+             booking(**EVENT_TYPE, inviteEmailVariable="{{" + "a" * 201 + "}}"), "bad-invite-variable")
+expect_clean("contact.custom. in upper case", booking(**EVENT_TYPE, inviteEmailVariable="CONTACT.CUSTOM.Work email"))
+expect_error("contact.custom. title with a brace",
+             booking(**EVENT_TYPE, inviteEmailVariable="contact.custom.a{b"), "bad-invite-variable")
+expect_error("inviteEmailSource without an event type",
+             booking(calendarId="primary", inviteEmailSource="contact"), "invite-without-event-type")
+for _key in ("inviteEmailVariable", "inviteEmailSource"):
+    expect_error("%s that is not a string" % _key, booking(**EVENT_TYPE, **{_key: 5}), "bad-type")
+# The pending-wiring note clears only for a finished target.
+for _name, _fields, _pending in (
+        ("a complete event type", EVENT_TYPE, False),
+        ("a complete calendar", {"calendarId": "primary"}, False),
+        ("an event type with an http link", {**EVENT_TYPE, "schedulingUrl": "http://cal.com/x"}, True),
+        ("an event type next to a calendar", {**EVENT_TYPE, "calendarId": "primary"}, True)):
+    _cfg = copy.deepcopy(BASE)
+    booking(**_fields)(_cfg)
+    _rep = V.Report()
+    V.validate(_cfg, FIELDS, _rep)
+    _is_pending = any(r[0] == "skills.appointmentBooking.integrationId" and r[3] for r in _rep.references)
+    if _is_pending != _pending:
+        failures.append("booking wiring for %s: pending=%s, expected %s" % (_name, _is_pending, _pending))
 expect_error("a placeholder event type id", booking(**{**EVENT_TYPE, "eventTypeRef": "REPLACE_WITH_EVENT_TYPE"}),
              "sentinel-placeholder")
 

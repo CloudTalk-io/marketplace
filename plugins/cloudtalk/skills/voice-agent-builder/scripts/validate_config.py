@@ -184,15 +184,22 @@ SAVE_BLOCKING_CODES = SAVE_REFUSED_CODES | {"no-hangup"}
 # The booking skill's event-type link and invite variable (the server's rules: an absolute https URL; a
 # dotted variable name or a contact.custom.<title> reference).
 def is_absolute_https_url(value):
-    """An https URL with a host (the server's rule), not merely one that starts with `https://`."""
-    if not isinstance(value, str) or re.search(r"\s", value):
+    """The server's isAbsoluteHTTPSURL: scheme https and a non-empty host part (`https://:443/x` has one).
+
+    Checked on the raw value, like the server does: a leading space leaves no scheme, a control character
+    is a parse error, and a space inside the host is invalid. Python's urlsplit would strip some of those
+    silently, so they are rejected here first.
+    """
+    if not isinstance(value, str) or re.search(r"[\x00-\x1f\x7f]|^\s", value):
         return False
     try:
         parts = urlsplit(value)
-        return parts.scheme == "https" and bool(parts.hostname)
     except ValueError:
         return False
+    return parts.scheme == "https" and bool(parts.netloc) and not re.search(r"\s", parts.netloc)
 
+
+BOOKING_PLATFORM_TYPES = ("cal_com", "calendly")
 
 INVITE_VARIABLE_RE = re.compile(r"^(?:(?i:contact\.custom\.)[^{}\n]+|[a-zA-Z_][a-zA-Z0-9_.]*)$")
 
@@ -1210,9 +1217,14 @@ def validate_skills(cfg, rep, direction, fields=None):
     if isinstance(ab, dict):
         ab_on = _skill_enabled(ab, "skills.appointmentBooking", rep)
         level = "ERROR" if ab_on else "INFO"
-        # A switched-off skill's semantic slips are notes for the draft, not refusals: the server reports
-        # them as warnings there.
-        sem_level = "ERROR" if ab_on else "WARN"
+        # The target rules are hard for an event-type skill whatever `enabled` says: the API refuses a
+        # switched-off one that carries eventTypeRef or whose integration is a booking platform. Only a
+        # calendar skill's target slips stay notes while it is switched off.
+        books_event_type = (isinstance(ab.get("eventTypeRef"), str) and ab["eventTypeRef"] != ""
+                            or ab.get("integrationType") in BOOKING_PLATFORM_TYPES)
+        hard = ab_on or books_event_type
+        level_target = "ERROR" if hard else "INFO"
+        sem_level = "ERROR" if hard else "WARN"
 
         def text(key):
             val = ab.get(key)
@@ -1222,10 +1234,11 @@ def validate_skills(cfg, rep, direction, fields=None):
             if ab.get(k) is not None and not isinstance(ab[k], str):
                 rep.err("bad-type", "skills.appointmentBooking.%s" % k, "Expected a string (schema §6.6).")
         calendar, event_type = text("calendarId"), text("eventTypeRef")
-        scheduling_url_ok = is_absolute_https_url(text("schedulingUrl"))
+        raw_url = ab.get("schedulingUrl") if isinstance(ab.get("schedulingUrl"), str) else ""
+        scheduling_url_ok = is_absolute_https_url(raw_url)
         for k in ("integrationId", "eventName"):
             if not text(k) and not isinstance(ab.get(k), (int, float, bool, list, dict)):
-                rep.at(level, "missing-required", "skills.appointmentBooking.%s" % k,
+                rep.at(level_target if k == "integrationId" else level, "missing-required", "skills.appointmentBooking.%s" % k,
                        "Required when appointmentBooking is enabled — a switched-off skill missing it is "
                        "unfinished: connect the integration in the dashboard, then switch it on (schema §6.6).")
         if calendar and event_type:
@@ -1233,33 +1246,30 @@ def validate_skills(cfg, rep, direction, fields=None):
                    "calendarId and eventTypeRef are mutually exclusive: a calendar (Google, Outlook) or an "
                    "event type (Cal.com, Calendly), never both (schema §6.6).")
         elif not calendar and not event_type:
-            rep.at(level, "missing-required", "skills.appointmentBooking.calendarId",
+            rep.at(level_target, "missing-required", "skills.appointmentBooking.calendarId",
                    "Required when appointmentBooking is enabled, unless an event type is booked instead "
                    "(eventTypeRef, schema §6.6) — a switched-off skill missing both is unfinished: connect "
                    "the calendar or booking platform in the dashboard, then switch it on.")
         if event_type:
             for k in ("eventTypeName", "schedulingUrl"):
                 if not text(k):
-                    rep.at(level, "missing-required", "skills.appointmentBooking.%s" % k,
+                    rep.at(level_target, "missing-required", "skills.appointmentBooking.%s" % k,
                            "Required with eventTypeRef — the dashboard stores it together with the event "
                            "type (schema §6.6).")
-            url = text("schedulingUrl")
-            if url and not scheduling_url_ok:
+            if raw_url and not scheduling_url_ok:
                 rep.at(sem_level, "bad-scheduling-url", "skills.appointmentBooking.schedulingUrl",
                        "Must be an absolute https URL (schema §6.6).")
             if "needsEmail" not in ab or ab.get("needsEmail") is None:
-                rep.at(level, "missing-required", "skills.appointmentBooking.needsEmail",
+                rep.at(level_target, "missing-required", "skills.appointmentBooking.needsEmail",
                        "Required with eventTypeRef: true or false, whether the event type asks for the "
                        "invitee's e-mail — `false` is a value, not an absence (schema §6.6).")
             elif not isinstance(ab["needsEmail"], bool):
                 rep.err("bad-type", "skills.appointmentBooking.needsEmail",
                         "Expected true or false (schema §6.6).")
-        elif calendar:
-            for k in ("eventTypeName", "schedulingUrl", "needsEmail"):
-                if ab.get(k) not in (None, ""):
-                    rep.at(sem_level, "event-type-field-without-ref", "skills.appointmentBooking.%s" % k,
-                           "Only valid with eventTypeRef — a calendar booking carries no event-type fields "
-                           "(schema §6.6).")
+        elif calendar and ab.get("integrationType") in BOOKING_PLATFORM_TYPES:
+            rep.at("ERROR", "missing-required", "skills.appointmentBooking.eventTypeRef",
+                   "Required for a Cal.com or Calendly integration — they book an event type, not a calendar "
+                   "(schema §6.6).")
         for k in ("inviteEmailVariable", "inviteEmailSource"):
             if k in ab and not isinstance(ab[k], str):
                 rep.err("bad-type", "skills.appointmentBooking.%s" % k, "Expected a string (schema §6.6).")

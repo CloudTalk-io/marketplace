@@ -173,7 +173,8 @@ find the resource kind below.
   absent — an empty value reads as *not chosen yet* and saves cleanly, while dropping a required key is what
   breaks the import (behavioral §9). A booking-platform draft carries `integrationId` (empty until chosen)
   and **omits** `calendarId` and the event-type fields until the user has picked the event type in the
-  Dashboard.
+  Dashboard. Never author a Cal.com or Calendly `integrationId` without the complete event type, even
+  switched off: the API refuses it.
 - **Dashboard:** connect the calendar in the Integrations area (OAuth), then read the integration's ID and
   the target calendar from it. For Cal.com or Calendly, connect that platform in the same Integrations area
   and pick the event type on the AI Voice Agent's Appointment Booking skill: the integration's ID is

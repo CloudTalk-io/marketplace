@@ -533,8 +533,10 @@ An event type:
 ```
 - `enabled: true` ⇒ `integrationId`, `eventName` and a booking target required; `durationMinutes > 0`.
 - **Booking target** — `calendarId` (Google, Outlook) and `eventTypeRef` (Cal.com, Calendly) are always
-  mutually exclusive: both set is refused when switched on and only warned about when switched off.
-  Switched on, exactly one is required; a switched-off draft may carry neither. With `eventTypeRef`, `eventTypeName`, an absolute https `schedulingUrl` and
+  mutually exclusive: both set is refused, switched on or off. Switched on, exactly one is required; a
+  switched-off calendar draft may carry neither. The event-type rules are hard even while switched off: a
+  skill that carries `eventTypeRef`, or whose integration is Cal.com or Calendly, is refused unless it books
+  one complete event type. With `eventTypeRef`, `eventTypeName`, an absolute https `schedulingUrl` and
   `needsEmail` are required; the dashboard's event-type picker stores the four together, so they are
   `reference` fields (see [`fields.json`](./fields.json)), copied from a saved agent, never invented.
 - **`inviteEmailVariable`** — a variable name such as `contact.emails` that the platform's invite takes the

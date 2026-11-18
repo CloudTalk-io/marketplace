@@ -1,13 +1,13 @@
-# AI Voice Agent v2 — reference example configs (E1–E10)
+# AI Voice Agent v2 — reference example configs (E1–E11)
 
-Ten archetype configs for the v2 Expert-Mode API, authored per the
+Eleven archetype configs for the v2 Expert-Mode API, authored per the
 [corpus](../README.md). Each is schema-valid ([`schema.md`](../schema.md)) and passes the
 [behavioral](../behavioral-guidance.md) §8 self-check — schema-only, no non-schema keys, nothing to strip.
 Every non-E2 example carries `defaultOutboundNumberId: 1` (Automatic) — the dashboard's create-time
 default — **with a placeholder `failoverOutboundNumberId`** you complete with a **real owned number ID**
 before saving; Automatic requires a real failover in both directions, so completing that failover (or
 setting a real `defaultOutboundNumberId` instead) is the one wiring step every file leaves you.
-**E4, E9 and E10** carry further account-specific values to swap for your own (see the notes below). They
+**E4, E9, E10 and E11** carry further account-specific values to swap for your own (see the notes below). They
 double as few-shot material and as executable documentation.
 
 Every example emits `provider` and `llm` (`schema.md` §5): a save keeps the agent's stored values when
@@ -111,7 +111,7 @@ handoff as a **disabled group draft** the user finishes in the dashboard:
 
 - **`.jsonc`** — the `//` comments are teaching notes; strip them for a pure-JSON paste. The body has no
   `_requiredResources` and no placeholder resource IDs inside a live reference, but every non-E2 file carries
-  a **placeholder `failoverOutboundNumberId`** to replace, and E4/E9/E10 carry further illustrative values.
+  a **placeholder `failoverOutboundNumberId`** to replace, and E4/E9/E10/E11 carry further illustrative values.
   **Outbound numbers:** completing the outbound number is a **setup step**. Every non-E2 example is
   `defaultOutboundNumberId: 1` (Automatic) — the dashboard's create-time default — with a placeholder
   `failoverOutboundNumberId`; complete it with a real owned number ID (Automatic requires a real failover

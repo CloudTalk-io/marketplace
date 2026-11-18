@@ -39,7 +39,7 @@ config and judges the transcript.
 | [`mcp-tools.md`](./mcp-tools.md) | Connected mode: the CloudTalk MCP tool surface, write-safety rules, and the not-yet-available workaround table. |
 | [`variables.md`](./variables.md) | Every `{{variable}}` the platform resolves — when it resolves, what it contains, and the silent empty-string behavior when unset. |
 | [`practice-call.md`](./practice-call.md) | A practice call in chat that any app can run (the user plays the caller), its plain-words score, and the replay's caller cards. Used by the builder, checkup and replay. |
-| [`examples/`](./examples/) | E1–E10 worked configs — clean, schema-only, save-ready: no placeholder IDs inside a *live* reference, but every non-E2 file carries a placeholder `failoverOutboundNumberId` to replace, and E4/E9/E10 carry further marked illustrative values (each named in the file's header). Executable documentation + few-shots. |
+| [`examples/`](./examples/) | E1–E11 worked configs — clean, schema-only, save-ready: no placeholder IDs inside a *live* reference, but every non-E2 file carries a placeholder `failoverOutboundNumberId` to replace, and E4/E9/E10/E11 carry further marked illustrative values (each named in the file's header). Executable documentation + few-shots. |
 
 ## The `authoring` tiers (full field partition)
 
