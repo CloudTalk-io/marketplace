@@ -143,7 +143,8 @@ greets, answers, captures and hangs up saves with nothing else to wire. How the 
   the content is large.
 - **Ending calls** → `scenarios` with `action: "hangup"` (always self-contained, always needed).
 - **Escalation / "transfer to a human"** → scaffold a `transferToHuman` group draft (switched off, blank
-  target) by default, or wire a complete real pair when the user gave you both halves. This one is **not**
+  target) by default, or wire a complete real pair when the user gave you both halves; a transfer to a
+  phone number outside CloudTalk is an `external` rule with the number the user gave. This one is **not**
   self-contained and has no zero-touch substitute — see below.
 - **Safety rules** → put them in the `goalPrompt` `## Guardrails` prose section. **Do not emit the
   `guardrails` array — keep it empty:** it is accepted and stored but **inert at runtime** (the runtime has
@@ -159,7 +160,7 @@ request, handle it via the **reference decision tree** below.
 `"group"`, a group being the preferred human target. Because a **group's extension can't be read
 programmatically** (the MCP group list returns id and name only), the default the generator emits is a
 **disabled draft the user finishes in the dashboard** — it does not wire a group target on its own. Three
-shapes:
+shapes, plus a fourth for a number outside CloudTalk:
 
 1. **Scaffold the group (default)** — ship the skill `enabled: false` with a rule carrying
    `destination: "group"` and the id/extension keys **omitted** (`groupId`/`groupExtension` absent). The
@@ -176,6 +177,13 @@ shapes:
    `agentExtension`, or `groupId` + `groupExtension`), from what they told you, the config they pasted, or
    an `agent` pair fetched over MCP (`cloudtalk_list_agents` returns the extension; `cloudtalk_list_groups`
    does not). Then emit the rule with `enabled: true`.
+4. **An external number** — only when the user asks to transfer to a phone number outside CloudTalk
+   (an answering service, a partner, an on-call mobile): a rule with `destination: "external"` and
+   `externalNumber` set to the number they gave, in canonical E.164 (`schema.md` §6.1), with no ids and no
+   fallback, `enabled: true` (see `examples/E12`). No read supplies the number and nothing may stand in for
+   it: without it, ask; if the user can't give it yet, ship the skill `enabled: false` with the rule kept
+   and `externalNumber` omitted, like shape 1. A national number is asked back in full international form,
+   never completed with a guessed country code.
 
 In every case keep the **prompt honest** while the skill is off: the agent offers a callback, not a handoff
 it can't perform (see `examples/E1`, `examples/E9`). **And keep it honest when the skill goes on:** the
@@ -199,6 +207,10 @@ Non-negotiables around this:
   always carries a complete real pair.
 - **Structure:** whenever the skill object is present, the `rules` key must be too (`[]` is fine; omitting
   it is a `422`), and every rule needs `condition` + `destination`.
+- **An external number is the user's, and a stored one is kept.** Never invent, copy or complete it. When
+  you rewrite `rules` (adding a rule, changing another rule's condition), every stored `externalNumber`
+  goes back verbatim; when a rule leaves `external`, drop its number. The validator checks the number's
+  shape only, and the save also refuses a number that does not exist in its country's numbering plan.
 - **`call_flow` only on explicit request** — when the user asks for it or says the agent runs inside a Call
   Flow. It is a hangup-and-continue: the agent ends its own step and the flow routes next, which does
   nothing for a standalone agent. When you do use it, pair it with an `extractData` routing signal for the
@@ -404,7 +416,8 @@ unchanged. Return:
    validated nowhere and fails only during a live call — which is why the values come from the user, not
    from you.
 4. **The `extractData` rationale** — list each proposed `extractData` property with a one-line *why
-   it's useful*, inviting the user to add or drop any (don't embed a data-collection schema silently).
+   it's useful*, and its fixed answers when it carries `allowedValues`, inviting the user to add or drop any
+   (don't embed a data-collection schema silently).
 5. **The save smoke-test reminder** — tell the user to save once to confirm it sticks; if the dashboard
    errors with *"Failed to update VoiceAgent,"* a referenced resource isn't provisioned in their company
    (deprecated voice, unowned `sendSms` number, custom tool missing its ElevenLabs ID, or a
@@ -436,7 +449,9 @@ folded into the prompt, and the **switched-off transfer** pattern) and
 [`examples/E6`](./examples/E6-inbound-frontdesk-enus.jsonc) (Deepgram via the Deepgram-exclusive
 `en-US`, callback instead of a handoff) are the canonical archetypes;
 [`examples/E3`](./examples/E3-inbound-qualification-cfd.jsonc) is the **explicit-CFD exception** (the user
-runs the agent inside a Call Flow); E2 (German outbound), E4 (support intake on Deepgram by choice),
+runs the agent inside a Call Flow), whose routing signal is closed with `allowedValues`;
+[`examples/E12`](./examples/E12-inbound-afterhours-external.jsonc) transfers emergencies to an **external
+number**; E2 (German outbound), E4 (support intake on Deepgram by choice),
 E5 (multilingual ElevenLabs), E7 (`takeMessage`), E8 (the **identity presets** — `tone`/`verbosity` with
 ElevenLabs turn-taking and background-sound knobs), E9 (a **group transfer shipped as a disabled draft with
 the id/extension omitted** plus an SMS confirmation) and
@@ -446,7 +461,8 @@ the id/extension omitted** plus an SMS confirmation) and
 
 > **The few-shots illustrate STRUCTURE, not ground truth.** Their environment/reference values are
 > placeholders, not real owned IDs: the `failoverOutboundNumberId` (`202`, on every non-E2 example, incl.
-> E3), and E9's `sendSms` `senderNumber` (`+15555550100`, on an *enabled* action). **Never copy a resource
+> E3), E9's `sendSms` `senderNumber` (`+15555550100`, on an *enabled* action), and E12's
+> `externalNumber` (`+442079460123`, a fictional UK number standing in for the one the user gives). **Never copy a resource
 > ID or number from an example into generated output** — obtain the real value per the ground-truth rule
 > (reuse → fetch → ask → omit/disable), exactly as for any reference field.
 

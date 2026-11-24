@@ -18,9 +18,13 @@ Checks:
      §4.4's premade voice IDs == KNOWN_VOICE_IDS; §11's tone labels == TONE_PRESETS and its verbosity
      values == VERBOSITIES; §7.1's scenario actions == SCENARIO_ACTIONS (and fields.json's
      `scenarioActions` rows).
+  4. The transfer destinations and the allowed-values limits: fields.json's rule `destination` enum ==
+     §6.1's `destination` ∈ line == TRANSFER_RULE_DESTINATIONS; §6.5's transferConfig enum ==
+     TRANSFER_DESTINATIONS; §6.3's per-property, per-skill and per-value limits == the validator's
+     MAX_ALLOWED_VALUES_* constants.
 
 Not checked (so the README must not claim it): §4.2's legacy-alias list (prose gives examples, not the
-whole map), the skills sub-schema shapes, and every threshold that lives only in the validator.
+whole map), the other skills sub-schema shapes, and every other threshold that lives only in the validator.
 
 Stdlib only. Run: python3 scripts/check_docs_sync.py   (exit 0 = in sync, 1 = a mismatch)
 """
@@ -293,6 +297,53 @@ def check_scenario_actions(schema_text, fields):
     return problems
 
 
+def skill_row(fields, skill, path):
+    for row in (fields.get("skills") or {}).get(skill, []):
+        if row.get("path") == path:
+            return row
+    return None
+
+
+def check_transfer_and_allowed_values(schema_text, fields):
+    """§6.1 / §6.5 destination enums and the §6.3 allowed-values limits, against the registry and the
+    validator: a destination added in one place only would make the validator refuse a config the docs
+    teach, or the reverse."""
+    problems = []
+    row = skill_row(fields, "transferToHuman", "skills.transferToHuman.rules[].destination")
+    if row is None or not row.get("enum"):
+        problems.append("fields.json: no enum on `skills.transferToHuman.rules[].destination`")
+    else:
+        problems += compare("rule destinations", set(row["enum"]), V.TRANSFER_RULE_DESTINATIONS,
+                            "fields.json", "validate_config.TRANSFER_RULE_DESTINATIONS")
+    body = "\n".join(section_lines(schema_text, re.compile(r"^###\s+6\.1")))
+    match = re.search(r"`destination` ∈ `([^`]+)`", body)
+    if not match:
+        problems.append("schema.md: could not parse the §6.1 `destination` ∈ line")
+    else:
+        documented = {d.strip() for d in match.group(1).split("|") if d.strip()}
+        problems += compare("rule destinations", documented, V.TRANSFER_RULE_DESTINATIONS,
+                            "schema.md §6.1", "validate_config.TRANSFER_RULE_DESTINATIONS")
+    body = "\n".join(section_lines(schema_text, re.compile(r"^###\s+6\.5")))
+    match = re.search(r"fixed enum\*\*\s+((?:`\w+`(?:\s*\|\s*)?)+)", body)
+    if not match:
+        problems.append("schema.md: could not parse the §6.5 transferConfig destination enum")
+    else:
+        problems += compare("transferConfig destinations", set(re.findall(r"`(\w+)`", match.group(1))),
+                            V.TRANSFER_DESTINATIONS, "schema.md §6.5", "validate_config.TRANSFER_DESTINATIONS")
+    body = "\n".join(section_lines(schema_text, re.compile(r"^###\s+6\.3")))
+    for label, pattern, constant in (
+            ("per property", r"at most \*\*(\d+)\*\* values per property", "MAX_ALLOWED_VALUES_PER_PROPERTY"),
+            ("per skill", r"\*\*(\d+)\*\* across the skill", "MAX_ALLOWED_VALUES_PER_SKILL"),
+            ("per value", r"\*\*(\d+)\*\* characters per value", "MAX_ALLOWED_VALUE_LENGTH")):
+        match = re.search(pattern, body)
+        if not match:
+            problems.append("schema.md: could not parse the §6.3 allowed-values limit %s" % label)
+        elif int(match.group(1)) != getattr(V, constant):
+            problems.append("allowed values %s: schema.md §6.3 says %s, validate_config.%s is %d"
+                            % (label, match.group(1), constant, getattr(V, constant)))
+    return problems
+
+
 def main():
     try:
         with open(SCHEMA_PATH, "r", encoding="utf-8") as fh:
@@ -310,6 +361,7 @@ def main():
     problems += check_voices(schema_text)
     problems += check_identity_presets(schema_text)
     problems += check_scenario_actions(schema_text, fields)
+    problems += check_transfer_and_allowed_values(schema_text, fields)
 
     if problems:
         print("OUT OF SYNC — %d mismatch(es):" % len(problems))
@@ -319,7 +371,8 @@ def main():
               "each field's authoring class.")
         return 1
     print("OK — schema.md, fields.json and validate_config.py agree (field set + tiers, LLM matrix, "
-          "languages, voices, tone/verbosity, scenario actions, elevenLabsSettings sub-fields).")
+          "languages, voices, tone/verbosity, scenario actions, elevenLabsSettings sub-fields, transfer "
+          "destinations, allowed-values limits).")
     return 0
 
 

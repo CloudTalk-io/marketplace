@@ -33,7 +33,8 @@ find the resource kind below.
 > - `knowledgeBaseIds` and the appointment `integrationId`/`calendarId` are **left intact** and **rejected
 >   by the platform** if they don't exist in your account. Use real IDs (or remove the feature) before saving.
 > - Transfer targets (`agentId`/`agentExtension`, `groupId`/`groupExtension`) are **not checked anywhere** —
->   a wrong one saves fine and fails **during a live call**. See *Direct transfers* below.
+>   a wrong one saves fine and fails **during a live call**. See *Direct transfers* below. An external
+>   transfer's number is checked at save for its format and that it exists, never for whose line it is.
 > - After saving, if the dashboard errors with **"Failed to update VoiceAgent,"** the config points at a
 >   resource not fully provisioned in your company — a deprecated voice, an unowned `sendSms` number, a
 >   custom tool missing its ElevenLabs ID, or a provider/language mismatch. **Fix that reference; re-saving
@@ -161,6 +162,25 @@ find the resource kind below.
   **always a cold hand-off with no resume**. That is only useful when the agent **runs as a step inside a
   Call Flow** — for a standalone agent it just ends the call — so it is used on request, not as a stand-in
   for a missing target.
+
+### External numbers — `transferToHuman.rules[].externalNumber`  *(action: ask)*
+
+- **What:** the phone number a rule with `destination: "external"` dials: someone outside CloudTalk, such
+  as an answering service, a partner or an on-call mobile. Today a fixed number.
+- **Connected and Dashboard alike:** no read lists it, because it is not a CloudTalk resource. It comes
+  from the user, or from the agent's current config when editing. Never from an example, a website you
+  were not given, or a guess.
+- **Wire:** `externalNumber` in canonical E.164, `+`, the country code and the digits with no spaces or
+  leading `00` (`schema.md` §6.1). A national number is asked back with its country, never completed by
+  you: a wrong country code dials a stranger, live, on every matching call.
+- **Checked at save, partly:** the save refuses a missing number, a malformed one, and one that does not
+  exist in its country's numbering plan. It cannot check that the line is the right one or
+  that someone answers, so read the number back to the user before switching the transfer on.
+- **When you don't have it yet:** ship the skill switched off with the rule kept (`destination:
+  "external"`) and `externalNumber` omitted; the agent offers a callback until the user gives the number
+  and you switch the transfer on with the callback lines changed to a handoff, in one save.
+- **Editing:** carry a stored number verbatim through every rewrite of `rules`; drop it only when the user
+  moves the rule to another destination.
 
 ### Appointment booking — `appointmentBooking.integrationId` / `calendarId` / `eventTypeRef`  *(action: create)*
 

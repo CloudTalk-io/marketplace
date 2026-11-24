@@ -112,13 +112,26 @@ KNOWN_VOICE_IDS = {
 }
 
 PROPERTY_TYPES = {"STRING", "NUMBER", "BOOLEAN", "ARRAY"}      # schema.md §6.3 (UPPERCASE)
+# schema.md §6.3 — allowed values of an extractData property, mirroring voice-agent-api's limits. The
+# extraction sends every list to the model in one strict schema, hence the per-skill total too.
+ALLOWED_VALUE_TYPES = {"STRING", "ARRAY"}
+MAX_ALLOWED_VALUES_PER_PROPERTY = 50
+MAX_ALLOWED_VALUE_LENGTH = 100
+MAX_ALLOWED_VALUES_PER_SKILL = 500
 KNOWN_SKILLS = {                                               # schema.md §6 — the whole skill set
     "transferToHuman", "takeMessage", "extractData", "custom", "answerQuestions", "appointmentBooking",
 }
 SCENARIO_ACTIONS = {"toolCall", "sendSms", "hangup"}           # schema.md §7.1
 SCENARIO_TRIGGER_TYPES = {"custom", "booking_confirmed"}       # schema.md §7.1
-# schema.md §6.1 — plus "" as the legal "target not decided yet" value on a switched-off skill.
+# schema.md §6.5 — the destinations of answerQuestions.transferConfig; a transferToHuman rule (§6.1) also
+# takes "external". Both accept "" as the "target not decided yet" value on a switched-off skill.
 TRANSFER_DESTINATIONS = {"agent", "group", "call_flow"}
+TRANSFER_RULE_DESTINATIONS = TRANSFER_DESTINATIONS | {"external"}
+# schema.md §6.1 — the shape of a rule's externalNumber: canonical E.164, "+" and the country code with up
+# to 15 digits, nothing else. The save also requires a number its country's numbering plan has, which a
+# stdlib script cannot check, so a well-formed number can still be refused there.
+E164_RE = re.compile(r"^\+[1-9][0-9]{1,14}$")
+TRANSFER_TARGET_KEYS = ("agentId", "agentExtension", "groupId", "groupExtension")
 ANSWER_ACTIONS = {"admitUncertainty", "offerAlternative", "transferToHuman"}  # schema.md §6.5
 TURN_EAGERNESS = {"patient", "normal", "eager"}                # schema.md §10
 TURN_MODEL = {"turn_v2", "turn_v3"}                            # schema.md §10
@@ -405,7 +418,7 @@ def flag_sentinels(cfg, rep):
         if isinstance(th, dict):
             for i, rule in enumerate(th.get("rules") or []):
                 if isinstance(rule, dict):
-                    for key in ("agentId", "agentExtension", "groupId", "groupExtension"):
+                    for key in TRANSFER_TARGET_KEYS + ("externalNumber",):
                         check("skills.transferToHuman.rules[%d].%s" % (i, key), rule.get(key))
         ab = skills.get("appointmentBooking")
         if isinstance(ab, dict):
@@ -877,10 +890,13 @@ def resolve_provider(cfg):
     return "elevenlabs"
 
 
-def _check_properties(props, where, rep, level="ERROR"):
+def _check_properties(props, where, rep, level="ERROR", allow_values=False):
+    """`allow_values` is true only for extractData: a transfer's customProperties have no allowedValues,
+    and the save drops the key there without a word."""
     if not isinstance(props, list):
         rep.at(level, "bad-type", where, "Expected a list of {name, type, description}.")
         return
+    total = 0
     for idx, p in enumerate(props):
         loc = "%s[%d]" % (where, idx)
         if not isinstance(p, dict):
@@ -893,16 +909,98 @@ def _check_properties(props, where, rep, level="ERROR"):
         if t is not None and (not isinstance(t, str) or t not in PROPERTY_TYPES):
             rep.at(level, "bad-enum", "%s.type" % loc,
                    "Must be UPPERCASE one of %s (schema §6.3); got %r." % (sorted(PROPERTY_TYPES), t))
+        if "allowedValues" not in p:
+            continue
+        if not allow_values:
+            rep.err("unknown-field", "%s.allowedValues" % loc,
+                    "allowedValues belongs on extractData properties only; the save drops it here without "
+                    "a word, so the list would be lost (schema §6.1, §6.3).")
+            continue
+        total += _check_allowed_values(p, "%s.allowedValues" % loc, rep, level)
+    if allow_values and total > MAX_ALLOWED_VALUES_PER_SKILL:
+        rep.at(_semantic_level(level), "allowed-values-total", where,
+               "%d allowed values across the properties: the save accepts at most %d per skill. Keep the "
+               "closed lists to the fields that need them (schema §6.3)." % (total, MAX_ALLOWED_VALUES_PER_SKILL))
 
 
-def _check_transfer_destination(rule, where, rep, enabled=True, direction=None):
+def _semantic_level(level):
+    """A switched-off skill's value problems don't block its save (the API reports them as warnings), but
+    they are refused the moment the skill is switched on, so they stay louder than a note."""
+    return "ERROR" if level == "ERROR" else "WARN"
+
+
+def _simple_fold(text):
+    """Go's strings.EqualFold, which the save compares allowed values with, uses simple case folding: Σ, σ
+    and ς are one letter, while ß and "ss" are not. Python's casefold() folds ß to "ss" and lower() keeps
+    ς apart from σ, so each character is mapped to the smallest member of its one-character case orbit."""
+    def fold(ch):
+        orbit = {ch, ch.lower(), ch.upper(), ch.lower().upper(), ch.upper().lower()}
+        return min(c for c in orbit if len(c) == 1)
+    return "".join(fold(ch) for ch in text)
+
+
+def _check_allowed_values(prop, where, rep, level):
+    """schema §6.3 — an extractData property's closed set, judged as voice-agent-api judges it: on the
+    trimmed values, and only as many one by one as a property may hold. Returns how many values the list
+    adds to the skill's total."""
+    values = prop.get("allowedValues")
+    if not isinstance(values, list):
+        rep.err("bad-type", where, "Expected a list of strings, or the key left out for free text (schema §6.3).")
+        return 0
+    if not values:
+        return 0
+    sem = _semantic_level(level)
+    prop_type = prop.get("type")
+    if isinstance(prop_type, str) and prop_type in PROPERTY_TYPES - ALLOWED_VALUE_TYPES:
+        rep.at(sem, "allowed-values-type", where,
+               "allowedValues is accepted on STRING and ARRAY properties only; a %s property takes no list. "
+               "Make it a STRING with the outcomes as values, or drop the list (schema §6.3)." % prop_type)
+    if len(values) > MAX_ALLOWED_VALUES_PER_PROPERTY:
+        rep.at(sem, "allowed-values-too-many", where,
+               "%d values: the save accepts at most %d per property (schema §6.3)."
+               % (len(values), MAX_ALLOWED_VALUES_PER_PROPERTY))
+    first_at = {}                                   # folded value -> index of its first occurrence
+    for i, raw in enumerate(values[:MAX_ALLOWED_VALUES_PER_PROPERTY]):
+        loc = "%s[%d]" % (where, i)
+        if not isinstance(raw, str):
+            rep.err("bad-type", loc, "Each allowed value must be a string (schema §6.3); got %r." % (raw,))
+            continue
+        value = raw.strip()
+        if not value:
+            rep.at(sem, "allowed-value-empty", loc, "An allowed value must not be empty (schema §6.3).")
+            continue
+        if value != raw:
+            rep.info("allowed-value-spaces", loc,
+                     "%r is stored without its surrounding spaces, and the extraction answers with the trimmed "
+                     "value (schema §6.3)." % raw)
+        if len(value) > MAX_ALLOWED_VALUE_LENGTH:
+            rep.at(sem, "allowed-value-too-long", loc,
+                   "%d characters: an allowed value has at most %d (schema §6.3)."
+                   % (len(value), MAX_ALLOWED_VALUE_LENGTH))
+        if "{{" in value:
+            rep.at(sem, "allowed-value-variable", loc,
+                   "An allowed value is fixed text and cannot contain a {{variable}} (schema §6.3).")
+        folded = _simple_fold(value)
+        if folded in first_at:
+            rep.at(sem, "allowed-value-duplicate", loc,
+                   "Repeats allowedValues[%d]; values differing only in letter case count as the same "
+                   "(schema §6.3)." % first_at[folded])
+            continue
+        first_at[folded] = i
+    return len(values)
+
+
+def _check_transfer_destination(rule, where, rep, enabled=True, direction=None,
+                                allowed=TRANSFER_DESTINATIONS):
     """schema §6.1. A direct destination needs BOTH halves of its pair — agentId + agentExtension, or
     groupId + groupExtension — because the extension is part of the dial. Nothing downstream checks the
     values: the frontend forwards them verbatim, the API has no agent/group ownership check, and the
     runtime dials them raw, so a wrong or half-set target fails only mid-call — where advanced transfer is
     enabled the AI announces the failure and resumes, but on a cold fallback the caller is dropped
     silently. Hence: never guess a value, an empty string is worse than an absent key, and an incomplete
-    target on a switched-off skill is something to finish in the dashboard rather than an import error."""
+    target on a switched-off skill is something to finish in the dashboard rather than an import error.
+    `allowed` is TRANSFER_RULE_DESTINATIONS for a transferToHuman rule, which may also dial an external
+    number; answerQuestions.transferConfig keeps the default set (schema §6.5)."""
     if "destination" not in rule:
         rep.err("missing-required", "%s.destination" % where,
                 "Required on every rule the config carries — a rule without the key is rejected on import "
@@ -912,8 +1010,7 @@ def _check_transfer_destination(rule, where, rep, enabled=True, direction=None):
     if not isinstance(dest, str):
         # Type before membership — an unhashable value must report, not crash the checker.
         rep.err("bad-type", "%s.destination" % where,
-                "Expected a string — one of %s, or \"\" while undecided (schema §6.1)."
-                % sorted(TRANSFER_DESTINATIONS))
+                "Expected a string — one of %s, or \"\" while undecided (schema §6.1)." % sorted(allowed))
         return
     if not dest.strip():
         # Unset is only legal while the skill is off; an enabled rule with nowhere to go is an error the
@@ -938,9 +1035,17 @@ def _check_transfer_destination(rule, where, rep, enabled=True, direction=None):
                           "one save (fallback: they pick it in the dashboard, and the instructions still need "
                           "that change) (referenced-resources.md#direct-transfers).")
         return
-    if dest not in TRANSFER_DESTINATIONS:
-        rep.err("bad-enum", "%s.destination" % where,
-                "Must be one of %s, or \"\" while undecided (schema §6.1)." % sorted(TRANSFER_DESTINATIONS))
+    if dest not in allowed:
+        if dest in TRANSFER_RULE_DESTINATIONS:
+            rep.err("bad-enum", "%s.destination" % where,
+                    "\"%s\" is accepted on transferToHuman rules only, not here: this transfer takes one of "
+                    "%s (schema §6.5)." % (dest, sorted(allowed)))
+        else:
+            rep.err("bad-enum", "%s.destination" % where,
+                    "Must be one of %s, or \"\" while undecided (schema §6.1)." % sorted(allowed))
+        return
+    if dest == "external":
+        _check_external_rule(rule, where, rep, enabled)
         return
     if dest == "call_flow":
         if direction == "outbound":
@@ -1009,6 +1114,75 @@ def _check_transfer_destination(rule, where, rep, enabled=True, direction=None):
                   "(referenced-resources.md#direct-transfers)."
                   % (dest, " Prefer a ring group: more targets can answer before an attended transfer falls back."
                      if dest == "agent" else ""))
+
+
+def _check_external_rule(rule, where, rep, enabled):
+    """schema §6.1. An external rule dials `externalNumber` and nothing else: target ids are ignored and the
+    instructions fallback belongs to group rules only."""
+    level = "ERROR" if enabled else "WARN"
+    _check_external_number(rule, where, rep, enabled)
+    stray = [k for k in TRANSFER_TARGET_KEYS if rule.get(k) not in (None, "")]
+    if stray:
+        rep.warn("external-rule-stray-target", where,
+                 "%s ignored on an external rule, which dials externalNumber only: drop %s (schema §6.1)."
+                 % (", ".join(stray) + (" is" if len(stray) == 1 else " are"),
+                    "it" if len(stray) == 1 else "them"))
+    fallback = rule.get("fallback")
+    if isinstance(fallback, dict) and fallback.get("type") == "instructions":
+        rep.at(level, "fallback-not-group", "%s.fallback" % where,
+               "An instructions fallback applies to group rules only, and the save refuses it on an external "
+               "rule: drop the fallback.")
+
+
+def _check_external_number(rule, where, rep, enabled):
+    """schema §6.1. The number is a value only the user can supply, so a missing one is asked for, never
+    invented. This checks the shape only; the save also requires a number its country's numbering plan
+    has. A template variable as the number is refused by the save today and kept in a branch of its own,
+    since a variable or tool-result number is the form expected next."""
+    key = "%s.externalNumber" % where
+    level = "ERROR" if enabled else "WARN"
+    number = rule.get("externalNumber")
+    if number is None or number == "":
+        if enabled:
+            rep.err("missing-required", key,
+                    "destination \"external\" dials externalNumber, and it is missing. Ask the user for the full "
+                    "international number (+, country code, digits only); never invent one, copy one from an "
+                    "example or guess a country code. Until they give it, ship the skill `enabled: false` with "
+                    "this rule kept and externalNumber omitted (schema §6.1).")
+        else:
+            rep.info("unfinished-transfer", where,
+                     "Switched-off external transfer: the number is not filled in. Once the user gives the full "
+                     "international number, set externalNumber, switch the skill on and change the callback "
+                     "lines to a handoff in one save (referenced-resources.md#external-numbers).")
+        rep.reference(key, "externalNumber", pending=True,
+                      what="The outside number this rule dials: ask the user for it in full international form "
+                      "(+, country code, digits only). It is theirs to give, never invented "
+                      "(referenced-resources.md#external-numbers).")
+        return
+    if not isinstance(number, str):
+        rep.err("bad-type", key,
+                "Expected a string: the number in canonical E.164, \"+\" and the country code followed by "
+                "digits only (schema §6.1); got %r." % (number,))
+        return
+    valid = False
+    if "{{" in number:
+        rep.at(level, "external-number-reference", key,
+               "A {{variable}} is not accepted as the number yet, and the save refuses it: ask the user for the "
+               "fixed number in full international form (schema §6.1).")
+    elif looks_sentinel(number):
+        pass                                        # flag_sentinels already reports the placeholder
+    elif not E164_RE.match(number):
+        rep.at(level, "bad-external-number", key,
+               "%r is not a canonical E.164 number: \"+\", the country code and the digits, with no spaces, "
+               "dashes, brackets or leading 00. A national number such as 0905 123 456 is refused: ask the "
+               "user for the country code, never add one yourself, since a guessed code dials a stranger "
+               "(schema §6.1)." % number)
+    else:
+        valid = True
+    rep.reference(key, "externalNumber", pending=not valid,
+                  what="An outside number, dialled exactly as written: it must be one the user gave. This check "
+                  "covers its shape only; the save also refuses a number that does not exist in its country's "
+                  "numbering plan (referenced-resources.md#external-numbers).")
 
 
 def _skill_enabled(skill, where, rep):
@@ -1129,7 +1303,12 @@ def validate_skills(cfg, rep, direction, fields=None):
                     rep.warn("transfer-vague-condition", loc,
                              "condition is long (%d chars, limit 120) — keep it a specific, enumerable "
                              "trigger (behavioral §3.4)." % len(cond))
-                _check_transfer_destination(rule, loc, rep, th_on, direction)
+                _check_transfer_destination(rule, loc, rep, th_on, direction,
+                                            allowed=TRANSFER_RULE_DESTINATIONS)
+                if rule.get("destination") != "external" and rule.get("externalNumber") not in (None, ""):
+                    rep.warn("external-number-unused", "%s.externalNumber" % loc,
+                             "externalNumber is ignored unless destination is \"external\": drop it, or set the "
+                             "destination to \"external\" if this rule should dial that number (schema §6.1).")
         inc = th.get("includeProperties")
         if isinstance(inc, list):
             bad = [x for x in inc if x not in ("callerName", "summary")]
@@ -1157,7 +1336,7 @@ def validate_skills(cfg, rep, direction, fields=None):
     if isinstance(ed, dict):
         ed_on = _skill_enabled(ed, "skills.extractData", rep)
         _check_properties(ed.get("properties"), "skills.extractData.properties", rep,
-                          "ERROR" if ed_on else "INFO")
+                          "ERROR" if ed_on else "INFO", allow_values=True)
 
     # custom
     custom = skills.get("custom")

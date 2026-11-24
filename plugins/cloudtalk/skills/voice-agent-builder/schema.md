@@ -357,7 +357,8 @@ useful shape — it ships a skill switched-off for the user to finish in the das
 > **Some of these need an already-created company object** (a custom tool, agent/group, or calendar
 > integration or booking platform) — those are **not** self-contained: a human must create/select the resource and wire its
 > ID in the UI. A direct `transferToHuman`/`answerQuestions` transfer needs a real agent/group **id +
-> extension**, and `appointmentBooking` needs a connected calendar or booking platform. When the real values aren't available,
+> extension** (a transfer to an external number needs the number from the user), and
+> `appointmentBooking` needs a connected calendar or booking platform. When the real values aren't available,
 > the shape that still saves is the skill **switched off** — `enabled: false` with `rules: []` — which the
 > dashboard surfaces as *"Requires configuration"* for the user to finish (§6.1). The `authoring` tier per
 > field is in the §2 column and [`fields.json`](./fields.json); **what each referenced object is and how to
@@ -382,7 +383,7 @@ useful shape — it ships a skill switched-off for the user to finish in the das
   "rules": [                                // required key whenever this object is present ([] legal only while OFF)
     {
       "condition": "when the customer explicitly asks for a human agent",
-      "destination": "group"                 // "agent" | "group" | "call_flow" — the intended human target
+      "destination": "group"                 // "agent" | "group" | "call_flow" | "external" — the intended human target
       // groupId / groupExtension OMITTED on a switched-off draft: the user completes the target in the
       // dashboard, then switches the skill on. Never blank an integer id to "" — that is an INVALID_TYPE.
       // When you DO have a complete real pair: enabled: true with groupId + groupExtension both set (or
@@ -397,10 +398,10 @@ useful shape — it ships a skill switched-off for the user to finish in the das
   while the skill is switched off**; an **enabled** `transferToHuman` needs **≥ 1 rule** (an enabled skill
   with `rules: []` is save-refused). Every rule you do send needs both a `condition` and a non-blank
   `destination` — `""` (target not decided) is legal only while the skill is switched off.
-- `destination` ∈ `agent | group | call_flow`. **A direct destination needs BOTH halves of its pair** —
+- `destination` ∈ `agent | group | call_flow | external`. **A direct destination needs BOTH halves of its pair** —
   `agent` ⇒ `agentId` **and** `agentExtension`; `group` ⇒ `groupId` **and** `groupExtension`. **`agentId`
   and `groupId` are INTEGERS** (the extension is a string, and is part of the dial; see
-  [referenced-resources](./referenced-resources.md)).
+  [referenced-resources](./referenced-resources.md)). `external` ⇒ `externalNumber` (below).
 - **The default way to ship a transfer the generator can't fully ground is a *disabled draft*.** Two shapes:
   - **Scaffold the group** — `enabled: false` with a rule carrying `destination: "group"` and the id/extension
     keys **omitted** (`groupId`/`groupExtension` absent). The group intent is visible; the target is the
@@ -428,9 +429,34 @@ useful shape — it ships a skill switched-off for the user to finish in the das
   no resume**. That only means something when the agent **runs as a step inside a Call Flow** — for a
   standalone agent it is just a hangup — so use it when the user says that's their setup, not as the
   default handoff.
+- `external` dials **a phone number outside CloudTalk** — an answering service, a partner, an on-call
+  mobile — written in `externalNumber`:
+  ```jsonc
+  { "condition": "the caller reports a burst pipe or flooding outside office hours",
+    "destination": "external", "externalNumber": "+442079460123" }   // the number the user gave you
+  ```
+  - `externalNumber` is **required** for `external` and is today **a fixed number in canonical E.164**:
+    `+`, the country code and the digits, with no spaces, dashes, brackets or leading `00`. The save also
+    checks that the number exists in its country's numbering plan, so a well-formed but unassigned number
+    is refused there (`SKILL_INVALID`), not by the bundled validator. A missing number is
+    `REQUIRED_FIELD_MISSING`.
+  - It is **the user's number to give**: never invent one, copy one from an example, or complete a
+    national number with a guessed country code — a guessed code dials a stranger. A national number
+    (`0905 123 456`) is refused: ask for the full international one.
+  - No ids and no fallback: an external rule carries no `agentId`/`groupId`/extensions, and the
+    `instructions` fallback is accepted on group rules only. `externalNumber` on any other destination is
+    ignored, so drop it when a rule leaves `external`.
+  - It runs **attended** where advanced transfer is enabled, like `agent`/`group`, and **cold** where it is
+    not. The person answering has no CloudTalk app, so the `includeProperties`/`customProperties` handover
+    never reaches them.
+  - **Draft shape:** no number yet ⇒ `enabled: false` with the rule kept (`destination: "external"`) and
+    `externalNumber` **omitted**, never blanked to `""`; it saves with a warning and the dashboard shows the
+    transfer as needing configuration.
+  - Prefer a group or agent rule for colleagues who use CloudTalk; `external` is for people who don't.
 - `includeProperties` (`callerName` | `summary`) plus any `customProperties` you define are the **data
   extracted and handed to the human who picks up the transferred call**, so the receiver has context on the
-  transfer (not a caller-facing feature). `customProperties[].type` ∈ `STRING|NUMBER|BOOLEAN|ARRAY`.
+  transfer (not a caller-facing feature). `customProperties[].type` ∈ `STRING|NUMBER|BOOLEAN|ARRAY`; a
+  custom property takes no `allowedValues` (the save drops the key here).
 
 ### 6.2 `takeMessage`
 ```jsonc
@@ -441,18 +467,36 @@ useful shape — it ships a skill switched-off for the user to finish in the das
 ### 6.3 `extractData`
 
 `properties` is a **list** of `{ name, type, description }` items; `type` ∈ `STRING|NUMBER|BOOLEAN|ARRAY`
-(**uppercase**), all three fields required.
+(**uppercase**), all three fields required. An optional `allowedValues` closes a property to a fixed list.
 
 ```jsonc
 {
   "enabled": true,
   "properties": [
     { "name": "customerName", "type": "STRING", "description": "Caller's full name" },
-    { "name": "orderNumber",  "type": "NUMBER", "description": "Order reference number" }
+    { "name": "orderNumber",  "type": "NUMBER", "description": "Order reference number" },
+    { "name": "callOutcome",  "type": "STRING", "description": "How the call ended for the lead",
+      "allowedValues": ["Interested", "Not interested", "Call back"] }   // optional closed set
   ],
   "endpoint": "https://example.com/webhook"   // optional, user-supplied (not a company-resource ID)
 }
 ```
+
+**`allowedValues` — fixed outcomes (structured outcomes).** On a `STRING` property the extraction answers
+with exactly one listed value, on an `ARRAY` property with only listed items, and with `null` when none
+fits; it never makes up a value outside the list. Leave the key out (or send `[]`) for free text.
+
+- Only `STRING` and `ARRAY` take a list; on `NUMBER` or `BOOLEAN` the save refuses it (`SKILL_INVALID`).
+- Limits: at most **50** values per property, **500** across the skill, and **100** characters per value
+  (`OUT_OF_RANGE`). Each value must be non-empty once trimmed, contain no `{{variable}}`, and not repeat
+  another value that differs only in letter case (`SKILL_INVALID`). Values are stored trimmed.
+- Use it when the user wants fixed outcomes ("interested / not interested / call back") or the value feeds
+  routing, reporting, a filter or a Call Flow splitter. Use the user's own words; add a catch-all such as
+  `Other` only when they ask for one, and spell out in `description` what each value means when it isn't
+  obvious.
+- When editing, keep a stored list unless the user asks to change it, and drop it when the property's
+  type becomes `NUMBER` or `BOOLEAN`. A switched-off skill saves with list problems as warnings, but they
+  are refused once it is switched on.
 
 A **lead-qualification** set, for example, might capture: **full name** (`STRING`), **company size**
 (`STRING` band or `NUMBER`), **budget range** (`STRING`), and **callback requested** (`BOOLEAN`) — write
@@ -490,7 +534,8 @@ skills. **`action` tells the agent how to behave when it *can't* answer a questi
 
 - **`action` is a 3-value enum** — `admitUncertainty` | `offerAlternative` | `transferToHuman`. The first
   two are **self-contained** (no target). `transferToHuman` ⇒ `transferConfig` required.
-- **`transferConfig.destination` is the fixed enum** `agent` | `group` | `call_flow`, but the concrete
+- **`transferConfig.destination` is the fixed enum** `agent` | `group` | `call_flow` — never `external`,
+  which only a `transferToHuman` rule takes (§6.1) — but the concrete
   **target IDs are free-form** (an agent id + extension from `cloudtalk_list_agents`, a group id +
   extension) — **not an API-provided option list**; nothing hands you the valid targets. Same rules as §6.1:
   a direct target needs the id **and** the extension.

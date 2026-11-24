@@ -1,13 +1,13 @@
-# AI Voice Agent v2 — reference example configs (E1–E11)
+# AI Voice Agent v2 — reference example configs (E1–E12)
 
-Eleven archetype configs for the v2 Expert-Mode API, authored per the
+Twelve archetype configs for the v2 Expert-Mode API, authored per the
 [corpus](../README.md). Each is schema-valid ([`schema.md`](../schema.md)) and passes the
 [behavioral](../behavioral-guidance.md) §8 self-check — schema-only, no non-schema keys, nothing to strip.
 Every non-E2 example carries `defaultOutboundNumberId: 1` (Automatic) — the dashboard's create-time
 default — **with a placeholder `failoverOutboundNumberId`** you complete with a **real owned number ID**
 before saving; Automatic requires a real failover in both directions, so completing that failover (or
 setting a real `defaultOutboundNumberId` instead) is the one wiring step every file leaves you.
-**E4, E9, E10 and E11** carry further account-specific values to swap for your own (see the notes below). They
+**E4, E9, E10, E11 and E12** carry further account-specific values to swap for your own (see the notes below). They
 double as few-shot material and as executable documentation.
 
 Every example emits `provider` and `llm` (`schema.md` §5): a save keeps the agent's stored values when
@@ -24,7 +24,7 @@ the examples doing real work set Haiku 4.5.
 |---|---|---|---|
 | `E1-inbound-receptionist.jsonc` | Receptionist; knowledge in the prompt; **switched-off transfer** | inbound | ElevenLabs (`en`); complex via prompt length → Haiku 4.5, the platform's pick too |
 | `E2-outbound-confirmation-de.jsonc` | Appointment confirmation, German | outbound | ElevenLabs (`de`); complex via scenarios → Haiku 4.5 |
-| `E3-inbound-qualification-cfd.jsonc` | Lead qualification → CFD routing (**explicit-Call-Flow exception**) | inbound | ElevenLabs (`en`); trivial-tier, Haiku 4.5 over the Qwen pick |
+| `E3-inbound-qualification-cfd.jsonc` | Lead qualification → CFD routing (**explicit-Call-Flow exception**), routing signal closed with **`allowedValues`** | inbound | ElevenLabs (`en`); trivial-tier, Haiku 4.5 over the Qwen pick |
 | `E4-inbound-support.jsonc` | Support intake on Deepgram by choice, no transfer; **`toolCall` scenario + `extractData` webhook**, `tone`/`verbosity` on a Deepgram agent | inbound | Deepgram (chosen on plain `en`) → Haiku 4.5 |
 | `E5-inbound-multilingual.jsonc` | Multilingual table-reservation request intake | inbound | ElevenLabs (required: multilingual) → Haiku 4.5 |
 | `E6-inbound-frontdesk-enus.jsonc` | US-English front desk; callback instead of a handoff | inbound | Deepgram (`en-US` — Deepgram-exclusive) → Haiku 4.5 |
@@ -33,6 +33,7 @@ the examples doing real work set Haiku 4.5.
 | `E9-inbound-support-transfer-sms.jsonc` | Support line; **group transfer as a disabled draft (id/extension omitted) + `sendSms`** (the default scaffold), a `## Known facts` variables section, a switched-off scenario | inbound | ElevenLabs (`en`); complex via scenarios → Haiku 4.5 |
 | `E10-inbound-booking-confirmation.jsonc` | Appointment booking; **`appointmentBooking` + `booking_confirmed` → `sendSms`** with `{{appointment.*}}` | inbound | ElevenLabs (`en`); complex via scenarios → Haiku 4.5 |
 | `E11-inbound-booking-event-type.jsonc` | Appointment booking against a **Cal.com / Calendly event type** (`eventTypeRef`, no `calendarId`) | inbound | ElevenLabs (`en`); complex via prompt length → Haiku 4.5 |
+| `E12-inbound-afterhours-external.jsonc` | After-hours line; emergencies **transferred to an external number** (`destination: "external"`), `allowedValues` on the urgency | inbound | ElevenLabs (`en`); complex via prompt length → Haiku 4.5, the platform's pick too |
 
 ## Self-contained — references handled without new resources
 
@@ -41,8 +42,8 @@ replace, per Conventions), but no example needs any *other* company resource by 
 would classically need one, most of these configs invent nothing and take the **substitute-first** path from
 [`generator-contract.md`](../generator-contract.md). Three capabilities have no zero-touch substitute —
 reaching a human, calling a custom tool, and booking into a calendar — so **E4**, **E10** and **E11** ship the tool,
-calendar or event type wired (each with the values to replace named in its header), while **E9** ships its human
-handoff as a **disabled group draft** the user finishes in the dashboard:
+calendar or event type wired and **E12** an outside number (each with the values to replace named in its header),
+while **E9** ships its human handoff as a **disabled group draft** the user finishes in the dashboard:
 
 - **E1** — the receptionist's FAQ lives in the `goalPrompt` (a screenful of facts is lower-latency than a
   KB). Its `transferToHuman` ships **switched off** (`enabled: false`, `rules: []`) because a live transfer
@@ -52,6 +53,8 @@ handoff as a **disabled group draft** the user finishes in the dashboard:
   large FAQ, create a KB in the UI and add its ID.
 - **E3** — the **only** example using `destination: "call_flow"`, and only because its user runs the agent
   as a step inside a Call Flow. Read it as the exception; E9 is the default and E1 the no-target fallback.
+  Its `routingDecision` carries `allowedValues` (`Sales`, `Resolved`), the splitter's two branches, so the
+  extraction answers with one of them or `null`, never a near-synonym the splitter would miss.
 - **E4** — a Deepgram-pinned support line that is **intake only** as far as humans go: it gathers
   order/issue details and a callback number, with no transfer skill at all. It does show the two shapes
   that reach *systems*: a `toolCall` scenario firing a company custom tool (`toolReferenceId` — replace
@@ -102,6 +105,12 @@ handoff as a **disabled group draft** the user finishes in the dashboard:
   type, with `eventTypeRef`, `eventTypeName`, `schedulingUrl`, `needsEmail` and `inviteEmailVariable` in place
   of `calendarId`. Cal.com or Calendly must be enabled for the company before it saves; then replace the
   integration and the event-type values with the ones the Dashboard's picker stores.
+- **E12** — the **external transfer**: people trapped in a lift go straight to a contractor's on-call desk,
+  which has no CloudTalk app, through a rule with `destination: "external"` and `externalNumber` in
+  canonical E.164 — no ids, no fallback. The person answering gets no handover card, so the prompt has the
+  agent say the address and the lift before transferring. Everything else is a message for the morning,
+  with `urgency` closed to two `allowedValues`. The number is fictional and must be replaced by the one the
+  user gives; without it, the skill ships switched off with `externalNumber` omitted.
 
 > **Provider coverage:** E4 *chooses* Deepgram on a language the platform would give ElevenLabs; E5 sets
 > ElevenLabs because its multilingual config needs it; E6 lands on Deepgram because `en-US` is
@@ -111,7 +120,7 @@ handoff as a **disabled group draft** the user finishes in the dashboard:
 
 - **`.jsonc`** — the `//` comments are teaching notes; strip them for a pure-JSON paste. The body has no
   `_requiredResources` and no placeholder resource IDs inside a live reference, but every non-E2 file carries
-  a **placeholder `failoverOutboundNumberId`** to replace, and E4/E9/E10/E11 carry further illustrative values.
+  a **placeholder `failoverOutboundNumberId`** to replace, and E4/E9/E10/E11/E12 carry further illustrative values.
   **Outbound numbers:** completing the outbound number is a **setup step**. Every non-E2 example is
   `defaultOutboundNumberId: 1` (Automatic) — the dashboard's create-time default — with a placeholder
   `failoverOutboundNumberId`; complete it with a real owned number ID (Automatic requires a real failover
@@ -127,6 +136,8 @@ handoff as a **disabled group draft** the user finishes in the dashboard:
     `eventTypeName`, `schedulingUrl`, `needsEmail`).
   - **E4** — `scenarios[0].toolReferenceId` (the custom tool). Its `skills.extractData.endpoint` ships
     commented out, so there is nothing to replace unless you enable the webhook.
+  - **E12** — `skills.transferToHuman.rules[0].externalNumber: "+442079460123"`, a fictional UK number from
+    Ofcom's drama range: the real one is the user's to give, never invented or completed.
 
   Replace them all before saving. Nothing validates a transfer id/extension, so a wrong pair fails only
   mid-call — the AI resumes where advanced transfer is enabled, but on a cold fallback the caller is

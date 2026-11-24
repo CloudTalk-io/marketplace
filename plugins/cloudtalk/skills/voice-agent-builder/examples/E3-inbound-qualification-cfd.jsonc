@@ -5,8 +5,8 @@
 // `qwen - qwen36-35b-a3b`. We therefore set `llm` to Haiku 4.5 — a genuine upgrade for a
 // small but reasoning-heavy qualification agent.
 // Demonstrates: the CFD transfer pattern (transfer_to_human with destination "call_flow" — the
-// agent hangs up and the flow routes), extractData routing signal, `llm` (real upgrade over
-// the trivial-tier pick).
+// agent hangs up and the flow routes), an extractData routing signal closed to the splitter's two
+// values with `allowedValues`, `llm` (real upgrade over the trivial-tier pick).
 //
 // WHY call_flow HERE — the exception, not the default: this user told us the agent runs as a step
 //   inside a Call Flow, which is the ONLY thing that makes "call_flow" meaningful (for a standalone
@@ -66,7 +66,9 @@
         {
           "name": "routingDecision",
           "type": "STRING",
-          "description": "Exactly \"Sales\" if the caller was qualified for the sales team, otherwise exactly \"Resolved\""
+          "description": "Exactly \"Sales\" if the caller was qualified for the sales team, otherwise exactly \"Resolved\"",
+          "allowedValues": ["Sales", "Resolved"] // the splitter's branches: the extraction answers with
+                                                 // one of them (or null), never a near-synonym like "sales team"
         },
         {
           "name": "companyName",

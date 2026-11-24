@@ -1374,6 +1374,167 @@ if _two_json.get("confirmFirst") is not True:
 if run_validator_on(_two) != 0:
     failures.append("defaultOutboundNumberId: 2 must exit 0: a number the company owns saves fine")
 
+# 35) EXTERNAL TRANSFERS: a rule may dial an outside number in canonical E.164. The number is the user's to
+# give, so a missing one is an error on a live rule and something to finish on a switched-off draft.
+_EXTERNAL = "+442079460123"   # a UK number from Ofcom's drama range, valid in the save's numbering plan check
+expect_clean("external rule with a canonical E.164 number",
+             transfer_rule(destination="external", externalNumber=_EXTERNAL))
+expect_error("enabled external rule without a number",
+             transfer_rule(destination="external"), "missing-required")
+expect_error("enabled external rule with an empty number",
+             transfer_rule(destination="external", externalNumber=""), "missing-required")
+expect_clean("switched-off external rule without a number",
+             transfer_rule(destination="external", _enabled=False))
+_ext_draft = copy.deepcopy(BASE)
+transfer_rule(destination="external", _enabled=False)(_ext_draft)
+_ext_draft_rep = V.Report()
+V.validate(_ext_draft, FIELDS, _ext_draft_rep)
+if not any(i.code == "unfinished-transfer" for i in _ext_draft_rep.issues):
+    failures.append("a switched-off external rule without a number must report unfinished-transfer INFO")
+if not any(r[3] and r[0].endswith(".externalNumber") for r in _ext_draft_rep.references):
+    failures.append("a missing external number must be pending wiring, got %s" % _ext_draft_rep.references)
+_ext_ok = copy.deepcopy(BASE)
+transfer_rule(destination="external", externalNumber=_EXTERNAL)(_ext_ok)
+_ext_ok_rep = V.Report()
+V.validate(_ext_ok, FIELDS, _ext_ok_rep)
+if any(r[3] for r in _ext_ok_rep.references):
+    failures.append("a supplied external number is wiring done, not pending: %s" % _ext_ok_rep.references)
+if not any(r[0].endswith(".externalNumber") and "numbering plan" in r[2] for r in _ext_ok_rep.references):
+    failures.append("a supplied external number must say the save also checks the numbering plan")
+# National, spaced, 00-prefixed, zero country code and over-long numbers are not canonical E.164.
+for _bad in ("0905 123 456", "0905123456", "+44 20 7946 0123", "+44-20-7946-0123", "00442079460123",
+             "+0442079460123", "+1234567890123456", "442079460123", "+44 (0)20 7946 0123"):
+    expect_error("external number %r" % _bad,
+                 transfer_rule(destination="external", externalNumber=_bad), "bad-external-number")
+# ...and a switched-off draft saves with them (the API warns), so they are a warning there, not an error.
+expect_no_code("bad external number on a switched-off rule is not an error",
+               transfer_rule(destination="external", externalNumber="0905 123 456", _enabled=False),
+               "bad-external-number")
+expect_warn("bad external number on a switched-off rule warns",
+            transfer_rule(destination="external", externalNumber="0905 123 456", _enabled=False),
+            "bad-external-number")
+expect_error("external number as an integer",
+             transfer_rule(destination="external", externalNumber=442079460123), "bad-type")
+expect_error("all-zero external number is a placeholder",
+             transfer_rule(destination="external", externalNumber="+00000000000"), "sentinel-placeholder")
+expect_no_code("a placeholder number is reported once, as a placeholder",
+               transfer_rule(destination="external", externalNumber="+00000000000"), "bad-external-number")
+# A variable or tool-result number is the form expected next; until the save takes it, it is refused in a
+# branch of its own so these cases flip together.
+for _ref in ("{{contact.phone}}", "{{caller_number}}"):
+    expect_error("external number %r" % _ref,
+                 transfer_rule(destination="external", externalNumber=_ref), "external-number-reference")
+    expect_no_code("external number %r is not reported as a bad format" % _ref,
+                   transfer_rule(destination="external", externalNumber=_ref), "bad-external-number")
+# answerQuestions never takes an external destination.
+expect_error("answerQuestions transfer to an external number",
+             lambda c: c.__setitem__("skills", {"answerQuestions": {
+                 "enabled": True, "action": "transferToHuman",
+                 "transferConfig": {"destination": "external", "externalNumber": _EXTERNAL}}}),
+             "bad-enum")
+# An external rule dials the number only: an instructions fallback is refused, stray target ids are noise.
+expect_error("external rule with an instructions fallback",
+             transfer_rule(destination="external", externalNumber=_EXTERNAL,
+                           fallback={"type": "instructions", "text": "Offer a callback."}),
+             "fallback-not-group")
+expect_clean("external rule with a none fallback",
+             transfer_rule(destination="external", externalNumber=_EXTERNAL, fallback={"type": "none"}))
+expect_warn("external rule carrying a groupId",
+            transfer_rule(destination="external", externalNumber=_EXTERNAL, groupId=456),
+            "external-rule-stray-target")
+# The dashboard form keeps empty extensions on an external rule; they dial nothing and must stay silent.
+expect_clean("external rule with the dashboard's empty extensions",
+             transfer_rule(destination="external", externalNumber=_EXTERNAL, agentExtension="",
+                           groupExtension=""))
+expect_warn("group rule carrying an externalNumber",
+            transfer_rule(destination="group", groupId=456, groupExtension="2001", externalNumber=_EXTERNAL),
+            "external-number-unused")
+if V.TRANSFER_RULE_DESTINATIONS != V.TRANSFER_DESTINATIONS | {"external"}:
+    failures.append("a rule takes the answerQuestions destinations plus external, got %s"
+                    % sorted(V.TRANSFER_RULE_DESTINATIONS))
+
+
+# 36) ALLOWED VALUES: a closed set on a STRING or ARRAY extractData property, within the save's limits.
+def extract_props(*props, **kw):
+    enabled = kw.get("enabled", True)
+    return lambda c: c.__setitem__("skills", {"extractData": {"enabled": enabled, "properties": list(props)}})
+
+
+def prop(name="outcome", type_="STRING", values=None):
+    p = {"name": name, "type": type_, "description": "The outcome of the call"}
+    if values is not None:
+        p["allowedValues"] = values
+    return p
+
+
+expect_clean("STRING property with allowed values",
+             extract_props(prop(values=["Interested", "Not interested", "Call back"])))
+expect_clean("ARRAY property with allowed values",
+             extract_props(prop(type_="ARRAY", values=["Pricing", "Support", "Billing"])))
+expect_clean("empty allowedValues list means free text", extract_props(prop(values=[])))
+for _type in ("NUMBER", "BOOLEAN"):
+    expect_error("%s property with allowed values" % _type,
+                 extract_props(prop(type_=_type, values=["1", "2"])), "allowed-values-type")
+    expect_no_code("%s property with allowed values on a switched-off skill" % _type,
+                   extract_props(prop(type_=_type, values=["1", "2"]), enabled=False), "allowed-values-type")
+    expect_warn("%s property with allowed values on a switched-off skill warns" % _type,
+                extract_props(prop(type_=_type, values=["1", "2"]), enabled=False), "allowed-values-type")
+expect_clean("exactly 50 allowed values", extract_props(prop(values=["v%d" % i for i in range(50)])))
+expect_error("51 allowed values", extract_props(prop(values=["v%d" % i for i in range(51)])),
+             "allowed-values-too-many")
+expect_clean("500 allowed values across the skill",
+             extract_props(*[prop(name="p%d" % n, values=["v%d" % i for i in range(50)]) for n in range(10)]))
+expect_error("over 500 allowed values across the skill",
+             extract_props(*[prop(name="p%d" % n, values=["v%d" % i for i in range(46)]) for n in range(11)]),
+             "allowed-values-total")
+for _empty in ("", "   "):
+    expect_error("allowed value %r" % _empty, extract_props(prop(values=["Yes", _empty])), "allowed-value-empty")
+expect_clean("a 100-character allowed value", extract_props(prop(values=["x" * 100])))
+expect_error("a 101-character allowed value", extract_props(prop(values=["x" * 101])), "allowed-value-too-long")
+# Characters, not bytes, as the save counts them.
+expect_clean("100 accented characters", extract_props(prop(values=["é" * 100])))
+expect_error("an allowed value with a variable", extract_props(prop(values=["{{contact.name}}"])),
+             "allowed-value-variable")
+expect_error("allowed values differing only in case", extract_props(prop(values=["Yes", "yes"])),
+             "allowed-value-duplicate")
+expect_error("allowed values equal once trimmed", extract_props(prop(values=["Yes", " Yes "])),
+             "allowed-value-duplicate")
+# The save folds case as Go does: Σ, σ and ς are one letter, ß and "ss" are not.
+expect_error("final sigma repeats capital sigma", extract_props(prop(values=["Σ", "ς"])),
+             "allowed-value-duplicate")
+expect_clean("sharp s is not ss", extract_props(prop(values=["Straße", "Strasse"])))
+expect_error("a non-string allowed value", extract_props(prop(values=["Yes", 1])), "bad-type")
+expect_error("allowedValues as a string", extract_props(prop(values="Yes, No")), "bad-type")
+_spaced = copy.deepcopy(BASE)
+extract_props(prop(values=[" Yes", "No"]))(_spaced)
+if error_codes(_spaced) or warn_codes(_spaced) or "allowed-value-spaces" not in info_codes(_spaced):
+    failures.append("surrounding spaces are trimmed by the save: an INFO only, got %s / %s / %s"
+                    % (error_codes(_spaced), warn_codes(_spaced), info_codes(_spaced)))
+# A transfer's customProperties take no allowed values: the save drops the key without a word.
+expect_error("allowed values on a transfer custom property",
+             lambda c: c.__setitem__("skills", {"transferToHuman": {
+                 "enabled": False, "rules": [],
+                 "customProperties": [prop(values=["Gold", "Silver"])]}}),
+             "unknown-field")
+
+# 37) An agent that already carries both settings, as a read returns it, validates with no error.
+_stored = copy.deepcopy(BASE)
+_stored["skills"] = {
+    "transferToHuman": {"enabled": True, "confirmationRequired": True, "rules": [
+        {"condition": "the caller reports an emergency out of hours", "destination": "external",
+         "externalNumber": _EXTERNAL, "agentExtension": "", "groupExtension": ""},
+        {"condition": "the caller asks for sales", "destination": "group", "groupId": 456,
+         "groupExtension": "2001"}],
+        "includeProperties": ["callerName", "summary"]},
+    "extractData": {"enabled": True, "properties": [
+        prop(values=["Interested", "Not interested", "Call back"]),
+        prop(name="topics", type_="ARRAY", values=["Pricing", "Support"]),
+        prop(name="callbackTime", values=None)]},
+}
+if error_codes(_stored) or warn_codes(_stored):
+    failures.append("a stored agent with an external rule and allowed values must validate clean, got %s / %s"
+                    % (error_codes(_stored), warn_codes(_stored)))
+
 if failures:
     print("FAIL — %d check(s):" % len(failures))
     for f in failures:

@@ -1,0 +1,97 @@
+// E12 — Inbound after-hours line that transfers emergencies to a phone number outside CloudTalk.
+// Provider: ElevenLabs ("en" is a plain language; schema §5). Complex via prompt length (over 1500
+// characters) → LLM Haiku 4.5, the platform's own pick too; a live transfer decision plus careful capture
+// needs it anyway (behavioral §7b). Both are emitted, as in every example.
+// Demonstrates: a transfer to an EXTERNAL number (`destination: "external"` + `externalNumber`): the
+// on-call engineers are a contractor's desk with no CloudTalk app, so a group or agent rule cannot reach
+// them. The rule carries no agent/group ids and no fallback; it runs attended where advanced transfer is
+// enabled, like a group transfer, and the handover details (`includeProperties`) never reach an outside
+// number, so the prompt has the agent say the essentials before the transfer instead. Also demonstrates
+// `allowedValues`: `urgency` is closed to the two answers the morning team sorts by.
+//
+// THE NUMBER IS THE USER'S: `externalNumber` here ("+442079460123") is a fictional UK number from Ofcom's
+//   drama range, standing in for the number the user gives you. Never copy it, never invent one, and
+//   never complete a national number with a guessed country code: ask for the full international form
+//   ("+", country code, digits only). The save checks that the number exists; nothing checks whose line
+//   it is, so read it back to the user before switching the transfer on. Without a number, ship the skill
+//   `enabled: false` with this rule kept and `externalNumber` omitted, and have the prompt take a message
+//   for emergencies too until the user gives it.
+// REQUIRED RESOURCES: nothing to create, but the outbound number is ground truth — set a real owned
+//   defaultOutboundNumberId, and behind Automatic (1) a real owned failoverOutboundNumberId in both
+//   directions (only 1 is magic; never guess 2; a bare 1 with no failover 400s).
+{
+  "agentName": "Kestrel Lift Services: After-Hours Line",
+  "direction": "inbound",
+  "defaultOutboundNumberId": 1,    // Automatic — required even for an inbound agent, which never calls out
+  "failoverOutboundNumberId": 202, // replace with a real owned number id (cloudtalk_list_numbers or the
+                                   // dashboard) — Automatic requires a real failover in BOTH directions
+  "language": "en",
+  "maxCallDuration": 15,
+  "temperature": 0.4,
+  "voice": "cgSgspJ2msm6clMCkdW9", // Jessica — Female, American English
+  "optimizeStreamingLatency": 2,
+  "stability": 0.3,
+  "similarity": 0.7,
+  "provider": "elevenlabs",
+  "llm": "anthropic - claude-haiku-4-5",
+  "startSpeakingFirst": true,
+  "greeting": "Thanks for calling Kestrel Lift Services. Our office is closed, but I can put you through to the on-call engineers for an emergency, or take a message. What's happened?",
+  "goalPrompt": "## Identity\nYou are the after-hours assistant for Kestrel Lift Services, which maintains passenger lifts in offices and apartment buildings. Outside office hours you connect real emergencies to the on-call engineers and take a message for everything else.\n\n## Tone\n- Calm, clear and quick: two short sentences per turn, never more in an emergency.\n- Ask one thing at a time and wait for the answer.\n- Say numbers as words; read phone numbers back in blocks of three or four digits.\n\n## Task flow\n1. Find out what has happened.\n2. If someone is trapped in a lift, or a lift has stopped between floors with people inside, it is an emergency:\n   - Ask for the building address and which lift it is, one question at a time.\n   - Say the address and the lift back in one short sentence, so the engineer hears them when the call connects.\n   - Tell the caller you are putting them through to the on-call engineers now, then transfer.\n3. Anything else (a lift out of service with nobody inside, a strange noise, a door not closing properly, a question about a visit) waits for the morning:\n   - Ask for their name, the building address and the best callback number, one at a time.\n   - Read the number back in digit blocks to confirm it.\n   - Tell them the office will call back the next working day.\n4. Ask if there is anything else, then close the call politely.\n\n## Guardrails\n- If anyone is hurt, unwell or in danger, tell the caller to hang up and call 999 now.\n- Tell trapped passengers to stay calm and stay inside the lift; never suggest forcing the doors.\n- Never promise how long the engineer will take to arrive — the engineers give that time themselves.\n- Use only information in this prompt; do not quote prices or book visits.\n- Transfer only for people trapped in a lift — this rule is important.",
+  "skills": {
+    "transferToHuman": {
+      "enabled": true,
+      "confirmationRequired": false, // an emergency: connect straight after saying so, no extra yes/no turn
+      "rules": [
+        {
+          "condition": "someone is trapped in a lift or a lift has stopped between floors with people inside",
+          "destination": "external",       // an outside number: the contractor's on-call desk has no CloudTalk app
+          "externalNumber": "+442079460123" // REPLACE with the number the user gives you (fictional, see header)
+        }
+      ]
+    },
+    "extractData": {
+      "enabled": true,
+      "properties": [
+        {
+          "name": "buildingAddress",
+          "type": "STRING",
+          "description": "The address of the building the call is about"
+        },
+        {
+          "name": "callbackNumber",
+          "type": "STRING",
+          "description": "The callback phone number the caller confirmed, digits only"
+        },
+        {
+          "name": "urgency",
+          "type": "STRING",
+          "description": "\"Emergency\" if someone was trapped in a lift, otherwise \"Next working day\"",
+          "allowedValues": ["Emergency", "Next working day"] // the two queues the morning team sorts by
+        },
+        {
+          "name": "issueSummary",
+          "type": "STRING",
+          "description": "One short phrase describing the problem with the lift"
+        }
+      ]
+    }
+  },
+  "scenarios": [
+    {
+      "enabled": true,
+      "when": "the message is taken and confirmed and the caller has nothing else",
+      "reply": "Thank you, the office will call you back on the next working day. Goodbye!",
+      "action": "hangup"
+    },
+    {
+      "enabled": true,
+      "when": "the caller has not responded after you re-engaged them twice",
+      "reply": "It seems we got disconnected. Please call back if you still need help. Goodbye!",
+      "action": "hangup"
+    }
+  ],
+  // guardrails are accepted but INERT at runtime (the runtime has no `enabled` field for them, so each is
+  // silently skipped) — keep the array empty; the always-on rules live in the goalPrompt `## Guardrails`
+  // section instead (behavioral §2.1)
+  "guardrails": []
+}

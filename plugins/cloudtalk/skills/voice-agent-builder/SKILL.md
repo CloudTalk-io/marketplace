@@ -50,7 +50,7 @@ that path is for offline use only. A create is a full document: every required f
 | | What you do | Covers |
 |---|---|---|
 | **Design** | **Author it.** Don't interrogate; a complete request needs no interview. | tone, task flow, guardrails, scenarios, the `extractData` proposal, numeric/voice tuning, provider/LLM |
-| **Ground truth** | **Obtain it — never invent, default, or copy from an example.** Connected: **fetch it** (numbers, transfer targets, KBs, tools, the agent's own document). Offline: ask. | the business's **real name** (spoken in `greeting`, always asked, never fetched), **real IDs** for any referenced feature explicitly requested (transfer target, KB, calendar, …), and an **outbound** agent's own number wiring |
+| **Ground truth** | **Obtain it — never invent, default, or copy from an example.** Connected: **fetch it** (numbers, transfer targets, KBs, tools, the agent's own document). Offline: ask. | the business's **real name** (spoken in `greeting`, always asked, never fetched), **real IDs** for any referenced feature explicitly requested (transfer target, KB, calendar, …), an **external transfer's phone number** (always asked, never fetched), and an **outbound** agent's own number wiring |
 
 If a ground-truth fact is missing and no read can supply it, **ask in one short batch and wait** before
 emitting JSON. Never coin a brand name from the use case ("socks" → "Sock Shop"). **If you'd reach for a
@@ -79,7 +79,7 @@ say so and offer the nearest supported path, never fake it:
 | `mcp-tools.md` | Connected mode only — the tool surface, write-safety rules, and what has no tool yet (with workarounds). |
 | `variables.md` | Whenever a `{{variable}}` is in play — what resolves, when, and the silent empty-string trap. |
 | `practice-call.md` | After a save, or whenever the user wants to try the agent: a practice call in chat that any app can run (the user plays the caller), its plain-words score, and the replay's caller cards. |
-| `examples/` (E1–E11) | Few-shots. **E1** (ElevenLabs, switched-off transfer) and **E6** (Deepgram via `en-US`) are the save-ready archetypes; **E3** is the explicit-Call-Flow exception; **E4** adds a `toolCall` scenario and an `extractData` webhook; **E7** adds `takeMessage`; **E8** shows `tone`/`verbosity` + ElevenLabs tuning; **E9** scaffolds a group transfer as a disabled draft (`destination: "group"`, id/extension omitted — completed in the dashboard) + `sendSms`; **E10** is appointment booking + a `booking_confirmed` SMS; **E11** books a Cal.com or Calendly event type (`eventTypeRef` instead of `calendarId`). Only **E2** exits `1`, deliberately (the both-directions failover gate). |
+| `examples/` (E1–E12) | Few-shots. **E1** (ElevenLabs, switched-off transfer) and **E6** (Deepgram via `en-US`) are the save-ready archetypes; **E3** is the explicit-Call-Flow exception, with an `allowedValues` routing signal; **E4** adds a `toolCall` scenario and an `extractData` webhook; **E7** adds `takeMessage`; **E8** shows `tone`/`verbosity` + ElevenLabs tuning; **E9** scaffolds a group transfer as a disabled draft (`destination: "group"`, id/extension omitted — completed in the dashboard) + `sendSms`; **E10** is appointment booking + a `booking_confirmed` SMS; **E11** books a Cal.com or Calendly event type (`eventTypeRef` instead of `calendarId`); **E12** transfers out-of-hours emergencies to an outside number (`destination: "external"`). Only **E2** exits `1`, deliberately (the both-directions failover gate). |
 
 ## Workflow — follow in order
 
@@ -189,7 +189,9 @@ Prose may be written in English for any agent; the runtime makes the agent speak
 
 - **Always** include hangup scenarios: normal completion + prolonged silence (+ voicemail if outbound).
 - `extractData` is post-call & passive — to *collect* a value, also instruct the prompt to ask for it and
-  read it back. Each property atomic.
+  read it back. Each property atomic. A property with a few known outcomes (interested / not interested /
+  call back, a routing decision) gets them as `allowedValues` on a `STRING` or `ARRAY` property, in the
+  user's words (`schema.md` §6.3); keep any stored list when editing.
 - `takeMessage` inbound-only, and emit it only deliberately: present-but-disabled renders an explicit
   "can't take messages". Don't auto-transfer `answerQuestions` without a KB/skills to try first.
 - Every `reply` = what the agent says or does when the scenario fires: the line itself or an instruction.
@@ -237,6 +239,17 @@ never transfers anyone.
 Call Flow** (it hangs up and the flow continues; for a standalone agent it does nothing). A wrong
 id/extension is validated **nowhere** and fails only mid-call — the AI resumes where advanced transfer is
 enabled, but on a cold fallback the caller is dropped.
+
+**`destination: "external"` when the user wants calls transferred to a phone number outside CloudTalk**
+(an answering service, a partner, an on-call mobile). The number is ground truth: use only the number the
+user gave in this conversation or the one the agent already carries, written as `externalNumber` in full
+international form (`+`, country code, digits only). No number yet: ask for it once; if they can't give it
+now, ship the transfer switched off with the rule kept and `externalNumber` omitted, and keep the callback
+lines as for a group draft. A national number (*0905 123 456*): ask *"Which country is that number in?"*
+or for the full number with the country code, never add one yourself. The save also checks that the
+number really exists; if it refuses it, say so in plain words and ask the user to check the number.
+Colleagues who use CloudTalk stay a group or agent transfer. When editing an agent that has one, carry the
+rule and its number unchanged unless the user asks to change them.
 
 ### 7 · Set numeric fields deliberately — `behavioral-guidance.md` §7a-bis, §4.4
 
@@ -312,7 +325,8 @@ The write's structured result replaces the paste-and-see smoke test.
    number as a setup step until a real owned id (default or failover) is in place.
 3. **Setup checklist** — only when step 2 flags something (keep it rare so it gets read).
 4. **What the agent notes after each call** (`extractData`): each one in plain words with a one-line *why
-   useful*, open to edit (never embed silently).
+   useful*, and its fixed answers when it has them (*"Outcome: interested, not interested or call back"*),
+   open to edit (never embed silently).
 5. **Save smoke-test** — save once to confirm it sticks; a *"Failed to update VoiceAgent"* error means a
    referenced resource isn't provisioned (fix the reference, don't retry — `referenced-resources.md`).
 6. **One next step:** *"Once it's saved, want to try it in a practice call here?"* (`practice-call.md`).
@@ -369,6 +383,9 @@ The write's structured result replaces the paste-and-see smoke test.
   otherwise the skill ships as a **disabled draft**: a scaffolded group (`destination: "group"`, id/extension
   **omitted**), or `rules: []`. `agentId`/`groupId` are integers — **OMIT them on a draft; never blank them
   to `""`** (an empty string is an INVALID_TYPE the save rejects even on a disabled skill).
+- **Never invent, guess or complete an external transfer number.** `externalNumber` is the number the user
+  gave or the agent already carries, in full international form; a national number gets a question back,
+  never a guessed country code, because a wrong number reaches a stranger on a live call.
 - **Never invent a URL or an *undeclared* `{{variable}}`** (`variables.md` — an unknown `{{placeholder}}`
   renders as an empty string, silently). Any URL (in a `sendSms` message, `greeting`, or `goalPrompt`) must
   be **user-supplied and copied verbatim**; there is **no booking/calendar-link variable**. To "text the

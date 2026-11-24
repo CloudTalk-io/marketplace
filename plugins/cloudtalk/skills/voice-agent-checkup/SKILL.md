@@ -113,15 +113,19 @@ Grade every finding:
      time silence (§4.1).
 3. **Handoffs to people** (`skills.transferToHuman`, `skills.answerQuestions`; behavioral §3.2, §3.4)
    - A transfer switched off on purpose is fine when the instructions offer a callback instead.
-   - Must fix: a switched-on rule missing its id or extension; a target not in step 2's lists, or a person
-     whose extension differs; switched on with no rules; transfers off while the instructions promise to
+   - Must fix: a switched-on agent or group rule missing its id or extension; a target not in step 2's
+     lists, or a person whose extension differs; a switched-on rule to an external number (`destination:
+     "external"`) without its number, or with one not in full international form (`+`, country code,
+     digits); switched on with no rules; transfers off while the instructions promise to
      connect the caller; transfers switched on while the instructions still refuse handoffs ("always offer
      a callback", "you can't put callers through") or never mention them, so the agent offers a callback
      instead of the transfer (fix: the builder rewrites those lines to offer the handoff); a `call_flow`
      handoff on an agent that doesn't run inside a Call Flow (ask once: standalone, it just hangs up).
    - Should fix: a vague condition ("anything it can't handle") or one over 120 characters; one person as
      target instead of a group; `answerQuestions` set to transfer with nothing to answer from first.
-   - Worth knowing: a group's extension can't be read here; the user confirms it in the dashboard.
+   - Worth knowing: a group's extension can't be read here; the user confirms it in the dashboard. An
+     external rule's number isn't in any list here either: show it masked and ask the user to confirm it
+     is the right line.
 4. **Knowledge** (`knowledgeBaseIds`; behavioral §7, referenced-resources *Knowledge bases*)
    - Must fix: a linked knowledge base missing from the list or not `ACTIVE` (if `SYNCHRONIZING`, the fix is
      to check again in a few minutes); any knowledge base on a `deepgram` agent, which can't use it.
