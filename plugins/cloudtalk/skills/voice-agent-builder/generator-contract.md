@@ -210,7 +210,8 @@ Non-negotiables around this:
 - **An external number is the user's, and a stored one is kept.** Never invent, copy or complete it. When
   you rewrite `rules` (adding a rule, changing another rule's condition), every stored `externalNumber`
   goes back verbatim; when a rule leaves `external`, drop its number. The validator checks the number's
-  shape only, and the save also refuses a number that does not exist in its country's numbering plan.
+  shape only, and the save also refuses a number its country's numbering plan does not allow; neither can
+  tell whether the line exists.
 - **`call_flow` only on explicit request** — when the user asks for it or says the agent runs inside a Call
   Flow. It is a hangup-and-continue: the agent ends its own step and the flow routes next, which does
   nothing for a standalone agent. When you do use it, pair it with an `extractData` routing signal for the
@@ -457,7 +458,8 @@ ElevenLabs turn-taking and background-sound knobs), E9 (a **group transfer shipp
 the id/extension omitted** plus an SMS confirmation) and
 [`examples/E10`](./examples/E10-inbound-booking-confirmation.jsonc) (**appointment booking** with a
 `booking_confirmed` → `sendSms` confirmation) add language, provider, and skill variations.
-**No example invents a transfer target.**
+**No example invents a transfer target, and none but E12 carries one the user did not give:** E12's
+`externalNumber` is a fictional stand-in, and the validator reports it as still to replace.
 
 > **The few-shots illustrate STRUCTURE, not ground truth.** Their environment/reference values are
 > placeholders, not real owned IDs: the `failoverOutboundNumberId` (`202`, on every non-E2 example, incl.

@@ -149,10 +149,10 @@ as though it is. So every enabled unit gets **explicit, complete wiring**, or it
   gets captured.
 - **DO close a property with `allowedValues` when the answer is one of a few known outcomes** — "interested
   / not interested / call back", a routing decision, a reason category — and whenever the value feeds
-  routing, a report, a filter or a CFD splitter: the extraction then answers with exactly one listed value
-  (or `null`), so a splitter or a report never meets a near-synonym. `STRING` or `ARRAY` only, in the
-  user's words, a catch-all only on request (`schema.md` §6.3). Keep free text for names, numbers and
-  anything open-ended.
+  routing, a report, a filter or a CFD splitter: a `STRING` then answers with exactly one listed value, an
+  `ARRAY` with listed items only, and either with `null` when none fits, so a splitter or a report never
+  meets a near-synonym. `STRING` or `ARRAY` only, in the user's words, a catch-all only on request
+  (`schema.md` §6.3). Keep free text for names, numbers and anything open-ended.
 - If extracted values drive **CFD routing**, tell the user to test extraction before going live —
   splitter mismatches silently drop calls. Listing the splitter's values in `allowedValues` removes the
   near-synonyms, not the need to test.

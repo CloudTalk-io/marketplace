@@ -173,9 +173,9 @@ find the resource kind below.
 - **Wire:** `externalNumber` in canonical E.164, `+`, the country code and the digits with no spaces or
   leading `00` (`schema.md` §6.1). A national number is asked back with its country, never completed by
   you: a wrong country code dials a stranger, live, on every matching call.
-- **Checked at save, partly:** the save refuses a missing number, a malformed one, and one that does not
-  exist in its country's numbering plan. It cannot check that the line is the right one or
-  that someone answers, so read the number back to the user before switching the transfer on.
+- **Checked at save, partly:** the save refuses a missing number, a malformed one, and one its country's
+  numbering plan does not allow. It cannot check that the line exists, is the right one or that someone
+  answers, so read the number back to the user before switching the transfer on.
 - **When you don't have it yet:** ship the skill switched off with the rule kept (`destination:
   "external"`) and `externalNumber` omitted; the agent offers a callback until the user gives the number
   and you switch the transfer on with the callback lines changed to a handoff, in one save.

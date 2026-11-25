@@ -107,10 +107,11 @@ while **E9** ships its human handoff as a **disabled group draft** the user fini
   integration and the event-type values with the ones the Dashboard's picker stores.
 - **E12** — the **external transfer**: people trapped in a lift go straight to a contractor's on-call desk,
   which has no CloudTalk app, through a rule with `destination: "external"` and `externalNumber` in
-  canonical E.164 — no ids, no fallback. The person answering gets no handover card, so the prompt has the
-  agent say the address and the lift before transferring. Everything else is a message for the morning,
-  with `urgency` closed to two `allowedValues`. The number is fictional and must be replaced by the one the
-  user gives; without it, the skill ships switched off with `externalNumber` omitted.
+  canonical E.164 — no ids, no fallback. The person answering gets no handover card and hears nothing the
+  agent said, so the prompt has the caller give them the address and the lift once connected. Everything
+  else is a message for the morning, with `urgency` closed to two `allowedValues`. The number is fictional
+  and must be replaced by the one the user gives (the validator reports it as still to replace); without
+  it, the skill ships switched off with `externalNumber` omitted.
 
 > **Provider coverage:** E4 *chooses* Deepgram on a language the platform would give ElevenLabs; E5 sets
 > ElevenLabs because its multilingual config needs it; E6 lands on Deepgram because `en-US` is

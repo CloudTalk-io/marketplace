@@ -437,8 +437,9 @@ useful shape — it ships a skill switched-off for the user to finish in the das
   ```
   - `externalNumber` is **required** for `external` and is today **a fixed number in canonical E.164**:
     `+`, the country code and the digits, with no spaces, dashes, brackets or leading `00`. The save also
-    checks that the number exists in its country's numbering plan, so a well-formed but unassigned number
-    is refused there (`SKILL_INVALID`), not by the bundled validator. A missing number is
+    checks that the number is valid in its country's numbering plan, so a well-formed number the plan
+    does not allow is refused there (`SKILL_INVALID`), not by the bundled validator. It cannot tell whether
+    the line exists or whose it is: a mistyped number that fits the plan saves. A missing number is
     `REQUIRED_FIELD_MISSING`.
   - It is **the user's number to give**: never invent one, copy one from an example, or complete a
     national number with a guessed country code — a guessed code dials a stranger. A national number

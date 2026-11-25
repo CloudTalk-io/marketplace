@@ -118,6 +118,9 @@ ALLOWED_VALUE_TYPES = {"STRING", "ARRAY"}
 MAX_ALLOWED_VALUES_PER_PROPERTY = 50
 MAX_ALLOWED_VALUE_LENGTH = 100
 MAX_ALLOWED_VALUES_PER_SKILL = 500
+# What Go's strings.TrimSpace removes around an allowed value: Python's str.strip() also takes the
+# separators U+001C-U+001F, which the save keeps.
+GO_WHITESPACE = "".join(chr(c) for c in range(0x110000) if chr(c).isspace() and not 0x1C <= c <= 0x1F)
 KNOWN_SKILLS = {                                               # schema.md §6 — the whole skill set
     "transferToHuman", "takeMessage", "extractData", "custom", "answerQuestions", "appointmentBooking",
 }
@@ -131,6 +134,9 @@ TRANSFER_RULE_DESTINATIONS = TRANSFER_DESTINATIONS | {"external"}
 # to 15 digits, nothing else. The save also requires a number its country's numbering plan has, which a
 # stdlib script cannot check, so a well-formed number can still be refused there.
 E164_RE = re.compile(r"^\+[1-9][0-9]{1,14}$")
+# The examples' stand-ins for the number the user gives (E12's is from Ofcom's drama range). Well formed and
+# accepted by the save, so only this list keeps a copied one from reading as finished wiring.
+EXAMPLE_EXTERNAL_NUMBERS = {"+442079460123"}
 TRANSFER_TARGET_KEYS = ("agentId", "agentExtension", "groupId", "groupExtension")
 ANSWER_ACTIONS = {"admitUncertainty", "offerAlternative", "transferToHuman"}  # schema.md §6.5
 TURN_EAGERNESS = {"patient", "normal", "eager"}                # schema.md §10
@@ -891,8 +897,8 @@ def resolve_provider(cfg):
 
 
 def _check_properties(props, where, rep, level="ERROR", allow_values=False):
-    """`allow_values` is true only for extractData: a transfer's customProperties have no allowedValues,
-    and the save drops the key there without a word."""
+    """`allow_values` is true only for extractData: a transfer's customProperties have no allowedValues.
+    The save drops the key there without a word; the validate endpoint refuses it as an unknown field."""
     if not isinstance(props, list):
         rep.at(level, "bad-type", where, "Expected a list of {name, type, description}.")
         return
@@ -914,7 +920,8 @@ def _check_properties(props, where, rep, level="ERROR", allow_values=False):
         if not allow_values:
             rep.err("unknown-field", "%s.allowedValues" % loc,
                     "allowedValues belongs on extractData properties only; the save drops it here without "
-                    "a word, so the list would be lost (schema §6.1, §6.3).")
+                    "a word, so the list would be lost, and the validate endpoint refuses it as an unknown "
+                    "field (schema §6.1, §6.3).")
             continue
         total += _check_allowed_values(p, "%s.allowedValues" % loc, rep, level)
     if allow_values and total > MAX_ALLOWED_VALUES_PER_SKILL:
@@ -948,6 +955,8 @@ def _check_allowed_values(prop, where, rep, level):
     trimmed values, and only as many one by one as a property may hold. Returns how many values the list
     adds to the skill's total."""
     values = prop.get("allowedValues")
+    if values is None:
+        return 0                                    # the save reads null as no list: free text
     if not isinstance(values, list):
         rep.err("bad-type", where, "Expected a list of strings, or the key left out for free text (schema §6.3).")
         return 0
@@ -969,7 +978,7 @@ def _check_allowed_values(prop, where, rep, level):
         if not isinstance(raw, str):
             rep.err("bad-type", loc, "Each allowed value must be a string (schema §6.3); got %r." % (raw,))
             continue
-        value = raw.strip()
+        value = raw.strip(GO_WHITESPACE)
         if not value:
             rep.at(sem, "allowed-value-empty", loc, "An allowed value must not be empty (schema §6.3).")
             continue
@@ -1183,10 +1192,15 @@ def _check_external_number(rule, where, rep, enabled):
                "(schema §6.1)." % number)
     else:
         valid = True
-    rep.reference(key, "externalNumber", pending=not valid,
+    stand_in = valid and number in EXAMPLE_EXTERNAL_NUMBERS
+    if stand_in:
+        rep.info("external-number-example", key,
+                 "%s is the examples' fictional stand-in, not a number the user gave: replace it with theirs, or "
+                 "ship the skill `enabled: false` without the number until they give it (schema §6.1)." % number)
+    rep.reference(key, "externalNumber", pending=not valid or stand_in,
                   what="An outside number, dialled exactly as written: it must be one the user gave. This check "
-                  "covers its shape only; the save also refuses a number that does not exist in its country's "
-                  "numbering plan (referenced-resources.md#external-numbers).")
+                  "covers its shape only; the save also refuses a number its country's numbering plan does not "
+                  "allow, but nothing checks that the line exists (referenced-resources.md#external-numbers).")
 
 
 def _skill_enabled(skill, where, rep):

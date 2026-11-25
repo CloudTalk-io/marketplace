@@ -297,11 +297,8 @@ def check_scenario_actions(schema_text, fields):
     return problems
 
 
-def skill_row(fields, skill, path):
-    for row in (fields.get("skills") or {}).get(skill, []):
-        if row.get("path") == path:
-            return row
-    return None
+def skill_rows(fields, skill, path):
+    return [row for row in (fields.get("skills") or {}).get(skill, []) if row.get("path") == path]
 
 
 def check_transfer_and_allowed_values(schema_text, fields):
@@ -309,12 +306,19 @@ def check_transfer_and_allowed_values(schema_text, fields):
     validator: a destination added in one place only would make the validator refuse a config the docs
     teach, or the reverse."""
     problems = []
-    row = skill_row(fields, "transferToHuman", "skills.transferToHuman.rules[].destination")
-    if row is None or not row.get("enum"):
-        problems.append("fields.json: no enum on `skills.transferToHuman.rules[].destination`")
+    # A second row for the same path would go unseen by a first-match lookup, so each must be the only one.
+    rows = skill_rows(fields, "transferToHuman", "skills.transferToHuman.rules[].destination")
+    if len(rows) != 1 or not rows[0].get("enum"):
+        problems.append("fields.json: need exactly one `skills.transferToHuman.rules[].destination` row, with "
+                        "an enum; got %d" % len(rows))
     else:
-        problems += compare("rule destinations", set(row["enum"]), V.TRANSFER_RULE_DESTINATIONS,
+        problems += compare("rule destinations", set(rows[0]["enum"]), V.TRANSFER_RULE_DESTINATIONS,
                             "fields.json", "validate_config.TRANSFER_RULE_DESTINATIONS")
+    rows = skill_rows(fields, "transferToHuman", "skills.transferToHuman.rules[].externalNumber")
+    if len(rows) != 1 or rows[0].get("authoring") != "reference":
+        problems.append("fields.json: need exactly one `skills.transferToHuman.rules[].externalNumber` row with "
+                        "authoring \"reference\" (the user gives it, the generator never makes it up); got %s"
+                        % rows)
     body = "\n".join(section_lines(schema_text, re.compile(r"^###\s+6\.1")))
     match = re.search(r"`destination` ∈ `([^`]+)`", body)
     if not match:

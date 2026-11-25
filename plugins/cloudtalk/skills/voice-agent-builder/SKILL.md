@@ -50,11 +50,14 @@ that path is for offline use only. A create is a full document: every required f
 | | What you do | Covers |
 |---|---|---|
 | **Design** | **Author it.** Don't interrogate; a complete request needs no interview. | tone, task flow, guardrails, scenarios, the `extractData` proposal, numeric/voice tuning, provider/LLM |
-| **Ground truth** | **Obtain it — never invent, default, or copy from an example.** Connected: **fetch it** (numbers, transfer targets, KBs, tools, the agent's own document). Offline: ask. | the business's **real name** (spoken in `greeting`, always asked, never fetched), **real IDs** for any referenced feature explicitly requested (transfer target, KB, calendar, …), an **external transfer's phone number** (always asked, never fetched), and an **outbound** agent's own number wiring |
+| **Ground truth** | **Obtain it — never invent, default, or copy from an example.** Connected: **fetch it** (numbers, transfer targets, KBs, tools, the agent's own document). Offline: ask. | the business's **real name** (spoken in `greeting`, always asked, never fetched), **real IDs** for any referenced feature explicitly requested (transfer target, KB, calendar, …), an **external transfer's phone number** (asked unless the agent already carries one, never looked up), and an **outbound** agent's own number wiring |
 
 If a ground-truth fact is missing and no read can supply it, **ask in one short batch and wait** before
-emitting JSON. Never coin a brand name from the use case ("socks" → "Sock Shop"). **If you'd reach for a
-placeholder or "stand-in," that is the signal to fetch or ask instead.**
+emitting JSON, except where the gate in step 1 already names what ships meanwhile: the outbound number on
+Automatic, a zero-touch substitute or omit-and-instruct for a KB or calendar, and a switched-off skill for a
+transfer target or external number the user can't give yet (Step 6). Never fill one in. Never coin a brand
+name from the use case ("socks" → "Sock Shop"). **If you'd reach for a placeholder or "stand-in," that is
+the signal to fetch or ask instead.**
 
 ## What you can build
 
@@ -246,8 +249,9 @@ user gave in this conversation or the one the agent already carries, written as 
 international form (`+`, country code, digits only). No number yet: ask for it once; if they can't give it
 now, ship the transfer switched off with the rule kept and `externalNumber` omitted, and keep the callback
 lines as for a group draft. A national number (*0905 123 456*): ask *"Which country is that number in?"*
-or for the full number with the country code, never add one yourself. The save also checks that the
-number really exists; if it refuses it, say so in plain words and ask the user to check the number.
+or for the full number with the country code, never add one yourself. The save also checks the number is
+valid in its country's numbering plan, not that the line exists or is theirs; if it refuses it, say so in
+plain words and ask the user to check the number.
 Colleagues who use CloudTalk stay a group or agent transfer. When editing an agent that has one, carry the
 rule and its number unchanged unless the user asks to change them.
 

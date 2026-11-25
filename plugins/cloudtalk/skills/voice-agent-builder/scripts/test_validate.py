@@ -1376,7 +1376,9 @@ if run_validator_on(_two) != 0:
 
 # 35) EXTERNAL TRANSFERS: a rule may dial an outside number in canonical E.164. The number is the user's to
 # give, so a missing one is an error on a live rule and something to finish on a switched-off draft.
-_EXTERNAL = "+442079460123"   # a UK number from Ofcom's drama range, valid in the save's numbering plan check
+# A UK number from Ofcom's drama range, valid in the save's numbering plan check. Not E12's stand-in, which
+# the validator reports as a number still to replace.
+_EXTERNAL = "+442079460456"
 expect_clean("external rule with a canonical E.164 number",
              transfer_rule(destination="external", externalNumber=_EXTERNAL))
 expect_error("enabled external rule without a number",
@@ -1401,12 +1403,49 @@ if any(r[3] for r in _ext_ok_rep.references):
     failures.append("a supplied external number is wiring done, not pending: %s" % _ext_ok_rep.references)
 if not any(r[0].endswith(".externalNumber") and "numbering plan" in r[2] for r in _ext_ok_rep.references):
     failures.append("a supplied external number must say the save also checks the numbering plan")
+# E12's stand-in is well formed and saves, but a config that copies it still dials a stranger: it reads as
+# a number to replace, never as wiring done.
+for _stand_in in sorted(V.EXAMPLE_EXTERNAL_NUMBERS):
+    expect_clean("stand-in %s is well formed" % _stand_in,
+                 transfer_rule(destination="external", externalNumber=_stand_in))
+    _ext_copy = copy.deepcopy(BASE)
+    transfer_rule(destination="external", externalNumber=_stand_in)(_ext_copy)
+    _ext_copy_rep = V.Report()
+    V.validate(_ext_copy, FIELDS, _ext_copy_rep)
+    if "external-number-example" not in [i.code for i in _ext_copy_rep.issues if i.level == "INFO"]:
+        failures.append("stand-in %s must report external-number-example INFO" % _stand_in)
+    if not any(r[3] and r[0].endswith(".externalNumber") for r in _ext_copy_rep.references):
+        failures.append("stand-in %s must be pending wiring, got %s" % (_stand_in, _ext_copy_rep.references))
+    if "Nothing else to wire" in capture_human(_ext_copy_rep):
+        failures.append("a config carrying stand-in %s must not read as ready" % _stand_in)
+# Every number an example actually dials is a listed stand-in, read from the rules, not the comments.
+_example_numbers = []
+for _path in sorted(glob.glob(os.path.join(HERE, "..", "examples", "E*.jsonc"))):
+    _ex = V.parse_config(open(_path, encoding="utf-8").read())
+    for _rule in ((_ex.get("skills") or {}).get("transferToHuman") or {}).get("rules") or []:
+        if _rule.get("destination") == "external":
+            _example_numbers.append((os.path.basename(_path), _rule.get("externalNumber")))
+if not any(name.startswith("E12-") for name, _ in _example_numbers):
+    failures.append("E12 must carry an external rule, got %s" % _example_numbers)
+for _name, _number in _example_numbers:
+    if _number not in V.EXAMPLE_EXTERNAL_NUMBERS:
+        failures.append("%s dials %r, which EXAMPLE_EXTERNAL_NUMBERS must list" % (_name, _number))
+expect_error("external number with non-ASCII digits",
+             transfer_rule(destination="external", externalNumber="+44\u0662\u0660\u0667\u0669\u0664"
+                           "\u0666\u0660\u0661\u0662\u0663"), "bad-external-number")
 # National, spaced, 00-prefixed, zero country code and over-long numbers are not canonical E.164.
 for _bad in ("0905 123 456", "0905123456", "+44 20 7946 0123", "+44-20-7946-0123", "00442079460123",
              "+0442079460123", "+1234567890123456", "442079460123", "+44 (0)20 7946 0123",
              "+442079460123\n"):
     expect_error("external number %r" % _bad,
                  transfer_rule(destination="external", externalNumber=_bad), "bad-external-number")
+# The shape allows up to 15 digits after the "+", and at least two: the country code's first digit and one
+# more. A short number such as +12 passes the shape only; the save's numbering plan check refuses it.
+expect_clean("15-digit external number", transfer_rule(destination="external", externalNumber="+441234567890123"))
+expect_error("external number with one digit", transfer_rule(destination="external", externalNumber="+1"),
+             "bad-external-number")
+expect_no_code("two digits pass the shape-only check", transfer_rule(destination="external", externalNumber="+12"),
+               "bad-external-number")
 # ...and a switched-off draft saves with them (the API warns), so they are a warning there, not an error.
 expect_no_code("bad external number on a switched-off rule is not an error",
                transfer_rule(destination="external", externalNumber="0905 123 456", _enabled=False),
@@ -1438,6 +1477,20 @@ expect_error("external rule with an instructions fallback",
              transfer_rule(destination="external", externalNumber=_EXTERNAL,
                            fallback={"type": "instructions", "text": "Offer a callback."}),
              "fallback-not-group")
+expect_warn("an instructions fallback on a switched-off external rule warns",
+            transfer_rule(destination="external", externalNumber=_EXTERNAL, _enabled=False,
+                          fallback={"type": "instructions", "text": "Offer a callback."}),
+            "fallback-not-group")
+expect_no_code("an instructions fallback on a switched-off external rule is not an error",
+               transfer_rule(destination="external", externalNumber=_EXTERNAL, _enabled=False,
+                             fallback={"type": "instructions", "text": "Offer a callback."}),
+               "fallback-not-group")
+_ext_bad_off = copy.deepcopy(BASE)
+transfer_rule(destination="external", externalNumber="0905 123 456", _enabled=False)(_ext_bad_off)
+_ext_bad_off_rep = V.Report()
+V.validate(_ext_bad_off, FIELDS, _ext_bad_off_rep)
+if not any(r[3] and r[0].endswith(".externalNumber") for r in _ext_bad_off_rep.references):
+    failures.append("a malformed number on a switched-off rule must still be pending wiring")
 expect_clean("external rule with a none fallback",
              transfer_rule(destination="external", externalNumber=_EXTERNAL, fallback={"type": "none"}))
 expect_warn("external rule carrying a groupId",
@@ -1485,6 +1538,18 @@ expect_error("51 allowed values", extract_props(prop(values=["v%d" % i for i in 
              "allowed-values-too-many")
 expect_clean("500 allowed values across the skill",
              extract_props(*[prop(name="p%d" % n, values=["v%d" % i for i in range(50)]) for n in range(10)]))
+expect_error("501 allowed values across the skill",
+             extract_props(*[prop(name="p%d" % n, values=["v%d" % i for i in range(50)]) for n in range(10)],
+                           prop(name="last", values=["only"])),
+             "allowed-values-total")
+expect_warn("over 500 allowed values on a switched-off skill warns",
+            extract_props(*[prop(name="p%d" % n, values=["v%d" % i for i in range(50)]) for n in range(10)],
+                          prop(name="last", values=["only"]), enabled=False),
+            "allowed-values-total")
+expect_no_code("over 500 allowed values on a switched-off skill is not an error",
+               extract_props(*[prop(name="p%d" % n, values=["v%d" % i for i in range(50)]) for n in range(10)],
+                             prop(name="last", values=["only"]), enabled=False),
+               "allowed-values-total")
 expect_error("over 500 allowed values across the skill",
              extract_props(*[prop(name="p%d" % n, values=["v%d" % i for i in range(46)]) for n in range(11)]),
              "allowed-values-total")
@@ -1520,6 +1585,30 @@ expect_error("allowed values on a transfer custom property",
                  "enabled": False, "rules": [],
                  "customProperties": [prop(values=["Gold", "Silver"])]}}),
              "unknown-field")
+
+# The save judges only the first 50 values one by one, counts every listed value toward the skill's 500,
+# skips an empty or null list on any type, measures a value once trimmed and trims only what Go's
+# strings.TrimSpace trims.
+_av51 = copy.deepcopy(BASE)
+extract_props(prop(values=["v%d" % i for i in range(50)] + ["v0"]))(_av51)
+if error_codes(_av51) != ["allowed-values-too-many"]:
+    failures.append("only the first 50 values are judged one by one, got %s" % error_codes(_av51))
+expect_error("the total counts every listed value, as the save does",
+             extract_props(prop(name="a", values=["v%d" % i for i in range(60)]),
+                           *[prop(name="p%d" % n, values=["v%d" % i for i in range(50)]) for n in range(9)]),
+             "allowed-values-total")
+expect_clean("an empty list on a NUMBER property is free text", extract_props(prop(type_="NUMBER", values=[])))
+expect_clean("a null list is free text, as the save reads it",
+             extract_props({"name": "n", "type": "STRING", "description": "d", "allowedValues": None}))
+# The examples that teach allowedValues keep their closed lists.
+for _file, _prop_name in (("E3-inbound-qualification-cfd.jsonc", "routingDecision"),
+                          ("E12-inbound-afterhours-external.jsonc", "urgency")):
+    _ex = V.parse_config(open(os.path.join(HERE, "..", "examples", _file), encoding="utf-8").read())
+    _props = {p.get("name"): p for p in _ex["skills"]["extractData"]["properties"]}
+    if not (_props.get(_prop_name) or {}).get("allowedValues"):
+        failures.append("%s must keep allowedValues on %s" % (_file, _prop_name))
+expect_clean("100 characters once trimmed", extract_props(prop(values=[" " + "x" * 100 + " "])))
+expect_clean("a U+001F separator is not trimmed by the save", extract_props(prop(values=["\x1f"])))
 
 # 37) An agent that already carries both settings, as a read returns it, validates with no error.
 _stored = copy.deepcopy(BASE)
