@@ -931,11 +931,15 @@ def _semantic_level(level):
 
 def _simple_fold(text):
     """Go's strings.EqualFold, which the save compares allowed values with, uses simple case folding: Σ, σ
-    and ς are one letter, while ß and "ss" are not. Python's casefold() folds ß to "ss" and lower() keeps
-    ς apart from σ, so each character is mapped to the smallest member of its one-character case orbit."""
+    and ς are one letter, and so are the micro sign and Greek mu, while ß and "ss" are not, and dotless ı
+    is no I. Python's casefold() is the full folding: it agrees wherever it gives one character, and where
+    it gives several (ß to "ss") the simple folding is the one-character lowercase, or the character itself."""
     def fold(ch):
-        orbit = {ch, ch.lower(), ch.upper(), ch.lower().upper(), ch.upper().lower()}
-        return min(c for c in orbit if len(c) == 1)
+        full = ch.casefold()
+        if len(full) == 1:
+            return full
+        lower = ch.lower()
+        return lower if len(lower) == 1 else ch
     return "".join(fold(ch) for ch in text)
 
 
@@ -1171,7 +1175,7 @@ def _check_external_number(rule, where, rep, enabled):
                "fixed number in full international form (schema §6.1).")
     elif looks_sentinel(number):
         pass                                        # flag_sentinels already reports the placeholder
-    elif not E164_RE.match(number):
+    elif not E164_RE.fullmatch(number):       # match() would let a trailing newline past the $
         rep.at(level, "bad-external-number", key,
                "%r is not a canonical E.164 number: \"+\", the country code and the digits, with no spaces, "
                "dashes, brackets or leading 00. A national number such as 0905 123 456 is refused: ask the "

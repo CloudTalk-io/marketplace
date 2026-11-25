@@ -1403,7 +1403,8 @@ if not any(r[0].endswith(".externalNumber") and "numbering plan" in r[2] for r i
     failures.append("a supplied external number must say the save also checks the numbering plan")
 # National, spaced, 00-prefixed, zero country code and over-long numbers are not canonical E.164.
 for _bad in ("0905 123 456", "0905123456", "+44 20 7946 0123", "+44-20-7946-0123", "00442079460123",
-             "+0442079460123", "+1234567890123456", "442079460123", "+44 (0)20 7946 0123"):
+             "+0442079460123", "+1234567890123456", "442079460123", "+44 (0)20 7946 0123",
+             "+442079460123\n"):
     expect_error("external number %r" % _bad,
                  transfer_rule(destination="external", externalNumber=_bad), "bad-external-number")
 # ...and a switched-off draft saves with them (the API warns), so they are a warning there, not an error.
@@ -1503,6 +1504,9 @@ expect_error("allowed values equal once trimmed", extract_props(prop(values=["Ye
 expect_error("final sigma repeats capital sigma", extract_props(prop(values=["Σ", "ς"])),
              "allowed-value-duplicate")
 expect_clean("sharp s is not ss", extract_props(prop(values=["Straße", "Strasse"])))
+expect_error("the micro sign repeats Greek mu", extract_props(prop(values=["\u00b5", "\u03bc"])),
+             "allowed-value-duplicate")
+expect_clean("dotless i is not capital I", extract_props(prop(values=["I", "\u0131"])))
 expect_error("a non-string allowed value", extract_props(prop(values=["Yes", 1])), "bad-type")
 expect_error("allowedValues as a string", extract_props(prop(values="Yes, No")), "bad-type")
 _spaced = copy.deepcopy(BASE)
