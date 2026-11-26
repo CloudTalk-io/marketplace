@@ -5,6 +5,30 @@ dated entry below, made whenever the config schema or the generation guidance ma
 Claude Code installs a release when the manifest version changes; the Claude app picks it up from the
 marketplace (Check for updates, or Sync automatically).
 
+## 0.3.4 — 2026-11-24
+
+- **`voice-agent-builder` transfers to external numbers.** A transfer rule may now dial a phone number
+  outside CloudTalk (`destination: "external"` with `externalNumber`), for an answering service, a partner
+  or an on-call mobile. The number is the user's to give: the skill asks for it, never invents it or adds a
+  country code, and asks back for the full international form when given a national number. Without it,
+  the transfer ships switched off with the rule kept. The validator accepts a canonical E.164 number and
+  refuses a missing one on a live rule, a malformed one, a `{{variable}}`, a fallback on an external rule
+  and an external destination on `answerQuestions`, and reports E12's fictional number as still to
+  replace; the save also checks the number is valid in its country's numbering plan, which cannot tell
+  whether the line exists. New example E12 transfers out-of-hours emergencies to a contractor's on-call
+  desk; the caller gives the engineer the details once connected, since nothing said before reaches them.
+- **`voice-agent-builder` sets allowed values on extracted data.** An extracted field with a few known
+  outcomes (interested / not interested / call back) gets them as `allowedValues` on a `STRING` or `ARRAY`
+  property, so the extraction answers with one listed value (an `ARRAY` with listed items only) or null.
+  Schema §6.3 lists the limits (50 per field, 500 per skill, 100 characters per value, no variables, no
+  case-only repeats), and the validator refuses what the save refuses, on a switched-on skill. E3's routing signal now carries its two values.
+- **Editing keeps both.** An agent that already has an external transfer or allowed values validates
+  without an error, and the guidance says to carry both through every rewrite of the skills.
+- **`voice-agent-checkup` knows external transfers.** A switched-on rule to an external number is no longer
+  reported as missing its id or extension; it needs its number in full international form instead.
+- `check_docs_sync.py` now also checks the transfer destination lists, that `fields.json` has one row each
+  for a rule's destination and external number, and the allowed-values limits.
+
 ## 0.3.3 — 2026-11-18
 
 - **`voice-agent-builder` knows booking platforms.** Appointment booking is no longer calendar-only: switching

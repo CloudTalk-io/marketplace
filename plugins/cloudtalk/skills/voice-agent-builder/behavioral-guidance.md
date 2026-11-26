@@ -147,8 +147,15 @@ as though it is. So every enabled unit gets **explicit, complete wiring**, or it
 - **DO present your proposed properties to the user** — list each with a one-line *why it's useful* and
   invite them to add or drop fields. Don't embed a data-collection schema silently; the user owns what
   gets captured.
+- **DO close a property with `allowedValues` when the answer is one of a few known outcomes** — "interested
+  / not interested / call back", a routing decision, a reason category — and whenever the value feeds
+  routing, a report, a filter or a CFD splitter: a `STRING` then answers with exactly one listed value, an
+  `ARRAY` with listed items only, and either with `null` when none fits, so a splitter or a report never
+  meets a near-synonym. `STRING` or `ARRAY` only, in the user's words, a catch-all only on request
+  (`schema.md` §6.3). Keep free text for names, numbers and anything open-ended.
 - If extracted values drive **CFD routing**, tell the user to test extraction before going live —
-  splitter mismatches silently drop calls.
+  splitter mismatches silently drop calls. Listing the splitter's values in `allowedValues` removes the
+  near-synonyms, not the need to test.
 
 ### 3.2 `answerQuestions` — don't default to transfer
 
@@ -190,6 +197,14 @@ as though it is. So every enabled unit gets **explicit, complete wiring**, or it
     CFD-embedded agent, expressing transfer intent this way — or as plain `action: "hangup"` scenarios —
     is **correct and intended**; give the CFD a routing signal via an `extractData` property. **Inbound**
     only (no flow to return to on outbound).
+  - `external` — **only when the user asks to transfer to a phone number outside CloudTalk** (an
+    answering service, a partner, an on-call engineer's mobile) and gives the number. It dials
+    `externalNumber`, attended where advanced transfer is enabled like `agent`/`group`. The number is the
+    user's: never invent it or complete it with a guessed country code; a national number gets one
+    question back for the full international form (`schema.md` §6.1). Colleagues who use CloudTalk stay a
+    `group`/`agent` rule — they get the caller's details on screen, an outside number does not. When the
+    user wants the transfer but can't give the number yet, ship the skill off with the rule kept and the
+    number omitted, exactly like a group draft.
 - **No real target? Ship the skill off as a draft.** The default is to **scaffold the group**:
   `enabled: false` with a rule carrying `destination: "group"` and the id/extension keys **omitted**
   (`groupId`/`groupExtension` absent — never blanked to `""`, an INVALID_TYPE on the integer id) — the group
@@ -469,10 +484,10 @@ Run a generated config against this before presenting it:
 | 1b | Task flow asks **one question per turn** with explicit decision criteria |
 | 2 | Custom skills in the recommended **2–4** band (6 tolerated, validator warns above 6); none < 50 or > 2000 words; no knowledge-source URLs in skills |
 | 3 | Factual content > ~500 words moved to KB (referenced; user told to create) |
-| 4 | Every `extractData` property atomic; active collection instructed, not assumed |
+| 4 | Every `extractData` property atomic; active collection instructed, not assumed; a property with a few known outcomes carries them as `allowedValues` (`STRING`/`ARRAY`, within the §6.3 limits), and a stored list is kept |
 | 5 | `answerQuestions` doesn't auto-transfer without KB/skills to try first |
 | 6 | `takeMessage` not enabled on outbound |
-| 7 | Transfer conditions specific, **< 120 chars**, no "anything/everything"; each **enabled** direct target carries **both** its id and extension, or the skill ships `enabled: false` as a draft — a scaffolded group rule with the id/extension **omitted** (never blanked to `""`), or `rules: []` — with the prompt offering a **callback** instead of a handoff (§3.4); a **switched-on** transfer's prompt offers the handoff and never says it can't connect callers |
+| 7 | Transfer conditions specific, **< 120 chars**, no "anything/everything"; each **enabled** direct target carries **both** its id and extension, or the skill ships `enabled: false` as a draft — a scaffolded group rule with the id/extension **omitted** (never blanked to `""`), or `rules: []` — with the prompt offering a **callback** instead of a handoff (§3.4); a **switched-on** transfer's prompt offers the handoff and never says it can't connect callers; every **enabled** `external` rule carries a number the user gave, in canonical E.164; a switched-off draft may omit the number (never blank it to `""`), and a stored one is kept verbatim |
 | 8 | Hangup scenarios present with an **explicit `action: "hangup"` and `enabled: true`** (an omitted action is a plain reply, and a switched-off scenario grants nothing): normal end + silence (+ voicemail if outbound) |
 | 9 | Every scenario without a `hangup`/`sendSms` action has a `reply`: the line to say or an instruction, not spoken word for word, in any language (§4.2) |
 | 10 | No behavior owned twice (greeting duplication, silence handling, conflicting rules) |

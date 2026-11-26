@@ -39,7 +39,7 @@ config and judges the transcript.
 | [`mcp-tools.md`](./mcp-tools.md) | Connected mode: the CloudTalk MCP tool surface, write-safety rules, and the not-yet-available workaround table. |
 | [`variables.md`](./variables.md) | Every `{{variable}}` the platform resolves — when it resolves, what it contains, and the silent empty-string behavior when unset. |
 | [`practice-call.md`](./practice-call.md) | A practice call in chat that any app can run (the user plays the caller), its plain-words score, and the replay's caller cards. Used by the builder, checkup and replay. |
-| [`examples/`](./examples/) | E1–E11 worked configs — clean, schema-only, save-ready: no placeholder IDs inside a *live* reference, but every non-E2 file carries a placeholder `failoverOutboundNumberId` to replace, and E4/E9/E10/E11 carry further marked illustrative values (each named in the file's header). Executable documentation + few-shots. |
+| [`examples/`](./examples/) | E1–E12 worked configs — clean, schema-only, save-ready: no placeholder IDs inside a *live* reference, but every non-E2 file carries a placeholder `failoverOutboundNumberId` to replace, and E4/E9/E10/E11/E12 carry further marked illustrative values (each named in the file's header). Executable documentation + few-shots. |
 
 ## The `authoring` tiers (full field partition)
 
@@ -49,7 +49,7 @@ the partition so "never emit" is an explicit signal, not folklore.
 | Tag | Meaning | Generator behavior |
 |---|---|---|
 | `generate` | Self-contained content/choice/number | Author it freely |
-| `reference` | Points to a company resource by ID | Reuse, fetch over MCP, substitute, ask the user for the real ID, ship the skill switched off (transfers), or omit + instruct; **never a placeholder, never a guess** |
+| `reference` | Points to a company resource by ID, or holds a value only the user can supply (an external transfer's number) | Reuse, fetch over MCP, substitute, ask the user for the real ID, ship the skill switched off (transfers), or omit + instruct; **never a placeholder, never a guess** |
 | `environment` | Env-specific phone-number selector | Defaults to `1` (Automatic), exactly as the dashboard seeds it — complete it with a real owned `failoverOutboundNumberId` in both directions, or set a real owned `defaultOutboundNumberId` directly (reuse/fetch/ask). Never guess `2`, never `null`, never a bare `1` with no failover — only `1` is magic and it still needs a real failover |
 | `forbidden` | Server-stamped / response-only (`minorVersion`, `optimizedSettings`, …), **or** system-managed by the dashboard/platform (`presetType`, `status`, `lastConfigurationStep`) | Never emit. The platform sets these on save/create; authoring them is stripped, ignored, or overridden on import |
 
@@ -72,7 +72,8 @@ Two things add a step, and the skill is explicit about both rather than papering
 2. a **transfer to a human**. There is no zero-touch substitute for reaching a person: either the real
    agent/group **id + extension** is known (fetched or supplied) and it ships wired, or the skill arrives
    **switched off** (`enabled: false`, `rules: []`) with exactly one thing left to do — pick the target on
-   that skill in the dashboard (it shows *"Requires configuration"*) and switch it on.
+   that skill in the dashboard (it shows *"Requires configuration"*) and switch it on. A transfer to a
+   number outside CloudTalk ships wired only with the number the user gave.
 
 The generator **never ships a config that fails to save**, and never invents an ID to look complete: it
 reuses an ID the agent already has, fetches one over MCP, prefers a self-contained substitute where one
@@ -98,6 +99,7 @@ CI runs [`scripts/check_docs_sync.py`](./scripts/check_docs_sync.py), which fail
 `fields.json`, `schema.md` and the validator's mirrored enums drift apart. It checks exactly this: the
 §2 field set + `authoring` tiers, the §4.2 per-provider LLM matrix, the §4.3 Deepgram language list plus
 the plain-two-letter-code rule the provider decision tree keys off, the §4.4 premade voice IDs, the §11 `tone`
-and `verbosity` enums, the §7.1 scenario actions, and the `elevenLabsSettings` sub-field set. Everything
-else — thresholds, skill shapes, the legacy-alias map — is on the author: steps 1–3 above are
+and `verbosity` enums, the §7.1 scenario actions, the `elevenLabsSettings` sub-field set, the transfer
+destination enums (§6.1 rules, §6.5 `transferConfig`) and the §6.3 allowed-values limits. Everything
+else — other thresholds, other skill shapes, the legacy-alias map — is on the author: steps 1–3 above are
 machine-checked, steps 4–7 are not.

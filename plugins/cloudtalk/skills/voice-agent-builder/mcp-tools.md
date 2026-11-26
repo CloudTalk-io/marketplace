@@ -104,7 +104,10 @@ called. Only the get and write responses carry the numeric one: `voice_agent.voi
 - **Updates merge onto the stored agent.** `cloudtalk_update_voice_agent` reads the agent and merges the
   fields you pass onto it before the upstream full replace, so only `voice_agent_id` is required and an
   omitted field keeps its stored value. **Collections are replaced, not merged** (`skills`, `scenarios`,
-  `guardrails`, `secondaryLanguages`, `knowledgeBaseIds`): to change one entry, pass the whole list.
+  `guardrails`, `secondaryLanguages`, `knowledgeBaseIds`): to change one entry, pass the whole list. In a
+  re-sent `skills`, every stored value you were not asked to change goes back as read, including a transfer
+  rule's `externalNumber` and an extracted field's `allowedValues`: both pass through the connection
+  unchecked, and the save is what judges them.
   Still **get → modify → update**: read the agent in this turn (the read gives you the current lists and
   the real IDs; never compose an update from memory or a stale copy), then send `voice_agent_id` plus
   only the fields you change, each changed collection or `elevenLabsSettings` in full. Re-sending the
